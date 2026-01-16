@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Permohonan Pengadaan - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Buat Permohonan Pengadaan{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('procurement.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Pengadaan
+    </a>
+</div>
+
+<!-- Form Card -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center">
+            <div class="bg-blue-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-clipboard-list text-blue-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-1">Form Permohonan Pengadaan Barang</h3>
+                <p class="text-sm text-gray-500">Step 1: Isi detail barang yang diajukan</p>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="p-6">
+        {{ form.hidden_tag() }}
+
+        <!-- Step Indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</div>
+                    <span class="ml-2 text-sm font-medium text-gray-800">Permohonan</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-4"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Persetujuan Admin</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-4"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">3</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Penerimaan Barang</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-4"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">4</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Selesai</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Item Selection -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-box mr-1 text-blue-600"></i>
+                Pilih Barang
+            </label>
+            {{ form.item_id(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all") }}
+            {% if form.item_id.errors %}
+                {% for error in form.item_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">Pilih barang dari daftar atau pilih "Lainnya" untuk barang baru</p>
+        </div>
+
+        <!-- New Item Fields (Hidden by default) -->
+        <div id="newItemFields" class="hidden">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h4 class="text-sm font-semibold text-green-900 mb-3">
+                    <i class="fas fa-plus-circle mr-1"></i>
+                    Detail Barang Baru
+                </h4>
+
+                <!-- New Item Name -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Nama Barang
+                    </label>
+                    {{ form.item_name(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all", placeholder="Contoh: Laptop Dell Latitude 5420") }}
+                    {% if form.item_name.errors %}
+                        {% for error in form.item_name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- New Item Category -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Kategori Barang
+                    </label>
+                    {{ form.item_category_id(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all") }}
+                    {% if form.item_category_id.errors %}
+                        {% for error in form.item_category_id.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                    <p class="mt-1 text-xs text-gray-500">Pilih kategori yang sesuai untuk barang baru</p>
+                </div>
+
+                <!-- New Item Unit -->
+                <div class="mb-2">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Satuan Barang
+                    </label>
+                    {{ form.item_unit(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all", placeholder="Contoh: pcs, unit, buah") }}
+                    {% if form.item_unit.errors %}
+                        {% for error in form.item_unit.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quantity -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-hashtag mr-1 text-purple-600"></i>
+                Kuantitas
+            </label>
+            {{ form.quantity(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all", placeholder="Masukkan jumlah barang") }}
+            {% if form.quantity.errors %}
+                {% for error in form.quantity.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Request Notes (Reason) -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-comment-alt mr-1 text-amber-600"></i>
+                Alasan Permohonan
+            </label>
+            {{ form.request_notes(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all", rows="4", placeholder="Jelaskan alasan pengadaan barang ini (min. 10 karakter)") }}
+            {% if form.request_notes.errors %}
+                {% for error in form.request_notes.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">Contoh: Penggantian unit yang rusak, Tambahan untuk kebutuhan baru, dll</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+            <a href="{{ url_for('procurement.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-times mr-2"></i>
+                Batal
+            </a>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i class="fas fa-paper-plane mr-2"></i>
+                Ajukan Permohonan
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Info Card -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-900 mb-2">Informasi Penting</h4>
+            <ul class="text-sm text-blue-800 space-y-1">
+                <li><i class="fas fa-check-circle mr-2"></i>Pilih barang dari daftar jika barang sudah terdaftar di sistem</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Jika barang baru, sistem akan otomatis membuat item baru</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Permohonan akan melalui proses persetujuan admin</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Admin akan memilih supplier dan menetapkan harga</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dynamic form validation and show/hide new item fields
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const itemSelect = document.getElementById('item_id');
+    const newItemFields = document.getElementById('newItemFields');
+    const itemNameInput = document.getElementById('item_name');
+
+    // Show/hide new item fields based on selection
+    itemSelect.addEventListener('change', function() {
+        if (this.value === '-1') {
+            // User selected "Lainnya"
+            newItemFields.classList.remove('hidden');
+            itemNameInput.required = true;
+        } else {
+            // User selected existing item
+            newItemFields.classList.add('hidden');
+            itemNameInput.required = false;
+            itemNameInput.value = '';
+            document.getElementById('item_category_id').value = '0';
+            document.getElementById('item_unit').value = '';
+        }
+    });
+
+    form.addEventListener('submit', function(e) {
+        const itemId = itemSelect.value;
+
+        // If user selected "Lainnya", validate new item fields
+        if (itemId === '-1') {
+            const itemName = itemNameInput.value.trim();
+            if (!itemName) {
+                e.preventDefault();
+                alert('Harap isi nama barang baru!');
+                itemNameInput.focus();
+                return false;
+            }
+        } else if (!itemId || itemId === '0') {
+            e.preventDefault();
+            alert('Harap pilih barang dari daftar atau pilih "Lainnya"!');
+            itemSelect.focus();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

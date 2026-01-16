@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Smart Geo Inventory</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#047857',
+                        secondary: '#64748b',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column !important;
+            }
+            #map {
+                flex: 1;
+                min-height: 40vh;
+            }
+            .sidebar {
+                flex: 2;
+                padding: 20px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container flex h-screen w-full overflow-hidden">
+        <div id="map" class="flex-3 h-full z-10"></div>
+
+        <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-10 bg-primary shadow-2xl border-l border-white/10 z-20 overflow-hidden">
+            <!-- Overlay for blur effect -->
+            <div class="absolute inset-0 bg-black/20 backdrop-blur-sm z-0"></div>
+
+            <div class="sidebar-content relative z-10 text-center w-full max-w-md">
+                <div class="logo-section mb-6">
+                    <h2 class="text-white text-2xl font-bold mb-2">
+                        <i class="fas fa-boxes"></i> Smart Geo Inventory
+                    </h2>
+                    <p class="text-gray-200">Sistem Manajemen Aset Universitas Sumatera Utara</p>
+                </div>
+
+                <div class="login-card bg-white/95 rounded-2xl p-8 shadow-2xl">
+                    <h4 class="mb-6 text-center text-xl font-bold text-gray-800">Login</h4>
+
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert {{ 'bg-green-100 border-green-400 text-green-700' if category == 'success' else 'bg-red-100 border-red-400 text-red-700' if category == 'danger' else 'bg-yellow-100 border-yellow-400 text-yellow-700' if category == 'warning' else 'bg-blue-100 border-blue-400 text-blue-700' }} border rounded-lg p-4 mb-4 flex items-center justify-between" role="alert">
+                                    <div>{{ message }}</div>
+                                    <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('auth.login') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-4">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                                {{ form.email.label.text }}
+                            </label>
+                            <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                                   id="email"
+                                   type="email"
+                                   name="email"
+                                   placeholder="Email"
+                                   required>
+                            {% if form.email.errors %}
+                                <div class="text-red-500 mt-1">
+                                    {% for error in form.email.errors %}
+                                        <small class="text-xs">{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-6">
+                            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                                {{ form.password.label.text }}
+                            </label>
+                            <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                                   id="password"
+                                   type="password"
+                                   name="password"
+                                   placeholder="Password"
+                                   required>
+                            {% if form.password.errors %}
+                                <div class="text-red-500 mt-1">
+                                    {% for error in form.password.errors %}
+                                        <small class="text-xs">{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Masuk
+                        </button>
+                    </form>
+
+                    <hr class="my-6 border-gray-300">
+
+                    <div class="text-center">
+                        <small class="text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Hubungi Niki Nami Perry untuk mendapatkan akun
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        var map = L.map('map', {
+            zoomControl: false
+        }).setView([3.561676, 98.6563423], 16);
+
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+
+        L.marker([3.561676, 98.6563423]).addTo(map)
+            .bindPopup('<b>Universitas Sumatera Utara</b><br>Sistem Manajemen Aset')
+            .openPopup();
+
+        // Auto-dismiss alerts
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                alert.style.transition = 'opacity 1s';
+                alert.style.opacity = '0';
+                setTimeout(function() {
+                    alert.remove();
+                }, 1000);
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

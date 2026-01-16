@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Admin - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Dashboard Administrator{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="mb-6">
+    <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div class="flex-1">
+                <h2 class="text-2xl font-bold mb-2">Selamat Datang, Administrator!</h2>
+                <p class="mb-0 text-emerald-100">
+                    <i class="fas fa-tachometer-alt mr-2"></i>
+                    Overview Sistem Smart Geo Inventory
+                </p>
+            </div>
+            <div class="text-right">
+                <i class="fas fa-shield-alt text-6xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Statistics -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <!-- Total Warehouse -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600 hover:shadow-lg transition-shadow">
+        <div class="flex items-center">
+            <div class="bg-blue-100 rounded-full p-3">
+                <i class="fas fa-warehouse text-blue-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <div class="text-3xl font-bold text-gray-800">{{ stats.total_warehouses or 0 }}</div>
+                <div class="text-sm text-gray-500">Total Warehouse</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Unit -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600 hover:shadow-lg transition-shadow">
+        <div class="flex items-center">
+            <div class="bg-green-100 rounded-full p-3">
+                <i class="fas fa-building text-green-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <div class="text-3xl font-bold text-gray-800">{{ stats.total_units or 0 }}</div>
+                <div class="text-sm text-gray-500">Total Unit</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Items -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600 hover:shadow-lg transition-shadow">
+        <div class="flex items-center">
+            <div class="bg-purple-100 rounded-full p-3">
+                <i class="fas fa-box text-purple-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <div class="text-3xl font-bold text-gray-800">{{ stats.total_items or 0 }}</div>
+                <div class="text-sm text-gray-500">Total Jenis Barang</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Users -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-600 hover:shadow-lg transition-shadow">
+        <div class="flex items-center">
+            <div class="bg-amber-100 rounded-full p-3">
+                <i class="fas fa-users text-amber-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <div class="text-3xl font-bold text-gray-800">{{ stats.total_users or 0 }}</div>
+                <div class="text-sm text-gray-500">Total Pengguna</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Distribution Status & Quick Actions -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Installation Status -->
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fas fa-tools text-primary mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Status Instalasi</h5>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-3 gap-4 text-center">
+                <div class="p-4 rounded-lg bg-amber-50 border border-amber-500">
+                    <h6 class="text-amber-600 font-semibold mb-2 text-sm">Sedang Dipasang</h6>
+                    <h2 class="text-3xl font-bold text-amber-600 mb-0">{{ stats.installing_count or 0 }}</h2>
+                </div>
+                <div class="p-4 rounded-lg bg-green-50 border border-green-600">
+                    <h6 class="text-green-600 font-semibold mb-2 text-sm">Terpasang</h6>
+                    <h2 class="text-3xl font-bold text-green-600 mb-0">{{ stats.installed_count or 0 }}</h2>
+                </div>
+                <div class="p-4 rounded-lg bg-red-50 border border-red-600">
+                    <h6 class="text-red-600 font-semibold mb-2 text-sm">Rusak/Maintenance</h6>
+                    <h2 class="text-3xl font-bold text-red-600 mb-0">{{ stats.broken_count or 0 }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fas fa-bolt text-primary mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Aksi Cepat</h5>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <a href="{{ url_for('suppliers.index') }}" class="block w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors text-center font-semibold">
+                    <i class="fas fa-truck mr-2"></i> Kelola Supplier
+                </a>
+                <a href="{{ url_for('items.index') }}" class="block w-full bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 transition-colors text-center font-semibold">
+                    <i class="fas fa-box mr-2"></i> Kelola Barang
+                </a>
+                <a href="{{ url_for('map.index') }}" class="block w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors text-center font-semibold">
+                    <i class="fas fa-map mr-2"></i> Lihat Peta GIS
+                </a>
+                <a href="{{ url_for('stock.index') }}" class="block w-full bg-amber-600 text-white px-4 py-3 rounded-lg hover:bg-amber-700 transition-colors text-center font-semibold">
+                    <i class="fas fa-boxes mr-2"></i> Monitor Stok
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Alert -->
+{% if stats.low_stock_count > 0 %}
+<div class="mb-6">
+    <div class="bg-white rounded-xl shadow-md border-2 border-amber-500">
+        <div class="p-6 bg-amber-500 text-white rounded-t-xl">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Perhatian: Stok Menipis!</h5>
+            </div>
+        </div>
+        <div class="p-6">
+            <p class="mb-4 text-gray-700">Terdapat <strong class="text-amber-600">{{ stats.low_stock_count }}</strong> jenis barang dengan stok di bawah batas minimum.</p>
+            <a href="{{ url_for('stock.low_stock') }}" class="inline-flex items-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold">
+                <i class="fas fa-list mr-2"></i> Lihat Daftar Stok Rendah
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Activity -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
+        <div class="flex items-center">
+            <i class="fas fa-history text-primary mr-3"></i>
+            <h5 class="text-lg font-semibold mb-0">Aktivitas Terbaru</h5>
+        </div>
+        <span class="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-semibold">
+            {{ recent_logs|length if recent_logs else 0 }} aktivitas
+        </span>
+    </div>
+    <div class="p-6 overflow-x-auto">
+        {% if recent_logs and recent_logs|length > 0 %}
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">User</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tabel</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Waktu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs[:10] %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4"><strong class="text-gray-800">{{ log.username or '-' }}</strong></td>
+                    <td class="py-3 px-4">
+                        <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold">
+                            {{ log.action }}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-gray-600">{{ log.table_name }}</td>
+                    <td class="py-3 px-4">
+                        <small class="text-gray-500">
+                            {{ log.created_at.strftime('%d/%m/%Y %H:%M') }}
+                        </small>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-clock text-4xl mb-3 opacity-50"></i>
+            <p class="mb-0">Belum ada aktivitas tercatat</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh dashboard every 60 seconds
+setTimeout(function() {
+    location.reload();
+}, 60000);
+</script>
+{% endblock %}

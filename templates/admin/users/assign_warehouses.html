@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Warehouse - {{ user.name }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Assign Warehouse{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('users.detail', id=user.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail User
+    </a>
+</div>
+
+<!-- User Info -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6">
+        <div class="flex items-center">
+            <div class="bg-blue-100 rounded-full p-3 mr-4">
+                <i class="fas fa-user text-blue-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">{{ user.name }}</h3>
+                <p class="text-sm text-gray-600">{{ user.email }}</p>
+                <div class="mt-1">
+                    {% if user.role == 'admin' %}
+                    <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                        <i class="fas fa-crown mr-1"></i>Administrator
+                    </span>
+                    {% elif user.role == 'warehouse_staff' %}
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                        <i class="fas fa-warehouse mr-1"></i>Warehouse Staff
+                    </span>
+                    {% elif user.role == 'field_staff' %}
+                    <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                        <i class="fas fa-hard-hat mr-1"></i>Field Staff
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Form -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center">
+            <div class="bg-indigo-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-warehouse text-indigo-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">Assignment Warehouse</h3>
+                <p class="text-sm text-gray-500">Pilih warehouse yang bisa diakses oleh user ini</p>
+            </div>
+        </div>
+    </div>
+
+    {% if user.role == 'admin' %}
+    <div class="p-6">
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
+            <i class="fas fa-crown text-amber-600 text-3xl mb-2"></i>
+            <p class="text-amber-900 font-semibold">Administrator memiliki akses ke semua warehouse</p>
+            <p class="text-sm text-amber-700 mt-1">Tidak perlu melakukan assignment untuk admin</p>
+        </div>
+    </div>
+    {% else %}
+    <form method="POST" class="p-6">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-warehouse mr-1 text-indigo-600"></i>
+                Pilih Warehouse
+            </label>
+            {{ form.warehouse_id(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all") }}
+            {% if form.warehouse_id.errors %}
+                {% for error in form.warehouse_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                Pilih satu warehouse untuk user ini
+            </p>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+            <div class="flex items-start">
+                <div class="bg-blue-100 rounded-lg p-2 mr-3">
+                    <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-blue-900 mb-2">Informasi Assignment</h4>
+                    <ul class="text-sm text-blue-800 space-y-1">
+                        <li><i class="fas fa-check-circle mr-2"></i>User hanya bisa mengakses satu warehouse yang ditugaskan</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Stock, procurement, dan instalasi akan difilter berdasarkan warehouse ini</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>User tanpa warehouse assignment tidak bisa mengakses fitur warehouse</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('users.detail', id=user.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Kembali
+            </a>
+            <button type="submit" class="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold">
+                <i class="fas fa-save mr-2"></i>
+                Simpan Assignment
+            </button>
+        </div>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

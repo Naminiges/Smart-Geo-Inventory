@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Kategori Barang - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Kategori Barang{% endblock %}
+
+{% block content %}
+<!-- Header with Search & Create Button -->
+<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Daftar Kategori</h2>
+        <p class="text-sm text-gray-600">Kelola kategori untuk pengelompokan barang</p>
+    </div>
+    <a href="{{ url_for('categories.create') }}" class="mt-4 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+        <i class="fas fa-plus mr-2"></i>Tambah Kategori
+    </a>
+</div>
+
+<!-- Search -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-4">
+    <form method="GET" class="flex gap-4">
+        <div class="flex-1">
+            <input type="text" name="search" value="{{ search }}" placeholder="Cari nama kategori..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+        <button type="submit" class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold">
+            <i class="fas fa-search mr-2"></i>Cari
+        </button>
+        {% if search %}
+        <a href="{{ url_for('categories.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fas fa-times mr-2"></i>Reset
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Categories Table -->
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Kategori</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jumlah Barang</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tanggal Dibuat</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for category in categories %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <div class="bg-indigo-100 rounded-lg p-2 mr-3">
+                                <i class="fas fa-tag text-indigo-600"></i>
+                            </div>
+                            <span class="font-semibold text-gray-800">{{ category.name }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                            {{ category_item_counts.get(category.id, 0) }} barang
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-600">
+                        {{ category.created_at.strftime('%d/%m/%Y') }}
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                            <a href="{{ url_for('categories.edit', id=category.id) }}" class="p-2 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if category_item_counts.get(category.id, 0) == 0 %}
+                            <form action="{{ url_for('categories.delete', id=category.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori {{ category.name }}?');" class="inline">
+                                <button type="submit" class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center">
+                            <i class="fas fa-tags text-gray-300 text-5xl mb-4"></i>
+                            <p class="text-gray-500 text-lg">Belum ada kategori</p>
+                            <a href="{{ url_for('categories.create') }}" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                Buat Kategori Baru
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Info -->
+    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                Menampilkan <strong>{{ categories|length }}</strong> kategori
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
