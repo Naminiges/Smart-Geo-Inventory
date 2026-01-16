@@ -1,15 +1,11 @@
-from flask import Flask, render_template
+# Legacy file - please use run.py instead
+# This file is kept for backward compatibility only
 
-app = Flask(__name__)
+import os
+from app import create_app
 
-# Route untuk menampilkan peta
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-@app.route('/login')
-def login():
-    return "Halaman Login (Belum dibuat)"
+# Create app instance
+app = create_app(os.getenv('FLASK_ENV', 'development'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
