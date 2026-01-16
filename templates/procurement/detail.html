@@ -1,0 +1,562 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Pengadaan #{{ procurement.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Detail Pengadaan #{{ procurement.id }}{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('procurement.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Pengadaan
+    </a>
+</div>
+
+<!-- Status Alert -->
+{% if procurement.status == 'pending' %}
+<div class="bg-amber-50 border-l-4 border-amber-500 rounded-lg p-4 mb-6">
+    <div class="flex items-center">
+        <div class="bg-amber-100 rounded-full p-2 mr-3">
+            <i class="fas fa-clock text-amber-600 text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="font-semibold text-amber-900">Menunggu Persetujuan</h4>
+            <p class="text-sm text-amber-800">Pengadaan ini memerlukan persetujuan admin sebelum diproses lebih lanjut.</p>
+        </div>
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('procurement.approve', id=procurement.id) }}" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-semibold text-sm">
+            <i class="fas fa-thumbs-up mr-1"></i> Review & Setujui
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% elif procurement.status == 'approved' %}
+<div class="bg-green-50 border-l-4 border-green-500 rounded-lg p-4 mb-6">
+    <div class="flex items-center">
+        <div class="bg-green-100 rounded-full p-2 mr-3">
+            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="font-semibold text-green-900">Disetujui</h4>
+            <p class="text-sm text-green-800">Pengadaan telah disetujui. Siap untuk menerima barang dari supplier.</p>
+        </div>
+        {% if current_user.is_warehouse_staff() %}
+        <a href="{{ url_for('procurement.receive_goods', id=procurement.id) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm">
+            <i class="fas fa-box mr-1"></i> Terima Barang
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% elif procurement.status == 'received' %}
+<div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
+    <div class="flex items-center">
+        <div class="bg-blue-100 rounded-full p-2 mr-3">
+            <i class="fas fa-box text-blue-600 text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="font-semibold text-blue-900">
+                Barang Diterima
+                {% if not procurement.is_fully_received %}
+                <span class="ml-2 text-sm font-normal text-blue-700">(Sebagian)</span>
+                {% endif %}
+            </h4>
+            {% if procurement.is_fully_received %}
+            <p class="text-sm text-blue-800">Semua barang telah diterima lengkap. Siap untuk dimasukkan ke stok gudang.</p>
+            {% else %}
+            <p class="text-sm text-blue-800">
+                Barang diterima: <strong>{{ procurement.total_received }}/{{ procurement.quantity }} unit</strong>.
+                Masih kurang <strong>{{ procurement.remaining_quantity }} unit</strong>.
+                {% if current_user.is_warehouse_staff() %}
+                Anda bisa menerima barang lagi atau menyelesaikan jika sudah lengkap.
+                {% endif %}
+            </p>
+            {% endif %}
+        </div>
+        {% if current_user.is_warehouse_staff() %}
+        {% if procurement.is_fully_received %}
+        <a href="{{ url_for('procurement.complete', id=procurement.id) }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm">
+            <i class="fas fa-check-double mr-1"></i> Selesaikan & Masukkan Stok
+        </a>
+        {% else %}
+        <a href="{{ url_for('procurement.receive_goods', id=procurement.id) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-sm">
+            <i class="fas fa-plus mr-1"></i> Terima Lagi
+        </a>
+        {% endif %}
+        {% endif %}
+    </div>
+</div>
+{% elif procurement.status == 'completed' %}
+<div class="bg-purple-50 border-l-4 border-purple-500 rounded-lg p-4 mb-6">
+    <div class="flex items-center">
+        <div class="bg-purple-100 rounded-full p-2 mr-3">
+            <i class="fas fa-check-double text-purple-600 text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="font-semibold text-purple-900">Selesai</h4>
+            <p class="text-sm text-purple-800">Pengadaan telah selesai dan barang telah ditambahkan ke stok.</p>
+        </div>
+    </div>
+</div>
+{% elif procurement.status == 'rejected' %}
+<div class="bg-red-50 border-l-4 border-red-500 rounded-lg p-4 mb-6">
+    <div class="flex items-center">
+        <div class="bg-red-100 rounded-full p-2 mr-3">
+            <i class="fas fa-times-circle text-red-600 text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="font-semibold text-red-900">Ditolak</h4>
+            <p class="text-sm text-red-800">
+                Pengadaan ini ditolak.
+                {% if procurement.rejection_reason %}
+                Alasan: "{{ procurement.rejection_reason }}"
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Left Column - Details -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Procurement Details -->
+        <div class="bg-white rounded-xl shadow-md">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center">
+                    <div class="bg-blue-100 rounded-lg p-3 mr-4">
+                        <i class="fas fa-clipboard-list text-blue-600 text-2xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800">Detail Pengadaan</h3>
+                        <p class="text-sm text-gray-500">Informasi lengkap pengadaan barang</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Item Information -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-600 mb-3">
+                            <i class="fas fa-box mr-1 text-blue-600"></i>
+                            Informasi Barang
+                        </h4>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <span class="text-gray-500">Nama Barang:</span>
+                                <span class="ml-2 font-semibold text-gray-800">{{ procurement.item.name if procurement.item else procurement.new_item_name or 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Kode Barang:</span>
+                                <span class="ml-2 font-mono font-semibold text-gray-800">{{ procurement.item.item_code if procurement.item else 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Kuantitas Diminta:</span>
+                                <span class="ml-2 font-bold text-gray-800">{{ procurement.quantity }} unit</span>
+                            </div>
+                            {% if procurement.actual_quantity %}
+                            <div>
+                                <span class="text-gray-500">Kuantitas Diterima:</span>
+                                <span class="ml-2 font-bold text-green-600">{{ procurement.actual_quantity }} unit</span>
+                            </div>
+                            {% endif %}
+
+                            <!-- Progress Bar (if partial receive) -->
+                            {% if procurement.status in ['approved', 'received'] and procurement.actual_quantity %}
+                            <div class="pt-2 mt-2 border-t border-gray-200">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-gray-600">Progress Penerimaan</span>
+                                    <span class="font-semibold {{ 'text-green-600' if procurement.is_fully_received else 'text-amber-600' }}">
+                                        {{ procurement.total_received }} / {{ procurement.quantity }} unit
+                                    </span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="h-2 rounded-full transition-all duration-300 {{ 'bg-green-500' if procurement.is_fully_received else 'bg-amber-500' }}"
+                                         style="width: {{ (procurement.total_received / procurement.quantity * 100)|int }}%"></div>
+                                </div>
+                                {% if not procurement.is_fully_received %}
+                                <p class="text-xs text-amber-600 mt-1">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    Masih kurang {{ procurement.remaining_quantity }} unit
+                                </p>
+                                {% else %}
+                                <p class="text-xs text-green-600 mt-1">
+                                    <i class="fas fa-check-circle mr-1"></i>
+                                    Lengkap!
+                                </p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Supplier Information -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="text-sm font-semibold text-gray-600 mb-3">
+                            <i class="fas fa-truck-loading mr-1 text-green-600"></i>
+                            Informasi Supplier
+                        </h4>
+                        <div class="space-y-2 text-sm">
+                            <div>
+                                <span class="text-gray-500">Nama Supplier:</span>
+                                <span class="ml-2 font-semibold text-gray-800">{{ procurement.supplier.name if procurement.supplier else '-' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Harga Satuan:</span>
+                                <span class="ml-2 font-semibold text-gray-800">Rp {{ "{:,.0f}".format(procurement.unit_price) if procurement.unit_price else 'N/A' }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Total Harga:</span>
+                                <span class="ml-2 font-bold text-green-600">
+                                    Rp {{ "{:,.0f}".format(procurement.total_price) if procurement.total_price else 'N/A' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Request Notes -->
+                {% if procurement.request_notes %}
+                <div class="mt-4 p-4 bg-amber-50 rounded-lg">
+                    <h4 class="text-sm font-semibold text-amber-900 mb-2">
+                        <i class="fas fa-comment-alt mr-1"></i>
+                        Alasan Permohonan
+                    </h4>
+                    <p class="text-sm text-amber-800 italic">"{{ procurement.request_notes }}"</p>
+                </div>
+                {% endif %}
+
+                <!-- Admin Notes -->
+                {% if procurement.notes %}
+                <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <h4 class="text-sm font-semibold text-blue-900 mb-2">
+                        <i class="fas fa-sticky-note mr-1"></i>
+                        Catatan Admin
+                    </h4>
+                    <p class="text-sm text-blue-800">{{ procurement.notes }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Receipt History (Partial Receiving) -->
+                {% if procurement.receipt_history %}
+                <div class="mt-4 p-4 bg-indigo-50 rounded-lg">
+                    <h4 class="text-sm font-semibold text-indigo-900 mb-2">
+                        <i class="fas fa-history mr-1"></i>
+                        Riwayat Penerimaan ({{ procurement.get_receipt_history()|length }} Kali Pengiriman)
+                    </h4>
+                    {% if procurement.receipt_number %}
+                    <p class="text-xs text-indigo-700 mb-3">
+                        <strong>Invoice:</strong> <span class="font-mono">{{ procurement.receipt_number }}</span>
+                    </p>
+                    {% endif %}
+                    <div class="space-y-2">
+                        {% for receipt in procurement.get_receipt_history() %}
+                        <div class="flex items-center justify-between p-3 bg-white rounded border border-indigo-200">
+                            <div class="flex-1">
+                                <div class="flex items-center mb-1">
+                                    <span class="text-xs font-semibold text-indigo-600 bg-indigo-100 px-2 py-1 rounded">
+                                        Pengiriman #{{ loop.index }}
+                                    </span>
+                                    <span class="mx-2 text-gray-300">|</span>
+                                    <span class="text-xs text-gray-600">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        {{ receipt.date[:10] }}
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-600">
+                                    <i class="fas fa-user mr-1"></i>
+                                    Diterima oleh: User ID #{{ receipt.received_by }}
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-indigo-600">{{ receipt.quantity }} unit</div>
+                                <div class="text-xs text-gray-500">
+                                    Kumulatif: <strong>{{ receipt.cumulative_total }}</strong> unit
+                                </div>
+                                {% if receipt.serials %}
+                                <div class="text-xs text-gray-500">{{ receipt.serials|length }} serial number</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-indigo-200 text-xs text-indigo-700">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Total diterima: <strong>{{ procurement.total_received }}</strong> dari <strong>{{ procurement.quantity }}</strong> unit
+                        {% if procurement.total_received < procurement.quantity %}
+                        <span class="text-amber-600">(Masih kurang {{ procurement.remaining_quantity }} unit)</span>
+                        {% else %}
+                        <span class="text-green-600">(Lengkap!)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Receipt Information -->
+                {% if procurement.receipt_number %}
+                <div class="mt-4 p-4 bg-green-50 rounded-lg">
+                    <h4 class="text-sm font-semibold text-green-900 mb-2">
+                        <i class="fas fa-receipt mr-1"></i>
+                        Informasi Invoice
+                    </h4>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-green-700">No. Invoice:</span>
+                            <span class="ml-2 font-mono font-bold text-green-900">{{ procurement.receipt_number }}</span>
+                        </div>
+                        <div>
+                            <span class="text-green-700">Total Diterima:</span>
+                            <span class="ml-2 font-bold text-green-900">{{ procurement.total_received }} unit</span>
+                        </div>
+                        <div>
+                            <span class="text-green-700">Tanggal Penerimaan Pertama:</span>
+                            <span class="ml-2 font-semibold text-green-900">
+                                {{ procurement.receipt_date.strftime('%d/%m/%Y') if procurement.receipt_date else 'N/A' }}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-green-700">Jumlah Pengiriman:</span>
+                            <span class="ml-2 font-semibold text-green-900">
+                                {{ procurement.get_receipt_history()|length }} kali
+                            </span>
+                        </div>
+                        {% if procurement.receiver %}
+                        <div>
+                            <span class="text-green-700">Penerima Pertama:</span>
+                            <span class="ml-2 font-semibold text-green-900">
+                                {{ procurement.receiver.name if procurement.receiver else 'N/A' }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="bg-white rounded-xl shadow-md">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-history mr-2 text-blue-600"></i>
+                    Timeline Pengadaan
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    <!-- Step 1: Request -->
+                    <div class="flex items-start">
+                        <div class="bg-blue-100 rounded-full p-2 mr-4">
+                            <i class="fas fa-clipboard-list text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-gray-800">Permohonan Dibuat</h4>
+                                <span class="text-xs text-gray-500">{{ procurement.request_date.strftime('%d/%m/%Y %H:%M') if procurement.request_date else 'N/A' }}</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Diajukan oleh {{ procurement.requester.name if procurement.requester else 'N/A' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Approval -->
+                    <div class="flex items-start">
+                        <div class="rounded-full p-2 mr-4 {{ 'bg-green-100' if procurement.approved_by else 'bg-gray-100' }}">
+                            <i class="fas fa-check-circle {{ 'text-green-600' if procurement.approved_by else 'text-gray-400' }}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-gray-800">
+                                    Persetujuan Admin
+                                    {% if not procurement.approved_by %}
+                                    <span class="ml-2 text-xs font-normal text-gray-500">(Menunggu)</span>
+                                    {% endif %}
+                                </h4>
+                                <span class="text-xs text-gray-500">
+                                    {{ procurement.approval_date.strftime('%d/%m/%Y %H:%M') if procurement.approval_date else 'N/A' }}
+                                </span>
+                            </div>
+                            {% if procurement.approved_by %}
+                            <p class="text-sm text-gray-600">Disetujui oleh {{ procurement.approver.name if procurement.approver else 'N/A' }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Goods Receipt -->
+                    <div class="flex items-start">
+                        <div class="rounded-full p-2 mr-4 {{ 'bg-blue-100' if procurement.received_by else 'bg-gray-100' }}">
+                            <i class="fas fa-box {{ 'text-blue-600' if procurement.received_by else 'text-gray-400' }}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-gray-800">
+                                    Penerimaan Barang
+                                    {% if not procurement.received_by %}
+                                    <span class="ml-2 text-xs font-normal text-gray-500">(Menunggu)</span>
+                                    {% endif %}
+                                </h4>
+                                <span class="text-xs text-gray-500">
+                                    {{ procurement.receipt_date.strftime('%d/%m/%Y %H:%M') if procurement.receipt_date else 'N/A' }}
+                                </span>
+                            </div>
+                            {% if procurement.received_by %}
+                            <p class="text-sm text-gray-600">Diterima oleh {{ procurement.receiver.name if procurement.receiver else 'N/A' }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Completion -->
+                    <div class="flex items-start">
+                        <div class="rounded-full p-2 mr-4 {{ 'bg-purple-100' if procurement.completed_by else 'bg-gray-100' }}">
+                            <i class="fas fa-check-double {{ 'text-purple-600' if procurement.completed_by else 'text-gray-400' }}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-gray-800">
+                                    Selesai
+                                    {% if not procurement.completed_by %}
+                                    <span class="ml-2 text-xs font-normal text-gray-500">(Menunggu)</span>
+                                    {% endif %}
+                                </h4>
+                                <span class="text-xs text-gray-500">
+                                    {{ procurement.completion_date.strftime('%d/%m/%Y %H:%M') if procurement.completion_date else 'N/A' }}
+                                </span>
+                            </div>
+                            {% if procurement.completed_by %}
+                            <p class="text-sm text-gray-600">Diselesaikan oleh {{ procurement.completer.name if procurement.completer else 'N/A' }}</p>
+                            <p class="text-xs text-green-600 mt-1">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Barang telah ditambahkan ke stok
+                            </p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Rejection (if any) -->
+                    {% if procurement.rejected_by %}
+                    <div class="flex items-start">
+                        <div class="bg-red-100 rounded-full p-2 mr-4">
+                            <i class="fas fa-times-circle text-red-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-semibold text-red-800">Ditolak</h4>
+                                <span class="text-xs text-gray-500">
+                                    {{ procurement.rejection_date.strftime('%d/%m/%Y %H:%M') if procurement.rejection_date else 'N/A' }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600">Ditolak oleh {{ procurement.rejecter.name if procurement.rejecter else 'N/A' }}</p>
+                            {% if procurement.rejection_reason %}
+                            <p class="text-sm text-red-600 mt-1">Alasan: "{{ procurement.rejection_reason }}"</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column - Actions & Info -->
+    <div class="space-y-6">
+        <!-- Status Badge -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h4 class="text-sm font-semibold text-gray-600 mb-3">Status Saat Ini</h4>
+            <div class="text-center py-4">
+                {% if procurement.status == 'pending' %}
+                <div class="inline-flex items-center px-6 py-3 bg-amber-100 text-amber-700 rounded-full font-bold text-lg">
+                    <i class="fas fa-clock mr-2"></i>
+                    PENDING
+                </div>
+                {% elif procurement.status == 'approved' %}
+                <div class="inline-flex items-center px-6 py-3 bg-green-100 text-green-700 rounded-full font-bold text-lg">
+                    <i class="fas fa-check mr-2"></i>
+                    APPROVED
+                </div>
+                {% elif procurement.status == 'received' %}
+                <div class="inline-flex items-center px-6 py-3 bg-blue-100 text-blue-700 rounded-full font-bold text-lg">
+                    <i class="fas fa-box mr-2"></i>
+                    RECEIVED
+                </div>
+                {% elif procurement.status == 'completed' %}
+                <div class="inline-flex items-center px-6 py-3 bg-purple-100 text-purple-700 rounded-full font-bold text-lg">
+                    <i class="fas fa-check-double mr-2"></i>
+                    COMPLETED
+                </div>
+                {% elif procurement.status == 'rejected' %}
+                <div class="inline-flex items-center px-6 py-3 bg-red-100 text-red-700 rounded-full font-bold text-lg">
+                    <i class="fas fa-times mr-2"></i>
+                    REJECTED
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h4 class="text-sm font-semibold text-gray-600 mb-3">Aksi Cepat</h4>
+            <div class="space-y-2">
+                {% if procurement.status == 'pending' and current_user.is_admin() %}
+                <a href="{{ url_for('procurement.approve', id=procurement.id) }}" class="flex items-center justify-center w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                    <i class="fas fa-thumbs-up mr-2"></i>
+                    Setujui Pengadaan
+                </a>
+                <form action="{{ url_for('procurement.reject', id=procurement.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menolak pengadaan ini?');">
+                    <input type="text" name="rejection_reason" placeholder="Alasan penolakan..." class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 text-sm" required>
+                    <button type="submit" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                        <i class="fas fa-times mr-2"></i>
+                        Tolak Pengadaan
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if procurement.status == 'approved' and current_user.is_warehouse_staff() %}
+                <a href="{{ url_for('procurement.receive_goods', id=procurement.id) }}" class="flex items-center justify-center w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                    <i class="fas fa-box mr-2"></i>
+                    Terima Barang
+                </a>
+                {% endif %}
+
+                {% if procurement.status == 'received' and current_user.is_warehouse_staff() %}
+                {% if procurement.is_fully_received %}
+                <a href="{{ url_for('procurement.complete', id=procurement.id) }}" class="flex items-center justify-center w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+                    <i class="fas fa-check-double mr-2"></i>
+                    Selesaikan & Masukkan Stok
+                </a>
+                {% else %}
+                <a href="{{ url_for('procurement.receive_goods', id=procurement.id) }}" class="flex items-center justify-center w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                    <i class="fas fa-plus mr-2"></i>
+                    Terima Barang Lagi
+                </a>
+                <p class="text-xs text-center text-gray-500 mt-2">
+                    Masih kurang {{ procurement.remaining_quantity }} unit
+                </p>
+                {% endif %}
+                {% endif %}
+
+                {% if procurement.status in ['pending', 'rejected'] and current_user.is_admin() %}
+                <form action="{{ url_for('procurement.delete', id=procurement.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus pengadaan ini?');">
+                    <button type="submit" class="flex items-center justify-center w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold">
+                        <i class="fas fa-trash mr-2"></i>
+                        Hapus Pengadaan
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Information -->
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <h4 class="text-sm font-semibold text-blue-900 mb-3">
+                <i class="fas fa-info-circle mr-1"></i>
+                Informasi
+            </h4>
+            <div class="space-y-2 text-sm text-blue-800">
+                <p><strong>ID:</strong> #{{ procurement.id }}</p>
+                <p><strong>Dibuat:</strong> {{ procurement.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p><strong>Terakhir Update:</strong> {{ procurement.updated_at.strftime('%d/%m/%Y %H:%M') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

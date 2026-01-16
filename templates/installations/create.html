@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Instalasi Baru - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Buat Instalasi Baru{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fas fa-plus-circle text-primary mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Form Instalasi Barang</h5>
+            </div>
+        </div>
+        <div class="p-6">
+            <form method="POST" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+
+                <!-- Item Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.item_id.label }}</label>
+                        {{ form.item_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent") }}
+                        {% if form.item_id.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.item_id.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.item_detail_id.label }}</label>
+                        {{ form.item_detail_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent", placeholder="Pilih Serial Number") }}
+                        {% if form.item_detail_id.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.item_detail_id.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="my-6 border-gray-200">
+
+                <!-- Location Information -->
+                <h6 class="text-lg font-semibold mb-4"><i class="fas fa-map-marker-alt mr-2"></i>Informasi Lokasi</h6>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.unit_id.label }}</label>
+                        {{ form.unit_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent") }}
+                        {% if form.unit_id.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.unit_id.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.unit_detail_id.label }}</label>
+                        {{ form.unit_detail_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent") }}
+                        {% if form.unit_detail_id.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.unit_detail_id.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.field_staff_id.label }}</label>
+                        {{ form.field_staff_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent") }}
+                        {% if form.field_staff_id.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.field_staff_id.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.warehouse_id.label }}</label>
+                        {{ form.warehouse_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent", readonly=true) }}
+                        <small class="text-gray-500">Warehouse otomatis terpilih</small>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.address.label }}</label>
+                    {{ form.address(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent", rows="2") }}
+                    {% if form.address.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.address.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Coordinates -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Latitude <span class="text-gray-500">(Opsional)</span></label>
+                        <input type="text" name="latitude" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Contoh: 3.561676"
+                               value="{{ request.form.latitude if request.form.latitude else '' }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Longitude <span class="text-gray-500">(Opsional)</span></label>
+                        <input type="text" name="longitude" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Contoh: 98.6563423"
+                               value="{{ request.form.longitude if request.form.longitude else '' }}">
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <button type="button" class="px-4 py-2 border border-info text-info rounded-lg hover:bg-info hover:text-white transition-colors text-sm" onclick="getCurrentLocation()">
+                        <i class="fas fa-map-marker-alt mr-1"></i> Gunakan Lokasi Saat Ini
+                    </button>
+                    <small class="text-gray-500 ml-2">Perlu izin lokasi browser</small>
+                </div>
+
+                <hr class="my-6 border-gray-200">
+
+                <!-- Additional Information -->
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.note.label }}</label>
+                    {{ form.note(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent", rows="3") }}
+                    {% if form.note.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.note.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex justify-between">
+                    <a href="{{ url_for('installations.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali
+                    </a>
+                    <button type="submit" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">
+                        <i class="fas fa-check-circle mr-1"></i> Buat Instalasi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Get current location using browser Geolocation API
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                document.querySelector('input[name="latitude"]').value = position.coords.latitude.toFixed(6);
+                document.querySelector('input[name="longitude"]').value = position.coords.longitude.toFixed(6);
+            },
+            function(error) {
+                alert('Tidak dapat mengambil lokasi: ' + error.message);
+            }
+        );
+    } else {
+        alert('Browser tidak mendukung geolocation');
+    }
+}
+
+// Dynamic dropdown: Load serial numbers based on selected item
+document.addEventListener('DOMContentLoaded', function() {
+    const itemSelect = document.querySelector('#item_id');
+    const serialSelect = document.querySelector('#item_detail_id');
+
+    if (itemSelect && serialSelect) {
+        itemSelect.addEventListener('change', function() {
+            const itemId = this.value;
+            if (itemId) {
+                fetch(`/api/installations/serial-numbers/${itemId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        serialSelect.innerHTML = '<option value="">-- Pilih Serial Number --</option>';
+                        data.forEach(item => {
+                            serialSelect.innerHTML += `<option value="${item.id}">${item.serial_number}</option>`;
+                        });
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else {
+                serialSelect.innerHTML = '<option value="">-- Pilih Barang Dahulu --</option>';
+            }
+        });
+    }
+
+    // Dynamic dropdown: Load unit details based on selected unit
+    const unitSelect = document.querySelector('#unit_id');
+    const unitDetailSelect = document.querySelector('#unit_detail_id');
+
+    if (unitSelect && unitDetailSelect) {
+        unitSelect.addEventListener('change', function() {
+            const unitId = this.value;
+            if (unitId) {
+                fetch(`/api/installations/unit-details/${unitId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        unitDetailSelect.innerHTML = '<option value="">-- Pilih Ruangan --</option>';
+                        data.forEach(detail => {
+                            unitDetailSelect.innerHTML += `<option value="${detail.id}">${detail.room_name}</option>`;
+                        });
+                    })
+                    .catch(error => console.error('Error:', error));
+            } else {
+                unitDetailSelect.innerHTML = '<option value="">-- Pilih Unit Dahulu --</option>';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Barang - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Detail Barang{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto fade-in">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="{{ url_for('items.index') }}" class="inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i> Kembali ke Katalog
+        </a>
+    </div>
+
+    <!-- Item Info Card -->
+    <div class="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
+        <div class="bg-emerald-600 text-white px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h5 class="text-lg font-semibold mb-1">
+                        <i class="fas fa-box mr-2"></i>{{ item.item_code }}
+                    </h5>
+                    <small class="opacity-90">{{ item.name }}</small>
+                </div>
+                <div>
+                    <span class="bg-white text-emerald-600 px-3 py-1 rounded-full text-sm font-medium">{{ item.category.name }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h6 class="text-emerald-600 font-semibold mb-3"><i class="fas fa-info-circle mr-2"></i>Informasi Barang</h6>
+                    <table class="w-full">
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2" width="40%">Kode Barang:</td>
+                            <td class="py-2"><strong>{{ item.item_code }}</strong></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2">Nama Barang:</td>
+                            <td class="py-2">{{ item.name }}</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2">Kategori:</td>
+                            <td class="py-2">{{ item.category.name }}</td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2">Unit:</td>
+                            <td class="py-2">{{ item.unit }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-gray-500 py-2">Total Stok:</td>
+                            <td class="py-2"><strong>{{ item.total_stock or 0 }}</strong></td>
+                        </tr>
+                    </table>
+                </div>
+                <div>
+                    <h6 class="text-green-600 font-semibold mb-3"><i class="fas fa-tags mr-2"></i>Status Serial Number</h6>
+                    <table class="w-full">
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2" width="40%">Total Serial:</td>
+                            <td class="py-2"><strong>{{ item.total_details or 0 }}</strong></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2">Tersedia:</td>
+                            <td class="py-2"><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">{{ item.available_details or 0 }}</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100">
+                            <td class="text-gray-500 py-2">Terpakai:</td>
+                            <td class="py-2"><span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-sm">{{ item.used_details or 0 }}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-gray-500 py-2">Maintenance:</td>
+                            <td class="py-2"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm">{{ item.maintenance_details or 0 }}</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Details Table -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <div class="flex items-center">
+                <i class="fas fa-list-ul mr-2 text-emerald-600"></i>
+                <h5 class="font-semibold mb-0">Daftar Serial Number</h5>
+            </div>
+            <a href="{{ url_for('items.create_detail') }}?item_id={{ item.id }}" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors text-sm">
+                <i class="fas fa-plus-circle mr-1"></i> Tambah Serial
+            </a>
+        </div>
+        <div class="p-6 overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Serial Number</th>
+                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Status</th>
+                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Supplier</th>
+                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Warehouse</th>
+                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Spesifikasi</th>
+                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if item_details and item_details|length > 0 %}
+                        {% for detail in item_details %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-2"><strong>{{ detail.serial_number }}</strong></td>
+                            <td class="py-3 px-2">
+                                {% if detail.status == 'available' %}
+                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">Tersedia</span>
+                                {% elif detail.status == 'used' %}
+                                    <span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-sm">Terpakai</span>
+                                {% elif detail.status == 'processing' %}
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">Processing</span>
+                                {% elif detail.status == 'maintenance' %}
+                                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">Maintenance</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-2">{{ detail.supplier.name if detail.supplier else '-' }}</td>
+                            <td class="py-3 px-2">{{ detail.warehouse.name if detail.warehouse else '-' }}</td>
+                            <td class="py-3 px-2">{{ detail.specification_notes or '-' }}</td>
+                            <td class="py-3 px-2">
+                                <a href="#" class="border border-emerald-500 text-emerald-500 hover:bg-emerald-50 px-2 py-1 rounded text-sm transition-colors">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-gray-500 py-8">
+                                <i class="fas fa-inbox text-4xl mb-2 block"></i>
+                                <strong>Belum ada serial number</strong>
+                                <p class="mb-0">Tambahkan serial number untuk barang ini</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
