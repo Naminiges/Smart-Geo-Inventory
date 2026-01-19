@@ -91,6 +91,38 @@
                 <i class="fas fa-plus-circle mr-1"></i> Tambah Serial
             </a>
         </div>
+        <!-- Filter Section -->
+        <div class="px-6 py-3 bg-gray-50 border-b border-gray-200">
+            <form method="GET" action="{{ url_for('items.details', id=item.id) }}" class="flex flex-wrap gap-4 items-end">
+                <div class="flex-1 min-w-[250px]">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-map-marker-alt mr-1"></i> Filter Lokasi
+                    </label>
+                    <select name="location" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                        <option value="">Semua Lokasi</option>
+                        {% for loc in locations %}
+                        <option value="{{ loc.value }}" {% if location_filter == loc.value %}selected{% endif %}>
+                            {{ loc.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[250px]">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        <i class="fas fa-search mr-1"></i> Cari Serial Number
+                    </label>
+                    <input type="text" name="search" value="{{ search_filter or '' }}" placeholder="Masukkan serial number..." class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                </div>
+                <div class="flex gap-2 shrink-0">
+                    <button type="submit" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-filter mr-1"></i> Filter
+                    </button>
+                    <a href="{{ url_for('items.details', id=item.id) }}" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-times mr-1"></i> Reset
+                    </a>
+                </div>
+            </form>
+        </div>
         <div class="p-6 overflow-x-auto">
             <table class="w-full">
                 <thead>

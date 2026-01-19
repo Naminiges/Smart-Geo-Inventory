@@ -87,10 +87,55 @@ def create():
 @login_required
 def details(id):
     """Show item details and list of item details (serial numbers)"""
-    item = Item.query.get_or_404(id)
-    item_details = ItemDetail.query.filter_by(item_id=id).all()
+    from app.models import Warehouse, Unit, Distribution
 
-    return render_template('items/details.html', item=item, item_details=item_details)
+    item = Item.query.get_or_404(id)
+
+    # Get filter parameters
+    location_filter = request.args.get('location', '')
+    search_filter = request.args.get('search', '').strip()
+
+    # Build query for item details
+    query = ItemDetail.query.filter_by(item_id=id)
+    item_details = query.all()
+
+    # Filter by location
+    if location_filter:
+        if ':' in location_filter:
+            filter_type, filter_id = location_filter.split(':', 1)
+            filter_id = int(filter_id)
+
+            if filter_type == 'warehouse':
+                # Filter by warehouse from item_details table
+                item_details = [d for d in item_details if d.warehouse_id == filter_id]
+            elif filter_type == 'unit':
+                # Filter by unit from distributions table
+                distributed_detail_ids = db.session.query(Distribution.item_detail_id).filter_by(unit_id=filter_id).all()
+                distributed_detail_ids = [d[0] for d in distributed_detail_ids]
+                item_details = [d for d in item_details if d.id in distributed_detail_ids]
+
+    # Filter by serial number search
+    if search_filter:
+        item_details = [d for d in item_details if search_filter.lower() in d.serial_number.lower()]
+
+    # Build combined location list for dropdown
+    locations = []
+    for warehouse in Warehouse.query.all():
+        locations.append({
+            'value': f'warehouse:{warehouse.id}',
+            'name': f'Warehouse: {warehouse.name}',
+            'type': 'warehouse'
+        })
+    for unit in Unit.query.all():
+        locations.append({
+            'value': f'unit:{unit.id}',
+            'name': f'Unit: {unit.name}',
+            'type': 'unit'
+        })
+
+    return render_template('items/details.html', item=item, item_details=item_details,
+                          locations=locations, location_filter=location_filter,
+                          search_filter=search_filter)
 
 
 @bp.route('/detail/create', methods=['GET', 'POST'])
