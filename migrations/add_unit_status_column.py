@@ -23,7 +23,7 @@ def migrate():
                 ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'available';
             """))
             db.session.commit()
-            print("   ✓ Column 'status' added successfully")
+            print("   [OK] Column 'status' added successfully")
 
             # Update existing rows to have 'available' status
             print("\nUpdating existing rows...")
@@ -33,13 +33,13 @@ def migrate():
                 WHERE status IS NULL;
             """))
             db.session.commit()
-            print("   ✓ Existing rows updated")
+            print("   [OK] Existing rows updated")
 
-            print("\n✓ Migration completed successfully!")
+            print("\n[OK] Migration completed successfully!")
             print("\nColumn 'status' added to units table with default value 'available'")
 
         except Exception as e:
-            print(f"\n✗ Error during migration: {str(e)}")
+            print(f"\n[ERROR] Error during migration: {str(e)}")
             db.session.rollback()
             raise
 
