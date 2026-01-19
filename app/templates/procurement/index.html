@@ -149,7 +149,7 @@
                 <tr class="border-b border-gray-200">
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Qty</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Total Qty</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Supplier</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
@@ -160,11 +160,22 @@
                 {% for procurement in procurements %}
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
                     <td class="py-3 px-4"><strong class="text-gray-800">#{{ procurement.id }}</strong></td>
-                    <td class="py-3 px-4 text-gray-600">{{ procurement.item.name if procurement.item else 'N/A' }}</td>
+                    <td class="py-3 px-4 text-gray-600">
+                        {% if procurement.items and procurement.items|length > 0 %}
+                            {% for item in procurement.items %}
+                                <div class="text-sm">
+                                    <span class="font-semibold">{{ item.item.name if item.item else 'Item Baru' }}</span>
+                                    <span class="text-xs text-gray-500">({{ item.quantity }} unit)</span>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-gray-400">N/A</span>
+                        {% endif %}
+                    </td>
                     <td class="py-3 px-4 text-gray-800 font-semibold">
-                        {{ procurement.quantity }}
-                        {% if procurement.actual_quantity %}
-                        <span class="text-xs text-green-600">(Received: {{ procurement.actual_quantity }} {{ procurement.unit_type or '' }})</span>
+                        {{ procurement.total_quantity }}
+                        {% if procurement.total_received > 0 %}
+                        <span class="text-xs text-green-600">(Received: {{ procurement.total_received }}/{{ procurement.total_quantity }})</span>
                         {% endif %}
                     </td>
                     <td class="py-3 px-4 text-gray-600 text-sm">{{ procurement.supplier.name if procurement.supplier else '-' }}</td>

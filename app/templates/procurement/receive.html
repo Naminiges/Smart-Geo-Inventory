@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}Penerimaan Barang #{{ procurement.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Penerimaan Barang{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('procurement.detail', id=procurement.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail
+    </a>
+</div>
+
+<!-- Procurement Summary -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center">
+            <div class="bg-green-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+            </div>
+            <div class="flex-1">
+                <h3 class="text-xl font-semibold text-gray-800 mb-1">Pengadaan #{{ procurement.id }} - Disetujui</h3>
+                <p class="text-sm text-gray-500">Step 3: Input detail barang yang diterima dari supplier</p>
+            </div>
+            <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full font-semibold">
+                <i class="fas fa-check mr-1"></i> {{ 'Received' if procurement.status == 'received' else 'Approved' }}
+            </span>
+        </div>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Total Barang Diminta</h4>
+                <p class="text-2xl font-bold text-gray-800">{{ procurement.total_quantity }} unit</p>
+                <p class="text-xs text-gray-500 mt-1">{{ procurement.items|length }} jenis barang</p>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                <h4 class="text-sm font-semibold text-blue-600 mb-2">Sudah Diterima</h4>
+                <p class="text-2xl font-bold text-blue-600">{{ procurement.total_received }} unit</p>
+                {% if procurement.total_received < procurement.total_quantity %}
+                <p class="text-xs text-blue-600 mt-1">({{ (procurement.total_received / procurement.total_quantity * 100)|int }}% lengkap)</p>
+                {% endif %}
+            </div>
+            <div class="bg-amber-50 rounded-lg p-4 border-2 border-amber-200">
+                <h4 class="text-sm font-semibold text-amber-600 mb-2">Sisa Barang</h4>
+                <p class="text-2xl font-bold text-amber-600">{{ procurement.remaining_quantity }} unit</p>
+                {% if procurement.remaining_quantity > 0 %}
+                <p class="text-xs text-amber-600 mt-1">Masih perlu diterima</p>
+                {% else %}
+                <p class="text-xs text-green-600 mt-1">Lengkap!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="mt-4">
+            <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">Progress Penerimaan</span>
+                <span class="font-semibold {{ 'text-green-600' if procurement.is_fully_received else 'text-amber-600' }}">
+                    {{ procurement.total_received }} / {{ procurement.total_quantity }} unit
+                </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="h-3 rounded-full transition-all duration-300 {{ 'bg-green-500' if procurement.is_fully_received else 'bg-amber-500' }}"
+                     style="width: {{ (procurement.total_received / procurement.total_quantity * 100)|int if procurement.total_quantity > 0 else 0 }}%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Goods Receipt Form -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center">
+            <div class="bg-blue-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-file-invoice text-blue-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">Form Penerimaan Barang</h3>
+                <p class="text-sm text-gray-500">Record tanda terima dan detail barang yang diterima</p>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="p-6">
+        {{ form.hidden_tag() }}
+
+        <!-- Receipt Number -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-receipt mr-1 text-red-600"></i>
+                Nomor Tanda Terima / Invoice
+            </label>
+            {% if procurement.receipt_number %}
+            <!-- Invoice already exists - read-only -->
+            <div class="w-full px-4 py-3 bg-green-50 border border-green-300 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-lock mr-2 text-green-600"></i>
+                    <span class="font-mono font-semibold text-green-900">{{ procurement.receipt_number }}</span>
+                    <span class="ml-3 px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-semibold">
+                        Invoice Terdaftar
+                    </span>
+                </div>
+            </div>
+            {{ form.receipt_number(type='hidden', value=procurement.receipt_number) }}
+            <p class="mt-1 text-xs text-green-600">
+                <i class="fas fa-info-circle mr-1"></i>
+                Invoice sudah terdaftar. Semua penerimaan menggunakan nomor invoice yang sama.
+            </p>
+            {% else %}
+            <!-- First time receiving - input invoice -->
+            {{ form.receipt_number(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all", placeholder="Contoh: INV-2024-001 atau REC-2024-001") }}
+            {% if form.receipt_number.errors %}
+                {% for error in form.receipt_number.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">
+                <i class="fas fa-exclamation-triangle mr-1 text-amber-600"></i>
+                <strong>Perhatian:</strong> Nomor invoice akan digunakan untuk semua penerimaan barang ini. Pastikan benar.
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Items to Receive -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-boxes mr-1 text-purple-600"></i>
+                Detail Barang yang Diterima
+            </label>
+
+            <div class="space-y-4">
+                {% for proc_item in procurement.items %}
+                <div class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h5 class="text-base font-semibold text-gray-800 mb-1">
+                                {{ proc_item.item.name if proc_item.item else 'Item Baru' }}
+                            </h5>
+                            <div class="flex items-center space-x-3 text-sm text-gray-600">
+                                <span>Kode: <span class="font-mono">{{ proc_item.item.item_code if proc_item.item else 'N/A' }}</span></span>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded font-semibold">
+                                    Diminta: {{ proc_item.quantity }} unit
+                                </span>
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded font-semibold">
+                                    Diterima: {{ proc_item.total_received }} unit
+                                </span>
+                                <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded font-semibold">
+                                    Sisa: {{ proc_item.remaining_quantity }} unit
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Quantity Received for this item -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                Jumlah Diterima (Kali Ini)
+                            </label>
+                            <input type="number"
+                                   name="quantity_{{ proc_item.id }}"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
+                                   placeholder="0"
+                                   min="0"
+                                   max="{{ proc_item.remaining_quantity }}"
+                                   value="{% if proc_item.remaining_quantity > 0 %}{{ proc_item.remaining_quantity }}{% endif %}"
+                                   {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}>
+                            {% if proc_item.remaining_quantity == 0 %}
+                            <p class="mt-1 text-xs text-green-600">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Barang ini sudah lengkap
+                            </p>
+                            {% endif %}
+                        </div>
+
+                        <!-- Serial Numbers for this item -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                Serial Numbers (Opsional)
+                            </label>
+                            <textarea name="serial_numbers_{{ proc_item.id }}"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm"
+                                      rows="3"
+                                      placeholder="Satu serial number per baris"
+                                      {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}></textarea>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="mt-3 p-3 bg-purple-50 rounded-lg">
+                <p class="text-xs text-purple-800">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Petunjuk:</strong> Isi jumlah barang yang diterima untuk setiap item. Serial numbers bersifat opsional.
+                </p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('procurement.detail', id=procurement.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Kembali
+            </a>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i class="fas fa-save mr-2"></i>
+                Konfirmasi Penerimaan
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Info Card -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="font-semibold text-blue-900 mb-2">Panduan Penerimaan Barang</h4>
+            <ul class="text-sm text-blue-800 space-y-1">
+                <li><i class="fas fa-check-circle mr-2"></i>Pastikan nomor tanda terima sesuai dengan dokumen dari supplier</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Cek kembali jumlah barang yang diterima untuk setiap item</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Serial numbers bersifat opsional, tapi sangat disarankan untuk tracking</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Anda bisa menerima barang sebagian (partial receiving)</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Setelah semua barang lengkap, pengadaan siap diselesaikan</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
