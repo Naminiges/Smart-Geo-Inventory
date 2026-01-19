@@ -28,16 +28,18 @@
         <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-                <input type="text" name="search" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="Cari nama supplier, kontak, atau email"
-                       value="{{ request.args.get('search', '') }}">
+                <input type="text" name="search" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500" placeholder="Cari nama supplier, kontak, email, atau telepon"
+                       value="{{ search }}">
             </div>
             <div class="flex gap-2 items-end">
                 <button type="submit" class="flex-1 bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg transition-colors">
                     <i class="fas fa-search mr-1"></i> Cari
                 </button>
+                {% if search %}
                 <a href="{{ url_for('suppliers.index') }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
                     <i class="fas fa-times"></i>
                 </a>
+                {% endif %}
             </div>
         </form>
     </div>
@@ -51,7 +53,15 @@
                 <i class="fas fa-building mr-2 text-sky-500"></i>
                 <h5 class="font-semibold mb-0">Daftar Supplier</h5>
             </div>
-            <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">Menampilkan {{ suppliers|length }} supplier</span>
+            <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
+                {% if pagination.total > 0 %}
+                    {% set end_num = (pagination.page * pagination.per_page) %}
+                    {% set show_end = end_num if end_num < pagination.total else pagination.total %}
+                    Menampilkan {{ pagination.page * pagination.per_page - pagination.per_page + 1 }} - {{ show_end }} dari {{ pagination.total }} supplier
+                {% else %}
+                    Tidak ada data
+                {% endif %}
+            </span>
         </div>
         <div class="p-6 overflow-x-auto">
             <table class="w-full">
@@ -98,8 +108,8 @@
                         <tr>
                             <td colspan="6" class="text-center text-gray-500 py-8">
                                 <i class="fas fa-inbox text-4xl mb-2 block"></i>
-                                <strong>Belum ada data supplier</strong>
-                                <p class="mb-0">Mulai dengan menambahkan supplier baru</p>
+                                <strong>{% if search %}Tidak ditemukan supplier yang cocok{% else %}Belum ada data supplier{% endif %}</strong>
+                                <p class="mb-0">{% if search %}Coba kata kunci lain{% else %}Mulai dengan menambahkan supplier baru{% endif %}</p>
                             </td>
                         </tr>
                     {% endif %}
@@ -108,45 +118,71 @@
         </div>
 
         <!-- Pagination -->
-        {% if pagination and pagination.pages > 1 %}
+        {% if pagination.pages > 1 %}
         <nav class="mt-4 px-6 pb-6">
-            <ul class="flex justify-center gap-1">
-                {% if pagination.has_prev %}
-                <li>
-                    <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=pagination.prev_num, search=request.args.get('search')) }}">
-                        <i class="fas fa-chevron-left"></i> Prev
-                    </a>
-                </li>
-                {% endif %}
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <!-- Info Halaman -->
+                <div class="text-sm text-gray-600">
+                    Halaman <strong>{{ pagination.page }}</strong> dari <strong>{{ pagination.pages }}</strong>
+                </div>
 
-                {% for page_num in pagination.iter_pages() %}
-                    {% if page_num %}
+                <!-- Pagination Buttons -->
+                <ul class="flex items-center gap-1">
+                    <!-- First & Prev -->
+                    {% if pagination.page > 1 %}
+                    <li>
+                        <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=1, search=search) }}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=pagination.prev_num, search=search) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    <!-- Page Numbers - Show max 5 pages centered on current page -->
+                    {% set start_page = [1, pagination.page - 2]|max %}
+                    {% set end_page = [pagination.pages, pagination.page + 2]|min %}
+
+                    {% if start_page > 1 %}
+                    <li><span class="px-2 text-gray-500">...</span></li>
+                    {% endif %}
+
+                    {% for page_num in range(start_page, end_page + 1) %}
                         {% if page_num == pagination.page %}
                         <li>
-                            <span class="px-3 py-2 bg-sky-500 text-white rounded-lg">{{ page_num }}</span>
+                            <span class="px-3 py-2 bg-sky-500 text-white rounded-lg font-medium">{{ page_num }}</span>
                         </li>
                         {% else %}
                         <li>
-                            <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=page_num, search=request.args.get('search')) }}">
+                            <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=page_num, search=search) }}">
                                 {{ page_num }}
                             </a>
                         </li>
                         {% endif %}
-                    {% else %}
+                    {% endfor %}
+
+                    {% if end_page < pagination.pages %}
+                    <li><span class="px-2 text-gray-500">...</span></li>
+                    {% endif %}
+
+                    <!-- Next & Last -->
+                    {% if pagination.has_next %}
                     <li>
-                        <span class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700">...</span>
+                        <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=pagination.next_num, search=search) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li>
+                        <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=pagination.pages, search=search) }}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
                     </li>
                     {% endif %}
-                {% endfor %}
-
-                {% if pagination.has_next %}
-                <li>
-                    <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors" href="{{ url_for('suppliers.index', page=pagination.next_num, search=request.args.get('search')) }}">
-                        Next <i class="fas fa-chevron-right"></i>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
+                </ul>
+            </div>
         </nav>
         {% endif %}
     </div>
