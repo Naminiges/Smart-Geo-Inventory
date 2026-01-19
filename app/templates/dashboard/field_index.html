@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Dashboard Field Staff{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl shadow-lg p-6 text-white">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold mb-2">Selamat Datang, {{ user.name }}!</h1>
+                <p class="mb-0 text-orange-100">
+                    <i class="fas fa-user mr-2"></i>
+                    Field Staff Dashboard
+                </p>
+            </div>
+            <div class="text-right">
+                <i class="fas fa-user-shield text-6xl opacity-30"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+    <!-- Total Distributions -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-600">
+        <div class="flex items-center">
+            <div class="bg-orange-100 rounded-full p-3">
+                <i class="fas fa-exchange-alt text-orange-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Total Distribusi</p>
+                <p class="text-2xl font-bold text-gray-800">{{ total_distributions }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Distributions -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-600">
+        <div class="flex items-center">
+            <div class="bg-amber-100 rounded-full p-3">
+                <i class="fas fa-clock text-amber-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Pending</p>
+                <p class="text-2xl font-bold text-gray-800">{{ pending_count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Distributions -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
+        <div class="flex items-center">
+            <div class="bg-green-100 rounded-full p-3">
+                <i class="fas fa-check text-green-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Selesai</p>
+                <p class="text-2xl font-bold text-gray-800">{{ completed_count }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- In Progress -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
+        <div class="flex items-center">
+            <div class="bg-blue-100 rounded-full p-3">
+                <i class="fas fa-truck text-blue-600 text-xl"></i>
+            </div>
+            <div class="ml-4">
+                <p class="text-sm text-gray-500">Dalam Proses</p>
+                <p class="text-2xl font-bold text-gray-800">{{ in_transit_count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="mb-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">Aksi Cepat</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="{{ url_for('installations.index') }}" class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow border-l-4 border-blue-500">
+            <div class="flex items-center">
+                <div class="bg-blue-100 rounded-full p-3">
+                    <i class="fas fa-desktop text-blue-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="font-semibold text-gray-800">Lihat Instalasi</p>
+                    <p class="text-sm text-gray-500">Kelola instalasi unit</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('distributions.index') }}" class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="bg-green-100 rounded-full p-3">
+                    <i class="fas fa-exchange-alt text-green-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="font-semibold text-gray-800">Lihat Distribusi</p>
+                    <p class="text-sm text-gray-500">Kelola distribusi barang</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('items.index') }}" class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow border-l-4 border-purple-500">
+            <div class="flex items-center">
+                <div class="bg-purple-100 rounded-full p-3">
+                    <i class="fas fa-box text-purple-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="font-semibold text-gray-800">Lihat Barang</p>
+                    <p class="text-sm text-gray-500">Daftar barang tersedia</p>
+                </div>
+            </div>
+        </a>
+
+        <a href="{{ url_for('map.index') }}" class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow border-l-4 border-amber-500">
+            <div class="flex items-center">
+                <div class="bg-amber-100 rounded-full p-3">
+                    <i class="fas fa-map-marked-alt text-amber-600 text-xl"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="font-semibold text-gray-800">Peta GIS</p>
+                    <p class="text-sm text-gray-500">Lihat lokasi unit</p>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Distributions -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-800">Distribusi Terakhir</h2>
+            <a href="{{ url_for('distributions.index') }}" class="text-blue-600 hover:text-blue-700 font-semibold">
+                Lihat Semua <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+    <div class="p-6">
+        {% if distributions and distributions|length > 0 %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Item</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dist in distributions[:10] %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-4">
+                            <strong class="text-gray-800">#{{ dist.id }}</strong>
+                        </td>
+                        <td class="py-3 px-4 text-gray-600">
+                            {{ dist.unit.name if dist.unit else '-' }}
+                        </td>
+                        <td class="py-3 px-4 text-gray-600">
+                            {{ dist.item.name if dist.item else '-' }}
+                        </td>
+                        <td class="py-3 px-4">
+                            {% if dist.status == 'pending' %}
+                            <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-clock mr-1"></i> Pending
+                            </span>
+                            {% elif dist.status == 'in_transit' %}
+                            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-truck mr-1"></i> In Transit
+                            </span>
+                            {% elif dist.status == 'completed' %}
+                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-check mr-1"></i> Completed
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
+                                {{ dist.status|title }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 px-4 text-gray-600 text-sm">
+                            {{ dist.created_at.strftime('%d/%m/%Y') if dist.created_at else '-' }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-gray-500 py-12">
+            <i class="fas fa-exchange-alt text-6xl mb-4 opacity-30"></i>
+            <p class="text-lg mb-0">Belum ada data distribusi</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

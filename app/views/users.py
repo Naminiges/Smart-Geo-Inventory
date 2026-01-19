@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Warehouse, UserWarehouse
+from app.models import User, Warehouse, UserWarehouse, Unit, UserUnit
 from app.forms.user_forms import UserForm, UserWarehouseAssignmentForm
 from app.utils.decorators import role_required
 from sqlalchemy import or_
@@ -103,10 +103,16 @@ def detail(id):
     warehouse_assignments = user.user_warehouses.all()
     warehouses = [uw.warehouse for uw in warehouse_assignments]
 
+    # Get unit assignments (for unit_staff)
+    unit_assignments = user.user_units.all() if user.role == 'unit_staff' else []
+    units = [uu.unit for uu in unit_assignments]
+
     return render_template('admin/users/detail.html',
                          user=user,
                          warehouse_assignments=warehouse_assignments,
-                         warehouses=warehouses)
+                         warehouses=warehouses,
+                         unit_assignments=unit_assignments,
+                         units=units)
 
 
 @bp.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -213,6 +219,9 @@ def delete(id):
         # Delete warehouse assignments
         UserWarehouse.query.filter_by(user_id=id).delete()
 
+        # Delete unit assignments
+        UserUnit.query.filter_by(user_id=id).delete()
+
         # Delete user
         user.delete()
         flash(f'User {user.name} berhasil dihapus!', 'success')
@@ -220,3 +229,52 @@ def delete(id):
         flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     return redirect(url_for('users.index'))
+
+
+@bp.route('/<int:id>/assign-units', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def assign_units(id):
+    """Assign unit to unit staff"""
+    user = User.query.get_or_404(id)
+
+    # Only unit_staff can be assigned to units
+    if user.role != 'unit_staff':
+        flash('Hanya user dengan role unit_staff yang bisa diassign ke unit!', 'danger')
+        return redirect(url_for('users.detail', id=id))
+
+    if request.method == 'POST':
+        try:
+            # Get selected units
+            selected_unit_ids = request.form.getlist('unit_ids')
+
+            # Remove old assignments
+            UserUnit.query.filter_by(user_id=id).delete()
+
+            # Add new assignments
+            for unit_id in selected_unit_ids:
+                if unit_id:  # Make sure unit_id is not empty
+                    user_unit = UserUnit(
+                        user_id=id,
+                        unit_id=unit_id,
+                        assigned_by=current_user.id
+                    )
+                    db.session.add(user_unit)
+
+            db.session.commit()
+            flash(f'Unit assignment untuk {user.name} berhasil diupdate!', 'success')
+            return redirect(url_for('users.detail', id=id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    # GET request - show form
+    units = Unit.query.all()
+    current_assignments = [uu.unit_id for uu in user.user_units.all()]
+
+    return render_template('admin/users/assign_units.html',
+                         user=user,
+                         units=units,
+                         current_assignments=current_assignments)
+

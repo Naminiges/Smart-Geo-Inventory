@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Verifikasi Permohonan #{{ asset_request.id }} - {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Verifikasi Permohonan Aset #{{ asset_request.id }}</h2>
+                <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Detail
+                </a>
+            </div>
+
+            <!-- Request Summary -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Ringkasan Permohonan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Unit:</strong> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+                            <p><strong>Tanggal Permohonan:</strong> {{ asset_request.request_date.strftime('%d/%m/%Y') if asset_request.request_date else '-' }}</p>
+                            <p><strong>Diajukan oleh:</strong> {{ asset_request.requester.full_name if asset_request.requester else '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Jumlah Item:</strong> {{ asset_request.items.count() }}</p>
+                            <p><strong>Status Saat Ini:</strong>
+                                <span class="badge bg-warning">Pending</span>
+                            </p>
+                        </div>
+                    </div>
+
+                    {% if asset_request.request_notes %}
+                    <div class="mt-3">
+                        <strong>Alasan Permohonan:</strong>
+                        <p>{{ asset_request.request_notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Requested Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Daftar Aset yang Dimohonkan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Aset</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah</th>
+                                    <th>Lokasi (Ruangan)</th>
+                                    <th>Catatan Ruangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in asset_request.items %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td>
+                                        <strong>{{ item.item.name if item.item else '-' }}</strong>
+                                        {% if item.item and item.item.description %}
+                                        <br><small class="text-muted">{{ item.item.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ item.item.category.name if item.item and item.item.category else '-' }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ item.quantity }}</span>
+                                    </td>
+                                    <td>{{ item.unit_detail.room_name if item.unit_detail else '-' }}</td>
+                                    <td>{{ item.room_notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Form -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Form Verifikasi</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('asset_requests.verify', id=asset_request.id) }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            <label for="{{ form.notes.id }}" class="form-label">
+                                {{ form.notes.label.text }}
+                            </label>
+                            {{ form.notes(class="form-control", rows=4, placeholder="Tambahkan catatan verifikasi jika diperlukan...") }}
+                            <small class="form-text text-muted">Catatan ini akan terlihat oleh unit staff.</small>
+                            {% if form.notes.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.notes.errors %}
+                                <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Information Alert -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Informasi:</strong> Setelah Anda menyetujui permohonan ini, permohonan akan otomatis muncul di daftar distribusi untuk warehouse staff agar barang dapat diproses dan dikirim ke unit yang bersangkutan.
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            {{ form.submit(class="btn btn-success btn-lg") }}
+                            <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> Batal
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">Aksi Cepat</h6>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                            <i class="fas fa-times"></i> Tolak Permohonan
+                        </button>
+                        <a href="{{ url_for('asset_requests.index', status='pending') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list"></i> Lihat Permohonan Lain
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('asset_requests.reject', id=asset_request.id) }}">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Tolak Permohonan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Perhatian:</strong> Permohonan yang ditolak tidak dapat diproses lebih lanjut.
+                    </div>
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">Alasan Penolakan <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" required placeholder="Jelaskan mengapa permohonan ini ditolak..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger">Tolak Permohonan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

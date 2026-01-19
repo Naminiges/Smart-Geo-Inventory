@@ -33,7 +33,7 @@ def create_app(config_name='default'):
     login_manager.login_message_category = 'warning'
 
     # Register blueprints
-    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories
+    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units
     from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement
 
     app.register_blueprint(auth.bp)
@@ -46,6 +46,8 @@ def create_app(config_name='default'):
     app.register_blueprint(procurement.bp)
     app.register_blueprint(users.bp)
     app.register_blueprint(categories.bp)
+    app.register_blueprint(asset_requests.bp)
+    app.register_blueprint(units.bp)
 
     # Register API blueprints
     app.register_blueprint(api_auth.bp, url_prefix='/api/auth')

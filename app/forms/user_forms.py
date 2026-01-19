@@ -12,7 +12,8 @@ class UserForm(FlaskForm):
     role = SelectField('Role', choices=[
         ('admin', 'Administrator'),
         ('warehouse_staff', 'Warehouse Staff'),
-        ('field_staff', 'Field Staff')
+        ('field_staff', 'Field Staff'),
+        ('unit_staff', 'Unit Staff')
     ], validators=[DataRequired()])
 
 
