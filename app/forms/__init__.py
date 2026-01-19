@@ -5,7 +5,6 @@ from app.forms.supplier_forms import SupplierForm
 from app.forms.installation_forms import DistributionForm, InstallationForm
 from app.forms.warehouse_forms import WarehouseForm, UnitForm, UnitDetailForm
 from app.forms.procurement_forms import (
-    ProcurementForm,
     ProcurementRequestForm,
     ProcurementApprovalForm,
     GoodsReceiptForm,
@@ -20,7 +19,6 @@ __all__ = [
     'SupplierForm',
     'DistributionForm', 'InstallationForm',
     'WarehouseForm', 'UnitForm', 'UnitDetailForm',
-    'ProcurementForm',
     'ProcurementRequestForm',
     'ProcurementApprovalForm',
     'GoodsReceiptForm',

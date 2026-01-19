@@ -5,7 +5,7 @@ from app.models.inventory import Stock, StockTransaction
 from app.models.user import User, UserWarehouse
 from app.models.distribution import Distribution
 from app.models.logging import ActivityLog, AssetMovementLog
-from app.models.procurement import Procurement
+from app.models.procurement import Procurement, ProcurementItem
 
 __all__ = [
     'BaseModel',
@@ -15,5 +15,5 @@ __all__ = [
     'User', 'UserWarehouse',
     'Distribution',
     'ActivityLog', 'AssetMovementLog',
-    'Procurement'
+    'Procurement', 'ProcurementItem'
 ]

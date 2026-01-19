@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models import Procurement, Supplier, Item, User, Warehouse, Category
+from app.models.procurement import ProcurementItem
 from app.forms import (
     ProcurementRequestForm,
     ProcurementApprovalForm,
@@ -50,75 +51,100 @@ def index():
 @login_required
 @role_required('warehouse_staff')
 def create_request():
-    """Step 1-2: Warehouse staff creates procurement request"""
+    """Step 1-2: Warehouse staff creates procurement request with multiple items"""
     form = ProcurementRequestForm()
 
-    # Populate item choices with "Lainnya" option
-    form.item_id.choices = [(0, '-- Pilih dari daftar barang --')] + \
-                          [(i.id, f"{i.item_code} - {i.name}") for i in Item.query.all()] + \
-                          [(-1, 'Lainnya (Barang Baru)')]
-
-    # Populate category choices
-    form.item_category_id.choices = [(0, '-- Pilih Kategori --')] + \
-                                   [(c.id, c.name) for c in Category.query.all()]
-
-    if form.validate_on_submit():
+    if request.method == 'POST':
         try:
-            # Check if user selected "Lainnya"
-            if form.item_id.data == -1:
-                # Barang baru - langsung buat item baru di tabel items
-                if not form.item_name.data:
-                    flash('Nama barang baru harus diisi!', 'danger')
-                    return render_template('procurement/request.html', form=form)
+            # Get items data from form
+            items_data = request.form.getlist('items')
+            request_notes = form.request_notes.data
 
-                if not form.item_category_id.data or form.item_category_id.data == 0:
-                    flash('Kategori barang harus dipilih!', 'danger')
-                    return render_template('procurement/request.html', form=form)
+            if not items_data or len(items_data) == 0:
+                flash('Minimal harus ada satu barang yang diminta!', 'danger')
+                return render_template('procurement/request.html', form=form)
 
-                # Buat item baru langsung di tabel items
-                new_item = Item(
-                    name=form.item_name.data,
-                    item_code=f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                    category_id=form.item_category_id.data,
-                    unit=form.item_unit.data or 'pcs'
+            # Validate and process items
+            valid_items = []
+            for item_json in items_data:
+                import json
+                item_data = json.loads(item_json)
+
+                # Check if user selected existing item or new item
+                if item_data.get('item_id') == -1:
+                    # Barang baru - langsung buat item baru di tabel items
+                    if not item_data.get('item_name'):
+                        flash('Nama barang baru harus diisi!', 'danger')
+                        return render_template('procurement/request.html', form=form)
+
+                    if not item_data.get('item_category_id') or item_data.get('item_category_id') == 0:
+                        flash('Kategori barang harus dipilih!', 'danger')
+                        return render_template('procurement/request.html', form=form)
+
+                    # Buat item baru langsung di tabel items
+                    new_item = Item(
+                        name=item_data.get('item_name'),
+                        item_code=f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}-{len(valid_items)}",
+                        category_id=item_data.get('item_category_id'),
+                        unit=item_data.get('item_unit') or 'pcs'
+                    )
+                    new_item.save()
+
+                    # Add to valid items with the new item_id
+                    valid_items.append({
+                        'item_id': new_item.id,
+                        'quantity': item_data.get('quantity'),
+                        'is_new_item': False  # Already created
+                    })
+                else:
+                    # Barang existing
+                    if not item_data.get('item_id') or item_data.get('item_id') == 0:
+                        flash('Harap pilih barang dari daftar atau pilih "Lainnya"', 'danger')
+                        return render_template('procurement/request.html', form=form)
+
+                    valid_items.append({
+                        'item_id': item_data.get('item_id'),
+                        'quantity': item_data.get('quantity'),
+                        'is_new_item': False
+                    })
+
+            if not valid_items:
+                flash('Tidak ada barang valid yang diminta!', 'danger')
+                return render_template('procurement/request.html', form=form)
+
+            # Create procurement
+            procurement = Procurement(
+                request_notes=request_notes,
+                status='pending',
+                requested_by=current_user.id,
+                request_date=datetime.now()
+            )
+            procurement.save()
+
+            # Create procurement items
+            for item_data in valid_items:
+                procurement_item = ProcurementItem(
+                    procurement_id=procurement.id,
+                    item_id=item_data['item_id'],
+                    quantity=item_data['quantity']
                 )
-                new_item.save()
+                procurement_item.save()
 
-                # Buat procurement dengan item_id yang baru dibuat
-                procurement = Procurement(
-                    item_id=new_item.id,  # Pakai item yang baru dibuat
-                    quantity=form.quantity.data,
-                    request_notes=form.request_notes.data,
-                    status='pending',
-                    requested_by=current_user.id,
-                    request_date=datetime.now()
-                )
-                procurement.save()
-
-                flash(f'Permohonan pengadaan berhasil dibuat! Barang baru "{new_item.name}" telah ditambahkan ke katalog. Menunggu persetujuan admin.', 'success')
-            else:
-                # Barang existing
-                if not form.item_id.data or form.item_id.data == 0:
-                    flash('Harap pilih barang dari daftar atau pilih "Lainnya"', 'danger')
-                    return render_template('procurement/request.html', form=form)
-
-                procurement = Procurement(
-                    item_id=form.item_id.data,
-                    quantity=form.quantity.data,
-                    request_notes=form.request_notes.data,
-                    status='pending',
-                    requested_by=current_user.id,
-                    request_date=datetime.now()
-                )
-                procurement.save()
-
-                flash('Permohonan pengadaan berhasil dibuat! Menunggu persetujuan admin.', 'success')
+            item_count = len(valid_items)
+            flash(f'Permohonan pengadaan berhasil dibuat dengan {item_count} barang! Menunggu persetujuan admin.', 'success')
 
             return redirect(url_for('procurement.index'))
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('procurement/request.html', form=form)
+    # GET request - prepare data for template
+    items = Item.query.all()
+    categories = Category.query.all()
+
+    return render_template('procurement/request.html',
+                         form=form,
+                         items=items,
+                         categories=categories)
 
 
 @bp.route('/<int:id>')
@@ -152,7 +178,6 @@ def approve(id):
             )
 
             if success:
-                procurement.unit_price = form.unit_price.data
                 if form.notes.data:
                     procurement.notes = form.notes.data
                 procurement.save()
@@ -191,7 +216,7 @@ def reject(id):
 @login_required
 @role_required('warehouse_staff')
 def receive_goods(id):
-    """Step 4-5: Record goods receipt with single invoice and multiple deliveries"""
+    """Step 4-5: Record goods receipt with single invoice and multiple deliveries for multiple items"""
     procurement = Procurement.query.get_or_404(id)
 
     if procurement.status != 'approved' and procurement.status != 'received':
@@ -204,33 +229,45 @@ def receive_goods(id):
     if procurement.receipt_number and not form.receipt_number.data:
         form.receipt_number.data = procurement.receipt_number
 
-    # Set default actual_quantity to remaining quantity for partial receive
-    if not form.actual_quantity.data:
-        form.actual_quantity.data = procurement.remaining_quantity
-
     if form.validate_on_submit():
         try:
-            # Parse serial numbers from textarea
-            serial_numbers = []
-            if form.serial_numbers.data:
-                serial_numbers = [sn.strip() for sn in form.serial_numbers.data.split('\n') if sn.strip()]
+            # Prepare items data from form
+            items_data = []
+            for procurement_item in procurement.items:
+                quantity_key = f'quantity_{procurement_item.id}'
+                serials_key = f'serial_numbers_{procurement_item.id}'
 
-            # Validate serial numbers count
-            quantity_received = form.actual_quantity.data
-            if len(serial_numbers) > 0 and len(serial_numbers) != quantity_received:
-                flash(f'Jumlah serial number ({len(serial_numbers)}) harus sama dengan jumlah barang ({quantity_received})!', 'warning')
-                return render_template('procurement/receive.html', procurement=procurement, form=form)
+                quantity_received = request.form.get(quantity_key, type=int)
+                serial_numbers_str = request.form.get(serials_key, '')
 
-            # Validate: tidak boleh melebihi quantity yang diminta
-            if procurement.total_received + quantity_received > procurement.quantity:
-                flash(f'Total barang yang diterima ({procurement.total_received + quantity_received}) tidak boleh melebihi jumlah yang diminta ({procurement.quantity})!', 'warning')
+                # Skip if no quantity provided
+                if not quantity_received or quantity_received <= 0:
+                    continue
+
+                # Parse serial numbers
+                serial_numbers = []
+                if serial_numbers_str:
+                    serial_numbers = [sn.strip() for sn in serial_numbers_str.split('\n') if sn.strip()]
+
+                # Validate quantity matches serial numbers count
+                if serial_numbers and len(serial_numbers) != quantity_received:
+                    flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) harus sama dengan jumlah barang ({quantity_received})!', 'warning')
+                    return render_template('procurement/receive.html', procurement=procurement, form=form)
+
+                items_data.append({
+                    'procurement_item_id': procurement_item.id,
+                    'quantity_received': quantity_received,
+                    'serial_numbers': serial_numbers
+                })
+
+            if not items_data:
+                flash('Minimal harus ada satu barang yang diterima!', 'warning')
                 return render_template('procurement/receive.html', procurement=procurement, form=form)
 
             success, message = procurement.receive_goods(
                 user_id=current_user.id,
                 receipt_number=form.receipt_number.data,
-                quantity_received=quantity_received,
-                serial_numbers=serial_numbers if serial_numbers else None
+                items_data=items_data
             )
 
             if success:
@@ -253,25 +290,33 @@ def receive_goods(id):
 @role_required('warehouse_staff')
 def complete(id):
     """Step 6: Complete procurement and add to stock - only if fully received"""
+    from app.models.user import UserWarehouse
+
     procurement = Procurement.query.get_or_404(id)
 
     # Validasi: harus status received dan semua barang sudah diterima
     if not procurement.is_fully_received:
-        flash(f'Pengadaan belum bisa diselesaikan. Barang yang diterima baru {procurement.total_received}/{procurement.quantity} unit. Masih kurang {procurement.remaining_quantity} unit.', 'warning')
+        flash(f'Pengadaan belum bisa diselesaikan. Barang yang diterima baru {procurement.total_received}/{procurement.total_quantity} unit. Masih kurang {procurement.remaining_quantity} unit.', 'warning')
         return redirect(url_for('procurement.detail', id=id))
 
     if procurement.status not in ['received']:
         flash('Hanya pengadaan yang sudah menerima barang dan lengkap yang bisa diselesaikan.', 'warning')
         return redirect(url_for('procurement.detail', id=id))
 
-    form = ProcurementCompleteForm()
-    form.warehouse_id.choices = [(w.id, w.name) for w in Warehouse.query.all()]
+    # Get warehouse dari user yang login (warehouse staff)
+    user_warehouse = UserWarehouse.query.filter_by(user_id=current_user.id).first()
 
-    if form.validate_on_submit():
+    if not user_warehouse:
+        flash('Anda belum terassign ke warehouse manapun. Hubungi admin.', 'danger')
+        return redirect(url_for('procurement.detail', id=id))
+
+    warehouse_id = user_warehouse.warehouse_id
+
+    if request.method == 'POST':
         try:
             success, message = procurement.complete(
                 user_id=current_user.id,
-                warehouse_id=form.warehouse_id.data
+                warehouse_id=warehouse_id
             )
 
             if success:
@@ -282,7 +327,9 @@ def complete(id):
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('procurement/complete.html', procurement=procurement, form=form)
+    return render_template('procurement/complete.html',
+                         procurement=procurement,
+                         warehouse=user_warehouse.warehouse)
 
 
 @bp.route('/<int:id>/delete', methods=['POST'])

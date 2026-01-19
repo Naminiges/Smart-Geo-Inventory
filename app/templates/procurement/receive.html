@@ -30,21 +30,17 @@
         </div>
     </div>
     <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Barang</h4>
-                <p class="text-base font-semibold text-gray-800">{{ procurement.item.name if procurement.item else 'N/A' }}</p>
-                <p class="text-sm text-gray-600">Kode: <span class="font-mono">{{ procurement.item.item_code if procurement.item else 'N/A' }}</span></p>
-            </div>
-            <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Jumlah Diminta</h4>
-                <p class="text-2xl font-bold text-gray-800">{{ procurement.quantity }} unit</p>
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Total Barang Diminta</h4>
+                <p class="text-2xl font-bold text-gray-800">{{ procurement.total_quantity }} unit</p>
+                <p class="text-xs text-gray-500 mt-1">{{ procurement.items|length }} jenis barang</p>
             </div>
             <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
                 <h4 class="text-sm font-semibold text-blue-600 mb-2">Sudah Diterima</h4>
                 <p class="text-2xl font-bold text-blue-600">{{ procurement.total_received }} unit</p>
-                {% if procurement.total_received < procurement.quantity %}
-                <p class="text-xs text-blue-600 mt-1">({{ (procurement.total_received / procurement.quantity * 100)|int }}% lengkap)</p>
+                {% if procurement.total_received < procurement.total_quantity %}
+                <p class="text-xs text-blue-600 mt-1">({{ (procurement.total_received / procurement.total_quantity * 100)|int }}% lengkap)</p>
                 {% endif %}
             </div>
             <div class="bg-amber-50 rounded-lg p-4 border-2 border-amber-200">
@@ -58,45 +54,17 @@
             </div>
         </div>
 
-        <!-- Receipt History (if any) -->
-        {% if procurement.receipt_history %}
-        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 class="text-sm font-semibold text-gray-700 mb-3">
-                <i class="fas fa-history mr-1"></i>
-                Riwayat Penerimaan
-            </h4>
-            <div class="space-y-2">
-                {% for receipt in procurement.get_receipt_history() %}
-                <div class="flex items-center justify-between p-2 bg-white rounded border">
-                    <div>
-                        <span class="font-semibold text-gray-800">{{ receipt.receipt_number }}</span>
-                        <span class="text-sm text-gray-600 ml-2">
-                            <i class="fas fa-calendar mr-1"></i>
-                            {{ receipt.date[:10] }}
-                        </span>
-                    </div>
-                    <div class="text-right">
-                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-semibold">
-                            {{ receipt.quantity }} unit
-                        </span>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
         <!-- Progress Bar -->
         <div class="mt-4">
             <div class="flex justify-between text-sm mb-1">
                 <span class="text-gray-600">Progress Penerimaan</span>
                 <span class="font-semibold {{ 'text-green-600' if procurement.is_fully_received else 'text-amber-600' }}">
-                    {{ procurement.total_received }} / {{ procurement.quantity }} unit
+                    {{ procurement.total_received }} / {{ procurement.total_quantity }} unit
                 </span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3">
                 <div class="h-3 rounded-full transition-all duration-300 {{ 'bg-green-500' if procurement.is_fully_received else 'bg-amber-500' }}"
-                     style="width: {{ (procurement.total_received / procurement.quantity * 100)|int }}%"></div>
+                     style="width: {{ (procurement.total_received / procurement.total_quantity * 100)|int if procurement.total_quantity > 0 else 0 }}%"></div>
             </div>
         </div>
     </div>
@@ -136,7 +104,7 @@
                     </span>
                 </div>
             </div>
-            {{ form.receipt_number(type='hidden') }}
+            {{ form.receipt_number(type='hidden', value=procurement.receipt_number) }}
             <p class="mt-1 text-xs text-green-600">
                 <i class="fas fa-info-circle mr-1"></i>
                 Invoice sudah terdaftar. Semua penerimaan menggunakan nomor invoice yang sama.
@@ -156,62 +124,79 @@
             {% endif %}
         </div>
 
-        <!-- Actual Quantity -->
+        <!-- Items to Receive -->
         <div class="mb-6">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-3">
                 <i class="fas fa-boxes mr-1 text-purple-600"></i>
-                Jumlah Barang Diterima (Kali Ini)
+                Detail Barang yang Diterima
             </label>
-            {{ form.actual_quantity(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all", placeholder="Masukkan jumlah barang yang diterima", id="actualQuantity") }}
-            {% if form.actual_quantity.errors %}
-                {% for error in form.actual_quantity.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-            <div class="mt-2 p-3 bg-purple-50 rounded-lg">
-                <div class="flex items-center text-sm text-purple-800">
-                    <i class="fas fa-info-circle mr-2"></i>
-                    <div>
-                        <p class="font-semibold">Informasi Penerimaan Bertahap:</p>
-                        <ul class="mt-1 space-y-1 text-xs">
-                            <li>• Diminta: <strong>{{ procurement.quantity }} unit</strong></li>
-                            <li>• Sudah diterima: <strong>{{ procurement.total_received }} unit</strong></li>
-                            <li>• Sisa yang bisa diterima: <strong>{{ procurement.remaining_quantity }} unit</strong></li>
-                            {% if procurement.total_received > 0 %}
-                            <li>• Anda bisa menerima sisa barang lain kali</li>
+
+            <div class="space-y-4">
+                {% for proc_item in procurement.items %}
+                <div class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h5 class="text-base font-semibold text-gray-800 mb-1">
+                                {{ proc_item.item.name if proc_item.item else 'Item Baru' }}
+                            </h5>
+                            <div class="flex items-center space-x-3 text-sm text-gray-600">
+                                <span>Kode: <span class="font-mono">{{ proc_item.item.item_code if proc_item.item else 'N/A' }}</span></span>
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded font-semibold">
+                                    Diminta: {{ proc_item.quantity }} unit
+                                </span>
+                                <span class="px-2 py-1 bg-green-100 text-green-700 rounded font-semibold">
+                                    Diterima: {{ proc_item.total_received }} unit
+                                </span>
+                                <span class="px-2 py-1 bg-amber-100 text-amber-700 rounded font-semibold">
+                                    Sisa: {{ proc_item.remaining_quantity }} unit
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Quantity Received for this item -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                Jumlah Diterima (Kali Ini)
+                            </label>
+                            <input type="number"
+                                   name="quantity_{{ proc_item.id }}"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
+                                   placeholder="0"
+                                   min="0"
+                                   max="{{ proc_item.remaining_quantity }}"
+                                   value="{% if proc_item.remaining_quantity > 0 %}{{ proc_item.remaining_quantity }}{% endif %}"
+                                   {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}>
+                            {% if proc_item.remaining_quantity == 0 %}
+                            <p class="mt-1 text-xs text-green-600">
+                                <i class="fas fa-check-circle mr-1"></i>
+                                Barang ini sudah lengkap
+                            </p>
                             {% endif %}
-                        </ul>
+                        </div>
+
+                        <!-- Serial Numbers for this item -->
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">
+                                Serial Numbers (Opsional)
+                            </label>
+                            <textarea name="serial_numbers_{{ proc_item.id }}"
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm"
+                                      rows="3"
+                                      placeholder="Satu serial number per baris"
+                                      {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}></textarea>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Serial Numbers -->
-        <div class="mb-6">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                <i class="fas fa-barcode mr-1 text-indigo-600"></i>
-                Serial Numbers (Untuk Pengiriman Ini)
-            </label>
-            {{ form.serial_numbers(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm", rows=procurement.remaining_quantity, placeholder="Masukkan serial number untuk setiap unit yang diterima KALI INI (satu per baris)&#10;Contoh:&#10;SN123456789&#10;SN123456790&#10;SN123456791") }}
-            {% if form.serial_numbers.errors %}
-                {% for error in form.serial_numbers.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
                 {% endfor %}
-            {% endif %}
-            <div class="mt-2 p-3 bg-indigo-50 rounded-lg">
-                <p class="text-xs text-indigo-800 mb-2">
+            </div>
+
+            <div class="mt-3 p-3 bg-purple-50 rounded-lg">
+                <p class="text-xs text-purple-800">
                     <i class="fas fa-info-circle mr-1"></i>
-                    <strong>Petunjuk:</strong>
+                    <strong>Petunjuk:</strong> Isi jumlah barang yang diterima untuk setiap item. Serial numbers bersifat opsional.
                 </p>
-                <ul class="text-xs text-indigo-700 space-y-1">
-                    <li>• Masukkan <strong>satu serial number per baris</strong> untuk barang yang diterima KALI INI</li>
-                    <li>• Jumlah serial number harus sama dengan jumlah yang diterima kali ini: <strong id="expectedQty">{{ procurement.remaining_quantity }}</strong> unit</li>
-                    <li>• Serial number akan digunakan untuk tracking masing-masing unit barang</li>
-                    <li>• Serial number akan disimpan di Item Details (item_details)</li>
-                    {% if procurement.total_received > 0 %}
-                    <li>• <strong>{{ procurement.total_received }} serial number</strong> sudah pernah diinput sebelumnya</li>
-                    {% endif %}
-                </ul>
             </div>
         </div>
 
@@ -239,65 +224,12 @@
             <h4 class="font-semibold text-blue-900 mb-2">Panduan Penerimaan Barang</h4>
             <ul class="text-sm text-blue-800 space-y-1">
                 <li><i class="fas fa-check-circle mr-2"></i>Pastikan nomor tanda terima sesuai dengan dokumen dari supplier</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Cek kembali jumlah barang yang diterima, bisa berbeda dengan yang diminta</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Pilih satuan yang sesuai (pcs, box, pack, karton, atau lainnya)</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Barcode bersifat opsional, tapi sangat disarankan untuk tracking</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Setelah dikonfirmasi, barang siap dimasukkan ke stok</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Cek kembali jumlah barang yang diterima untuk setiap item</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Serial numbers bersifat opsional, tapi sangat disarankan untuk tracking</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Anda bisa menerima barang sebagian (partial receiving)</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Setelah semua barang lengkap, pengadaan siap diselesaikan</li>
             </ul>
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const serialNumbersInput = document.getElementById('serial_numbers');
-    const actualQtyInput = document.getElementById('actualQuantity');
-    const expectedQtyEl = document.getElementById('expectedQty');
-    const remainingQty = {{ procurement.remaining_quantity }};
-
-    // Count serial numbers in real-time
-    function countSerialNumbers() {
-        const lines = serialNumbersInput.value.split('\n').filter(line => line.trim() !== '');
-        return lines.length;
-    }
-
-    // Update count when typing
-    serialNumbersInput.addEventListener('input', function() {
-        const count = countSerialNumbers();
-        const actualQty = parseInt(actualQtyInput.value) || remainingQty;
-
-        // Update info text
-        expectedQtyEl.textContent = actualQty;
-
-        // Visual feedback for count
-        let countDisplay = this.parentElement.querySelector('#snCount');
-        if (!countDisplay) {
-            countDisplay = document.createElement('div');
-            countDisplay.id = 'snCount';
-            countDisplay.className = 'mt-2 text-sm';
-            this.parentElement.appendChild(countDisplay);
-        }
-
-        if (count === actualQty) {
-            countDisplay.innerHTML = `<span class="text-green-600 font-semibold"><i class="fas fa-check-circle mr-1"></i>${count} serial number diinput (Sempurna!)</span>`;
-        } else if (count < actualQty) {
-            countDisplay.innerHTML = `<span class="text-amber-600 font-semibold"><i class="fas fa-exclamation-circle mr-1"></i>${count} / ${actualQty} serial number diinput (Kurang ${actualQty - count})</span>`;
-        } else {
-            countDisplay.innerHTML = `<span class="text-red-600 font-semibold"><i class="fas fa-times-circle mr-1"></i>${count} serial number diinput (Kelebihan ${count - actualQty})</span>`;
-        }
-    });
-
-    // Auto-resize textarea based on quantity
-    actualQtyInput.addEventListener('change', function() {
-        const qty = parseInt(this.value) || remainingQty;
-        serialNumbersInput.rows = Math.max(qty, 3);
-        expectedQtyEl.textContent = qty;
-        // Trigger count update
-        serialNumbersInput.dispatchEvent(new Event('input'));
-    });
-
-    // Initial count
-    serialNumbersInput.dispatchEvent(new Event('input'));
-});
-</script>
 {% endblock %}
