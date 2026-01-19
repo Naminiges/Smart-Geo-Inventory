@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Supplier - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Edit Supplier{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fas fa-edit text-primary mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Form Edit Supplier</h5>
+            </div>
+        </div>
+        <div class="p-6">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <!-- Informasi Dasar -->
+                <h6 class="text-lg font-semibold mb-4"><i class="fas fa-building mr-2"></i>Informasi Dasar</h6>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.name.label }} <span class="text-red-500">*</span></label>
+                    {{ form.name(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent", placeholder="Masukkan nama supplier", value=supplier.name) }}
+                    {% if form.name.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.name.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.contact_person.label }}</label>
+                        {{ form.contact_person(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent", placeholder="Nama kontak person", value=supplier.contact_person or '') }}
+                        {% if form.contact_person.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.contact_person.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.phone.label }}</label>
+                        {{ form.phone(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent", placeholder="08xxxxxxxxxx", value=supplier.phone or '') }}
+                        {% if form.phone.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.phone.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.email.label }}</label>
+                    {{ form.email(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent", placeholder="email@supplier.com", value=supplier.email or '') }}
+                    {% if form.email.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.email.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-6 border-gray-200">
+
+                <!-- Alamat -->
+                <h6 class="text-lg font-semibold mb-4"><i class="fas fa-map-marker-alt mr-2"></i>Alamat</h6>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.address.label }}</label>
+                    {{ form.address(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent", rows="3", placeholder="Masukkan alamat lengkap supplier", value=supplier.address or '') }}
+                    {% if form.address.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.address.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex justify-between">
+                    <a href="{{ url_for('suppliers.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali
+                    </a>
+                    <button type="submit" class="px-6 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
