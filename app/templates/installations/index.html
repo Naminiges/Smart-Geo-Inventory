@@ -137,27 +137,47 @@
                 </tr>
             </thead>
             <tbody>
-                {% if distributions and distributions.items|length > 0 %}
-                    {% for distribution in distributions.items %}
+                {% if distributions and distributions|length > 0 %}
+                    {% for distribution in distributions %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-3 px-4"><strong class="text-gray-800">{{ distribution.item_detail.serial_number }}</strong></td>
                         <td class="py-3 px-4">
-                            <div class="font-bold text-gray-800">{{ distribution.item_detail.item.name }}</div>
-                            <small class="text-gray-500">{{ distribution.item_detail.item.item_code }}</small>
+                            <div class="flex items-center gap-2">
+                                <strong class="text-gray-800">{{ distribution.item_detail.serial_number if distribution.item_detail else '-' }}</strong>
+                                {% if distribution.verification_status == 'submitted' %}
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                    <i class="fas fa-hourglass-half mr-1"></i> Perlu Verifikasi
+                                </span>
+                                {% endif %}
+                            </div>
                         </td>
                         <td class="py-3 px-4">
-                            <div class="font-bold text-gray-800">{{ distribution.unit.name }}</div>
-                            <small class="text-gray-500">{{ distribution.unit_detail.room_name }}</small>
-                            {% if distribution.unit_detail.floor %}
+                            <div class="font-bold text-gray-800">{{ distribution.item_detail.item.name if distribution.item_detail and distribution.item_detail.item else '-' }}</div>
+                            <small class="text-gray-500">{{ distribution.item_detail.item.item_code if distribution.item_detail and distribution.item_detail.item else '' }}</small>
+                            <div class="mt-1">
+                                {% if distribution.task_type == 'installation' %}
+                                <span class="text-xs text-purple-600"><i class="fas fa-tools mr-1"></i>Instalasi</span>
+                                {% else %}
+                                <span class="text-xs text-indigo-600"><i class="fas fa-truck mr-1"></i>Pengiriman</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-gray-800">{{ distribution.unit.name if distribution.unit else '-' }}</div>
+                            <small class="text-gray-500">{{ distribution.unit_detail.room_name if distribution.unit_detail else '-' }}</small>
+                            {% if distribution.unit_detail and distribution.unit_detail.floor %}
                             <small class="block text-gray-500">Lantai {{ distribution.unit_detail.floor }}</small>
                             {% endif %}
                         </td>
-                        <td class="py-3 px-4 text-gray-600">{{ distribution.field_staff.name }}</td>
-                        <td class="py-3 px-4 text-gray-600">{{ distribution.installed_at.strftime('%d/%m/%Y') }}</td>
+                        <td class="py-3 px-4 text-gray-600">{{ distribution.field_staff.name if distribution.field_staff else '-' }}</td>
+                        <td class="py-3 px-4 text-gray-600">{{ distribution.installed_at.strftime('%d/%m/%Y') if distribution.installed_at else '-' }}</td>
                         <td class="py-3 px-4">
                             {% if distribution.status == 'installing' %}
                                 <span class="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
                                     <i class="fas fa-clock mr-1"></i> Sedang Dipasang
+                                </span>
+                            {% elif distribution.status == 'in_transit' %}
+                                <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                    <i class="fas fa-truck mr-1"></i> Sedang Dikirim
                                 </span>
                             {% elif distribution.status == 'installed' %}
                                 <span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
@@ -174,16 +194,24 @@
                             {% endif %}
                         </td>
                         <td class="py-3 px-4">
-                            <div class="flex gap-1">
+                            <div class="flex gap-1 flex-wrap">
                                 <a href="{{ url_for('installations.detail', id=distribution.id) }}"
                                    class="px-3 py-1 border border-emerald-600 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors text-sm" title="Detail">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                {% if distribution.verification_status == 'submitted' %}
+                                <a href="{{ url_for('installations.verify_task', id=distribution.id) }}"
+                                   class="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm" title="Verifikasi Tugas">
+                                    <i class="fas fa-check-double"></i>
+                                </a>
+                                {% endif %}
+                                {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
                                 {% if distribution.status in ['installing', 'installed'] %}
-                                <a href="{{ url_for('installations.update_status', id=distribution.id, status='maintenance') }}"
+                                <a href="#" onclick="if(confirm('Set status maintenance?')) location.href='{{ url_for('installations.update_status', id=distribution.id, status='maintenance') }}'"
                                    class="px-3 py-1 border border-orange-500 text-orange-500 rounded-lg hover:bg-orange-500 hover:text-white transition-colors text-sm" title="Set Maintenance">
                                     <i class="fas fa-tools"></i>
                                 </a>
+                                {% endif %}
                                 {% endif %}
                             </div>
                         </td>

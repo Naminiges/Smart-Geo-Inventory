@@ -19,16 +19,25 @@ def index():
         verified_requests = AssetRequest.query.filter_by(status='verified').all()
         # Filter to only show requests that don't have a distribution yet
         verified_requests = [req for req in verified_requests if req.distribution_id is None]
+        # Get unique units and field staffs for filters
+        units = Unit.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id).distinct().all()
+        field_staffs = User.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id, User.role == 'field_staff').distinct().all()
     elif current_user.is_field_staff():
         installations = Distribution.query.filter_by(field_staff_id=current_user.id).all()
         verified_requests = []
+        units = []
+        field_staffs = []
     else:  # admin
         installations = Distribution.query.all()
         verified_requests = AssetRequest.query.filter_by(status='verified', distribution_id=None).all()
+        units = Unit.query.join(Distribution).distinct().all()
+        field_staffs = User.query.filter_by(role='field_staff').all()
 
     return render_template('installations/index.html',
-                         installations=installations,
-                         verified_requests=verified_requests)
+                         distributions=installations,
+                         verified_requests=verified_requests,
+                         units=units,
+                         field_staffs=field_staffs)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
@@ -121,7 +130,7 @@ def create():
 @login_required
 @role_required('warehouse_staff', 'admin')
 def verify(id):
-    """Verify installation completion"""
+    """Verify installation completion (legacy - direct verify)"""
     distribution = Distribution.query.get_or_404(id)
 
     try:
@@ -154,6 +163,45 @@ def verify(id):
         flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     return redirect(url_for('installations.index'))
+
+
+@bp.route('/<int:id>/verify-task', methods=['GET', 'POST'])
+@login_required
+@role_required('warehouse_staff', 'admin')
+def verify_task(id):
+    """Verify task completion from field staff with photo verification"""
+    distribution = Distribution.query.get_or_404(id)
+
+    # Check access for warehouse staff
+    if current_user.is_warehouse_staff() and distribution.warehouse_id != current_user.warehouse_id:
+        flash('Anda tidak memiliki akses ke tugas ini.', 'danger')
+        return redirect(url_for('installations.index'))
+
+    if request.method == 'POST':
+        action = request.form.get('action')  # 'approve' or 'reject'
+        rejection_reason = request.form.get('rejection_reason', '')
+
+        try:
+            if action == 'approve':
+                success, message = distribution.verify_task(current_user.id)
+                if success:
+                    flash(message, 'success')
+                else:
+                    flash(message, 'danger')
+            elif action == 'reject':
+                if not rejection_reason:
+                    flash('Mohon isi alasan penolakan.', 'warning')
+                    return render_template('installations/verify_task.html', distribution=distribution)
+                success, message = distribution.reject_verification(current_user.id, rejection_reason)
+                if success:
+                    flash(message, 'success')
+                else:
+                    flash(message, 'danger')
+            return redirect(url_for('installations.verify_task', id=id))
+        except Exception as e:
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return render_template('installations/verify_task.html', distribution=distribution)
 
 
 @bp.route('/<int:id>/detail')

@@ -102,6 +102,58 @@
           {% endif %}
 
 
+          {% if current_user.is_field_staff() %}
+          <!-- Field Staff Only Menu -->
+          <p
+            class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
+          >
+            Menu Field Staff
+          </p>
+
+          <!-- Tugas Saya -->
+          <div class="mb-1">
+            <button
+              class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'field_tasks' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+              onclick="toggleFieldTasksMenu()"
+            >
+              <div class="flex items-center">
+                <i
+                  class="fas fa-tasks w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'field_tasks' in request.endpoint else 'text-gray-400' }}"
+                ></i>
+                <span class="font-medium">Tugas Saya</span>
+              </div>
+              <i
+                class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"
+                id="field-tasks-icon"
+              ></i>
+            </button>
+
+            <!-- Submenu Tugas -->
+            <div class="ml-8 mt-1 space-y-1 hidden" id="field-tasks-submenu">
+              <a
+                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'field_tasks.index' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                href="{{ url_for('field_tasks.index') }}"
+              >
+                <i
+                  class="fas fa-list w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if request.endpoint == 'field_tasks.index' else 'text-gray-400' }}"
+                ></i>
+                <span class="text-sm">Daftar Tugas</span>
+              </a>
+
+              <a
+                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'field_tasks.map_view' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                href="{{ url_for('field_tasks.map_view') }}"
+              >
+                <i
+                  class="fas fa-map-marked-alt w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if request.endpoint == 'field_tasks.map_view' else 'text-gray-400' }}"
+                ></i>
+                <span class="text-sm">Peta Tugas</span>
+              </a>
+            </div>
+          </div>
+          {% endif %}
+
+
           {% if current_user.is_unit_staff() %}
           <!-- Unit Staff Only Menu -->
           <p
@@ -476,6 +528,20 @@
         }
       }
 
+      // Toggle Field Tasks submenu
+      function toggleFieldTasksMenu() {
+        const submenu = document.getElementById("field-tasks-submenu");
+        const icon = document.getElementById("field-tasks-icon");
+
+        if (submenu.classList.contains("hidden")) {
+          submenu.classList.remove("hidden");
+          icon.classList.add("rotate-180");
+        } else {
+          submenu.classList.add("hidden");
+          icon.classList.remove("rotate-180");
+        }
+      }
+
       // Auto-open submenu if user is on installations or assets page
       document.addEventListener("DOMContentLoaded", function () {
         const currentEndpoint = "{{ request.endpoint }}";
@@ -503,6 +569,19 @@
         if (isAssetRequestsPage) {
           const submenu = document.getElementById("asset-requests-submenu");
           const icon = document.getElementById("asset-requests-icon");
+          if (submenu && icon) {
+            submenu.classList.remove("hidden");
+            icon.classList.add("rotate-180");
+          }
+        }
+
+        // Check if current page is under Field Tasks submenu
+        const isFieldTasksPage =
+          currentEndpoint && currentEndpoint.includes("field_tasks");
+
+        if (isFieldTasksPage) {
+          const submenu = document.getElementById("field-tasks-submenu");
+          const icon = document.getElementById("field-tasks-icon");
           if (submenu && icon) {
             submenu.classList.remove("hidden");
             icon.classList.add("rotate-180");
