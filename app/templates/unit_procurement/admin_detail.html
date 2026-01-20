@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Detail Permohonan #{{ procurement.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Admin - Detail Permohonan Pengadaan{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('unit_procurement.admin_index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Permohonan
+    </a>
+</div>
+
+<!-- Status Banner -->
+{% set status_colors = {
+    'pending_verification': 'bg-yellow-100 border-yellow-300 text-yellow-800',
+    'verified': 'bg-purple-100 border-purple-300 text-purple-800',
+    'approved': 'bg-blue-100 border-blue-300 text-blue-800',
+    'in_procurement': 'bg-indigo-100 border-indigo-300 text-indigo-800',
+    'received': 'bg-cyan-100 border-cyan-300 text-cyan-800',
+    'completed': 'bg-green-100 border-green-300 text-green-800',
+    'rejected': 'bg-red-100 border-red-300 text-red-800',
+    'cancelled': 'bg-gray-100 border-gray-300 text-gray-800'
+} %}
+{% set status_labels = {
+    'pending_verification': 'Menunggu Verifikasi',
+    'verified': 'Terverifikasi',
+    'approved': 'Disetujui',
+    'in_procurement': 'Dalam Proses Pengadaan',
+    'received': 'Barang Diterima',
+    'completed': 'Selesai',
+    'rejected': 'Ditolak',
+    'cancelled': 'Dibatalkan'
+} %}
+<div class="mb-6 p-4 rounded-lg border {{ status_colors.get(procurement.status, 'bg-gray-100 border-gray-300 text-gray-800') }}">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center">
+            <i class="fas fa-info-circle text-2xl mr-3"></i>
+            <div>
+                <h3 class="text-lg font-semibold">Status: {{ status_labels.get(procurement.status, procurement.status) }}</h3>
+                <p class="text-sm opacity-75">Permohonan #{{ procurement.id }} dari Unit: {{ procurement.unit.name }}</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            {% if procurement.status == 'pending_verification' %}
+            <a href="{{ url_for('unit_procurement.verify', id=procurement.id) }}" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                <i class="fas fa-check mr-2"></i>Verifikasi
+            </a>
+            {% elif procurement.status == 'verified' %}
+            <a href="{{ url_for('unit_procurement.approve', id=procurement.id) }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-check-circle mr-2"></i>Setujui & Buat Pengadaan
+            </a>
+            {% endif %}
+            {% if procurement.status not in ['completed', 'in_procurement', 'cancelled'] %}
+            <a href="{{ url_for('unit_procurement.reject', id=procurement.id) }}" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                <i class="fas fa-times mr-2"></i>Tolak
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Progress Tracker (Admin View) -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Progress Tracking</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 rounded-lg border {% if procurement.created_at %}bg-green-50 border-green-200{% else %}bg-gray-50 border-gray-200{% endif %}">
+            <div class="flex items-center mb-2">
+                <div class="w-6 h-6 {% if procurement.created_at %}bg-green-500{% else %}bg-gray-300{% endif %} rounded-full flex items-center justify-center mr-2">
+                    {% if procurement.created_at %}
+                    <i class="fas fa-check text-white text-xs"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-sm font-semibold">Permohonan Dibuat</h4>
+            </div>
+            {% if procurement.created_at %}
+            <p class="text-xs text-gray-600">{{ procurement.created_at.strftime('%d/%m/%Y %H:%M') }}</p>
+            {% endif %}
+        </div>
+
+        <div class="p-4 rounded-lg border {% if procurement.verification_date %}bg-green-50 border-green-200{% elif procurement.status == 'pending_verification' %}bg-yellow-50 border-yellow-200{% else %}bg-gray-50 border-gray-200{% endif %}">
+            <div class="flex items-center mb-2">
+                <div class="w-6 h-6 {% if procurement.verification_date %}bg-green-500{% elif procurement.status == 'pending_verification' %}bg-yellow-500{% else %}bg-gray-300{% endif %} rounded-full flex items-center justify-center mr-2">
+                    {% if procurement.verification_date %}
+                    <i class="fas fa-check text-white text-xs"></i>
+                    {% elif procurement.status == 'pending_verification' %}
+                    <i class="fas fa-clock text-white text-xs"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-sm font-semibold">Verifikasi Admin</h4>
+            </div>
+            {% if procurement.verification_date %}
+            <p class="text-xs text-gray-600">{{ procurement.verification_date.strftime('%d/%m/%Y %H:%M') }}</p>
+            <p class="text-xs text-gray-500">oleh {{ procurement.verifier.full_name if procurement.verifier else 'Admin' }}</p>
+            {% elif procurement.status == 'pending_verification' %}
+            <p class="text-xs text-yellow-600">Menunggu verifikasi</p>
+            {% endif %}
+        </div>
+
+        <div class="p-4 rounded-lg border {% if procurement.approval_date %}bg-green-50 border-green-200{% elif procurement.status == 'verified' %}bg-yellow-50 border-yellow-200{% elif procurement.status in ['rejected', 'cancelled'] %}bg-red-50 border-red-200{% else %}bg-gray-50 border-gray-200{% endif %}">
+            <div class="flex items-center mb-2">
+                <div class="w-6 h-6 {% if procurement.approval_date %}bg-green-500{% elif procurement.status == 'verified' %}bg-yellow-500{% elif procurement.status in ['rejected', 'cancelled'] %}bg-red-500{% else %}bg-gray-300{% endif %} rounded-full flex items-center justify-center mr-2">
+                    {% if procurement.approval_date %}
+                    <i class="fas fa-check text-white text-xs"></i>
+                    {% elif procurement.status == 'verified' %}
+                    <i class="fas fa-hourglass-half text-white text-xs"></i>
+                    {% elif procurement.status in ['rejected', 'cancelled'] %}
+                    <i class="fas fa-times text-white text-xs"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-sm font-semibold">Persetujuan & Pengadaan</h4>
+            </div>
+            {% if procurement.approval_date %}
+            <p class="text-xs text-gray-600">{{ procurement.approval_date.strftime('%d/%m/%Y %H:%M') }}</p>
+            {% if procurement.procurement_id %}
+            <a href="{{ url_for('procurement.detail', id=procurement.procurement_id) }}" target="_blank" class="text-xs text-blue-600 hover:underline">
+                Pengadaan #{{ procurement.procurement_id }}
+            </a>
+            {% endif %}
+            {% elif procurement.status == 'verified' %}
+            <p class="text-xs text-yellow-600">Menunggu persetujuan</p>
+            {% elif procurement.status == 'rejected' %}
+            <p class="text-xs text-red-600">Ditolak</p>
+            {% endif %}
+        </div>
+
+        <div class="p-4 rounded-lg border {% if procurement.status in ['in_procurement', 'received', 'completed'] %}bg-green-50 border-green-200{% elif procurement.procurement %}bg-blue-50 border-blue-200{% else %}bg-gray-50 border-gray-200{% endif %}">
+            <div class="flex items-center mb-2">
+                <div class="w-6 h-6 {% if procurement.status in ['in_procurement', 'received', 'completed'] %}bg-green-500{% elif procurement.procurement %}bg-blue-500{% else %}bg-gray-300{% endif %} rounded-full flex items-center justify-center mr-2">
+                    {% if procurement.status in ['in_procurement', 'received', 'completed'] %}
+                    <i class="fas fa-check text-white text-xs"></i>
+                    {% elif procurement.procurement %}
+                    <i class="fas fa-spinner fa-spin text-white text-xs"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-sm font-semibold">Proses Pengadaan</h4>
+            </div>
+            {% if procurement.procurement %}
+            <p class="text-xs text-gray-600">Status: {{ procurement.procurement.status }}</p>
+            {% if procurement.procurement.supplier %}
+            <p class="text-xs text-gray-500">Supplier: {{ procurement.procurement.supplier.name }}</p>
+            {% endif %}
+            {% else %}
+            <p class="text-xs text-gray-500">Belum diproses</p>
+            {% endif %}
+        </div>
+
+        <div class="p-4 rounded-lg border {% if procurement.status in ['received', 'completed'] %}bg-green-50 border-green-200{% else %}bg-gray-50 border-gray-200{% endif %}">
+            <div class="flex items-center mb-2">
+                <div class="w-6 h-6 {% if procurement.status in ['received', 'completed'] %}bg-green-500{% else %}bg-gray-300{% endif %} rounded-full flex items-center justify-center mr-2">
+                    {% if procurement.status in ['received', 'completed'] %}
+                    <i class="fas fa-check text-white text-xs"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-sm font-semibold">Barang Diterima</h4>
+            </div>
+            {% if procurement.unit_receipt_date %}
+            <p class="text-xs text-gray-600">{{ procurement.unit_receipt_date.strftime('%d/%m/%Y %H:%M') }}</p>
+            {% else %}
+            <p class="text-xs text-gray-500">Menunggu</p>
+            {% endif %}
+        </div>
+
+        <div class="p-4 rounded-lg border {% if procurement.status == 'completed' %}bg-green-50 border-green-200{% elif procurement.status in ['rejected', 'cancelled'] %}bg-red-50 border-red-200{% else %}bg-gray-50 border-gray-200{% endif %}">
+            <div class="flex items-center mb-2">
+                <div class="w-6 h-6 {% if procurement.status == 'completed' %}bg-green-500{% elif procurement.status in ['rejected', 'cancelled'] %}bg-red-500{% else %}bg-gray-300{% endif %} rounded-full flex items-center justify-center mr-2">
+                    {% if procurement.status == 'completed' %}
+                    <i class="fas fa-check text-white text-xs"></i>
+                    {% elif procurement.status in ['rejected', 'cancelled'] %}
+                    <i class="fas fa-times text-white text-xs"></i>
+                    {% endif %}
+                </div>
+                <h4 class="text-sm font-semibold">Status Akhir</h4>
+            </div>
+            <p class="text-xs {% if procurement.status == 'completed' %}text-green-600{% elif procurement.status == 'rejected' %}text-red-600{% elif procurement.status == 'cancelled' %}text-gray-600{% else %}text-gray-500{% endif %}">
+                {{ status_labels.get(procurement.status, procurement.status) }}
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Request Details -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Request Information -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Informasi Permohonan</h3>
+        <div class="space-y-3">
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500">ID Permohonan</span>
+                <span class="text-sm font-semibold text-gray-900">#{{ procurement.id }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Unit</span>
+                <span class="text-sm font-semibold text-gray-900">{{ procurement.unit.name }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Alamat Unit</span>
+                <span class="text-sm font-semibold text-gray-900">{{ procurement.unit.address or '-' }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Tanggal Permohonan</span>
+                <span class="text-sm font-semibold text-gray-900">{{ procurement.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Diajukan oleh</span>
+                <span class="text-sm font-semibold text-gray-900">{{ procurement.requester.full_name }}</span>
+            </div>
+            {% if procurement.procurement_id %}
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-500">Pengadaan Warehouse</span>
+                <a href="{{ url_for('procurement.detail', id=procurement.procurement_id) }}" target="_blank" class="text-sm font-semibold text-blue-600 hover:underline">
+                    #{{ procurement.procurement_id }} <i class="fas fa-external-link-alt text-xs"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Items List -->
+    <div class="bg-white rounded-xl shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Daftar Barang ({{ procurement.items|length }} item)</h3>
+        <div class="space-y-3 max-h-64 overflow-y-auto">
+            {% for item in procurement.items %}
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                    <p class="text-sm font-semibold text-gray-900">{{ item.item.name if item.item else 'N/A' }}</p>
+                    <p class="text-xs text-gray-500">{{ item.item.item_code if item.item else '' }}</p>
+                    <p class="text-xs text-gray-400">Kategori: {{ item.item.category.name if item.item and item.item.category else '-' }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm font-bold text-gray-900">{{ item.quantity }}</p>
+                    <p class="text-xs text-gray-500">{{ item.item.unit if item.item else '' }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 pt-4 border-t border-gray-200">
+            <p class="text-sm font-semibold text-gray-900">Total Quantity: {{ procurement.total_quantity }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Request Notes -->
+<div class="mt-6 bg-white rounded-xl shadow-md p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-3">Alasan Permohonan</h3>
+    <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <p class="text-sm text-gray-700">{{ procurement.request_notes or '-' }}</p>
+    </div>
+</div>
+
+<!-- Verification Notes (if verified) -->
+{% if procurement.verification_notes %}
+<div class="mt-6 bg-purple-50 border border-purple-200 rounded-xl p-6">
+    <h3 class="text-lg font-semibold text-purple-900 mb-3">Catatan Verifikasi</h3>
+    <div class="flex items-start">
+        <i class="fas fa-clipboard-check text-purple-600 text-xl mr-3 mt-1"></i>
+        <div>
+            <p class="text-sm text-purple-800">{{ procurement.verification_notes }}</p>
+            <p class="text-xs text-purple-600 mt-2">Diverifikasi oleh: {{ procurement.verifier.full_name if procurement.verifier else 'Admin' }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Admin Notes -->
+{% if procurement.admin_notes %}
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+    <h3 class="text-lg font-semibold text-blue-900 mb-3">Catatan Admin</h3>
+    <p class="text-sm text-blue-800">{{ procurement.admin_notes }}</p>
+</div>
+{% endif %}
+
+<!-- Rejection Reason (if rejected) -->
+{% if procurement.status == 'rejected' and procurement.rejection_reason %}
+<div class="mt-6 bg-red-50 border border-red-200 rounded-xl p-6">
+    <h3 class="text-lg font-semibold text-red-900 mb-3">Alasan Penolakan</h3>
+    <div class="flex items-start">
+        <i class="fas fa-times-circle text-red-600 text-xl mr-3 mt-1"></i>
+        <div>
+            <p class="text-sm text-red-800">{{ procurement.rejection_reason }}</p>
+            <p class="text-xs text-red-600 mt-2">Ditolak oleh: {{ procurement.rejecter.full_name if procurement.rejecter else 'Admin' }}</p>
+            <p class="text-xs text-red-600">{{ procurement.rejection_date.strftime('%d/%m/%Y %H:%M') if procurement.rejection_date else '' }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="mt-6 flex justify-end gap-3">
+    <a href="{{ url_for('unit_procurement.admin_index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali
+    </a>
+    {% if procurement.status == 'pending_verification' %}
+    <a href="{{ url_for('unit_procurement.verify', id=procurement.id) }}" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold">
+        <i class="fas fa-check mr-2"></i>
+        Verifikasi Permohonan
+    </a>
+    {% elif procurement.status == 'verified' %}
+    <a href="{{ url_for('unit_procurement.approve', id=procurement.id) }}" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+        <i class="fas fa-check-circle mr-2"></i>
+        Setujui & Buat Pengadaan
+    </a>
+    {% endif %}
+    {% if procurement.status not in ['completed', 'in_procurement', 'cancelled'] %}
+    <a href="{{ url_for('unit_procurement.reject', id=procurement.id) }}" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+        <i class="fas fa-times mr-2"></i>
+        Tolak Permohonan
+    </a>
+    {% endif %}
+</div>
+{% endblock %}

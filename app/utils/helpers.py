@@ -107,6 +107,7 @@ def get_dashboard_stats(warehouse_id=None):
     if warehouse_id:
         low_stock_query = low_stock_query.filter(Stock.warehouse_id == warehouse_id)
     stats['low_stock_count'] = low_stock_query.count()
+    stats['low_stock_items'] = low_stock_query.order_by(Stock.quantity.asc()).all()
 
     # Item details by status
     item_detail_query = ItemDetail.query

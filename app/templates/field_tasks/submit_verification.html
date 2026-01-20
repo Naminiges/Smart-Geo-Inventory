@@ -64,6 +64,7 @@
         </div>
 
         <form method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <!-- Photo Upload -->
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-2">

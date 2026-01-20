@@ -1,6 +1,7 @@
 from datetime import datetime
 from app import db
 from app.models.base import BaseModel
+from app.utils.datetime_helper import get_wib_now
 
 
 class AssetRequestItem(BaseModel):
@@ -14,6 +15,10 @@ class AssetRequestItem(BaseModel):
     # Target location in unit
     unit_detail_id = db.Column(db.Integer, db.ForeignKey('unit_details.id'), nullable=True)
     room_notes = db.Column(db.Text)  # Additional notes about room/location
+
+    # Distribution tracking
+    status = db.Column(db.String(20), default='pending', nullable=False)  # pending, distributing, completed
+    distribution_id = db.Column(db.Integer, db.ForeignKey('distributions.id'))  # Link to created distribution
 
     # Relationships
     asset_request = db.relationship('AssetRequest', backref='items')
@@ -42,7 +47,7 @@ class AssetRequest(BaseModel):
 
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
     requested_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    request_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    request_date = db.Column(db.DateTime, default=get_wib_now, nullable=False)
 
     # Verification tracking
     verified_by = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -52,6 +57,8 @@ class AssetRequest(BaseModel):
 
     # Distribution tracking
     distribution_id = db.Column(db.Integer, db.ForeignKey('distributions.id'))
+    distributed_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    distributed_at = db.Column(db.DateTime)
     received_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     received_at = db.Column(db.DateTime)
 
@@ -64,7 +71,8 @@ class AssetRequest(BaseModel):
     requester = db.relationship('User', foreign_keys=[requested_by], backref='asset_requests_made')
     verifier = db.relationship('User', foreign_keys=[verified_by], backref='asset_requests_verified')
     receiver = db.relationship('User', foreign_keys=[received_by], backref='asset_requests_received')
-    distribution = db.relationship('Distribution', backref='asset_request')
+    distribution = db.relationship('Distribution', foreign_keys=[distribution_id], backref='asset_request_link')
+    distributor = db.relationship('User', foreign_keys=[distributed_by], backref='asset_requests_distributed')
 
     @property
     def total_quantity(self):
@@ -93,7 +101,7 @@ class AssetRequest(BaseModel):
 
         self.status = 'verified'
         self.verified_by = user_id
-        self.verified_at = datetime.utcnow()
+        self.verified_at = get_wib_now()
         if notes:
             self.verification_notes = notes
         self.save()
@@ -106,20 +114,20 @@ class AssetRequest(BaseModel):
 
         self.status = 'rejected'
         self.verified_by = user_id
-        self.verified_at = datetime.utcnow()
+        self.verified_at = get_wib_now()
         self.verification_notes = reason
         self.save()
         return True, 'Permohonan aset berhasil ditolak'
 
     def mark_completed(self, distribution_id, user_id):
         """Mark asset request as completed after distribution"""
-        if self.status != 'verified':
-            return False, 'Hanya permohonan yang sudah diverifikasi yang bisa diselesaikan'
+        if self.status not in ['verified', 'distributing']:
+            return False, 'Hanya permohonan yang sedang didistribusikan atau sudah diverifikasi yang bisa diselesaikan'
 
         self.status = 'completed'
         self.distribution_id = distribution_id
         self.received_by = user_id
-        self.received_at = datetime.utcnow()
+        self.received_at = get_wib_now()
         self.save()
         return True, 'Permohonan aset berhasil diselesaikan'
 
