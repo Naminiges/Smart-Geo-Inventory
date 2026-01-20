@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Permohonan Aset - {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Buat Permohonan Aset Baru</h2>
+                <a href="{{ url_for('asset_requests.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </a>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Form Permohonan Aet - {{ unit.name if unit else 'Unit Anda' }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('asset_requests.create') }}" id="assetRequestForm">
+                        {{ form.hidden_tag() }}
+
+                        <!-- Items Section -->
+                        <div class="mb-4">
+                            <h6>Aset yang Dimohonkan</h6>
+                            <div id="items-container">
+                                <!-- Items will be added here dynamically -->
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addItemRow()">
+                                <i class="fas fa-plus"></i> Tambah Aset
+                            </button>
+                        </div>
+
+                        <!-- Request Notes -->
+                        <div class="mb-3">
+                            <label for="{{ form.request_notes.id }}" class="form-label">
+                                {{ form.request_notes.label.text }} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.request_notes(class="form-control", rows=4, placeholder="Jelaskan alasan permohonan aset ini...") }}
+                            {% if form.request_notes.errors %}
+                            <div class="text-danger">
+                                {% for error in form.request_notes.errors %}
+                                <small>{{ error }}</small><br>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i> Ajukan Permohonan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template for item row (hidden) -->
+<template id="item-row-template">
+    <div class="card mb-3 item-row">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label">Aset <span class="text-danger">*</span></label>
+                    <select class="form-select item-select" required>
+                        <option value="">-- Pilih Aset --</option>
+                        {% for item in items %}
+                        <option value="{{ item.id }}" data-item-name="{{ item.name }}">
+                            {{ item.name }} (Kategori: {{ item.category.name if item.category else '-' }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Jumlah <span class="text-danger">*</span></label>
+                    <input type="number" class="form-control quantity-input" min="1" value="1" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Lokasi (Ruangan)</label>
+                    <select class="form-select unit-detail-select">
+                        <option value="">-- Pilih Lokasi --</option>
+                        {% for ud in unit_details %}
+                        <option value="{{ ud.id }}">{{ ud.room_name }} ({{ ud.floor }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Catatan Ruangan</label>
+                    <input type="text" class="form-control room-notes-input" placeholder="Opsional">
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="button" class="btn btn-danger btn-sm remove-item-btn" onclick="removeItemRow(this)">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+let itemCount = 0;
+
+// Add first item row on page load
+document.addEventListener('DOMContentLoaded', function() {
+    addItemRow();
+});
+
+function addItemRow() {
+    const container = document.getElementById('items-container');
+    const template = document.getElementById('item-row-template');
+    const clone = template.content.cloneNode(true);
+
+    // Update IDs and names
+    const itemRow = clone.querySelector('.item-row');
+    itemRow.id = `item-row-${itemCount}`;
+
+    container.appendChild(clone);
+    itemCount++;
+}
+
+function removeItemRow(button) {
+    const container = document.getElementById('items-container');
+    const rows = container.querySelectorAll('.item-row');
+
+    if (rows.length <= 1) {
+        alert('Minimal harus ada satu aset yang dimohonkan!');
+        return;
+    }
+
+    button.closest('.item-row').remove();
+}
+
+// Validate form before submission
+document.getElementById('assetRequestForm').addEventListener('submit', function(e) {
+    const itemRows = document.querySelectorAll('.item-row');
+    const itemsData = [];
+
+    // Validate each item row
+    for (let row of itemRows) {
+        const itemSelect = row.querySelector('.item-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const unitDetailSelect = row.querySelector('.unit-detail-select');
+        const roomNotesInput = row.querySelector('.room-notes-input');
+
+        const itemId = parseInt(itemSelect.value);
+
+        if (!itemId || itemId === 0) {
+            e.preventDefault();
+            alert('Harap pilih aset dari daftar untuk setiap baris!');
+            itemSelect.focus();
+            return;
+        }
+
+        const quantity = parseInt(quantityInput.value);
+
+        if (!quantity || quantity <= 0) {
+            e.preventDefault();
+            alert('Harap isi jumlah aset dengan benar!');
+            quantityInput.focus();
+            return;
+        }
+
+        // Build item data
+        itemsData.push({
+            item_id: itemId,
+            quantity: quantity,
+            unit_detail_id: unitDetailSelect.value ? parseInt(unitDetailSelect.value) : null,
+            room_notes: roomNotesInput.value
+        });
+    }
+
+    // Create hidden input for items data
+    const itemsInput = document.createElement('input');
+    itemsInput.type = 'hidden';
+    itemsInput.name = 'items';
+    itemsInput.value = itemsData.map(item => JSON.stringify(item)).join(',');
+    this.appendChild(itemsInput);
+
+    // Update to use getlist properly
+    itemsInput.name = 'items';
+    itemsInput.setAttribute('value', itemsData.map(item => JSON.stringify(item)).join(','));
+});
+</script>
+{% endblock %}

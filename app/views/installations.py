@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Distribution, ItemDetail, User, Unit, UnitDetail
+from app.models import Distribution, ItemDetail, User, Unit, UnitDetail, AssetRequest, AssetRequestItem
 from app.forms import DistributionForm, InstallationForm
 from app.utils.decorators import role_required, warehouse_access_required
 
@@ -12,15 +12,23 @@ bp = Blueprint('installations', __name__, url_prefix='/installations')
 @login_required
 @warehouse_access_required
 def index():
-    """List all installations"""
+    """List all installations and verified asset requests"""
     if current_user.is_warehouse_staff():
         installations = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).all()
+        # Get verified asset requests that haven't been distributed yet
+        verified_requests = AssetRequest.query.filter_by(status='verified').all()
+        # Filter to only show requests that don't have a distribution yet
+        verified_requests = [req for req in verified_requests if req.distribution_id is None]
     elif current_user.is_field_staff():
         installations = Distribution.query.filter_by(field_staff_id=current_user.id).all()
+        verified_requests = []
     else:  # admin
         installations = Distribution.query.all()
+        verified_requests = AssetRequest.query.filter_by(status='verified', distribution_id=None).all()
 
-    return render_template('installations/index.html', installations=installations)
+    return render_template('installations/index.html',
+                         installations=installations,
+                         verified_requests=verified_requests)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
@@ -177,3 +185,109 @@ def cancel(id):
         flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     return redirect(url_for('installations.index'))
+
+
+@bp.route('/asset-request/<int:request_id>/distribute', methods=['GET', 'POST'])
+@login_required
+@role_required('warehouse_staff', 'admin')
+def distribute_asset_request(request_id):
+    """Process verified asset request and create distributions"""
+    asset_request = AssetRequest.query.get_or_404(request_id)
+
+    if asset_request.status != 'verified':
+        flash('Hanya permohonan yang sudah diverifikasi yang dapat diproses.', 'warning')
+        return redirect(url_for('installations.index'))
+
+    if asset_request.distribution_id:
+        flash('Permohonan ini sudah memiliki distribusi.', 'info')
+        return redirect(url_for('installations.index'))
+
+    if request.method == 'POST':
+        try:
+            # For each item in the asset request, create a distribution
+            request_items = AssetRequestItem.query.filter_by(asset_request_id=request_id).all()
+
+            if not request_items:
+                flash('Tidak ada item dalam permohonan ini.', 'danger')
+                return redirect(url_for('installations.index'))
+
+            # Create distributions for each item
+            # For simplicity, we'll create one distribution per item
+            distributions_created = 0
+
+            for req_item in request_items:
+                # Find available item details in warehouse
+                # This is a simplified version - you may need more complex logic
+                # to allocate specific items from stock
+
+                # Get item details with available status
+                available_items = ItemDetail.query.filter_by(
+                    item_id=req_item.item_id,
+                    status='available'
+                ).limit(req_item.quantity).all()
+
+                if len(available_items) < req_item.quantity:
+                    flash(f'Stok tidak mencukupi untuk {req_item.item.name}. Tersedia: {len(available_items)}, Diminta: {req_item.quantity}', 'danger')
+                    return redirect(url_for('installations.index'))
+
+                # Create distribution record for each item
+                for item_detail in available_items:
+                    distribution = Distribution(
+                        item_detail_id=item_detail.id,
+                        warehouse_id=item_detail.warehouse_id,
+                        unit_id=asset_request.unit_id,
+                        unit_detail_id=req_item.unit_detail_id,
+                        address=asset_request.unit.location if asset_request.unit else None,
+                        note=f"Aset Request #{asset_request.id}: {req_item.room_notes or asset_request.request_notes}",
+                        status='installing'
+                    )
+
+                    # Set coordinates if unit has location
+                    if asset_request.unit and hasattr(asset_request.unit, 'latitude') and hasattr(asset_request.unit, 'longitude'):
+                        if asset_request.unit.latitude and asset_request.unit.longitude:
+                            distribution.set_coordinates(asset_request.unit.latitude, asset_request.unit.longitude)
+
+                    distribution.save()
+
+                    # Update item detail status
+                    item_detail.status = 'processing'
+                    item_detail.save()
+
+                    # Log the movement
+                    from app.models import AssetMovementLog
+                    from app.utils import send_notification
+
+                    AssetMovementLog.log_movement(
+                        item_detail=item_detail,
+                        operator=current_user,
+                        origin_type='warehouse',
+                        origin_id=item_detail.warehouse_id,
+                        destination_type='unit',
+                        destination_id=asset_request.unit_id,
+                        status_before='available',
+                        status_after='processing',
+                        note=f"Asset Request #{asset_request.id}: {req_item.room_notes or ''}"
+                    )
+
+                    distributions_created += 1
+
+            # Link the asset request to the first distribution (for tracking)
+            if distributions_created > 0:
+                first_distribution = Distribution.query.filter_by(
+                    unit_id=asset_request.unit_id,
+                    note=f"Aset Request #{asset_request.id}"
+                ).first()
+
+                if first_distribution:
+                    asset_request.distribution_id = first_distribution.id
+                    asset_request.save()
+
+            flash(f'Berhasil membuat {distributions_created} distribusi untuk permohonan aset #{asset_request.id}!', 'success')
+            return redirect(url_for('installations.index'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    # GET request - show confirmation
+    return render_template('installations/distribute_asset_request.html', asset_request=asset_request)

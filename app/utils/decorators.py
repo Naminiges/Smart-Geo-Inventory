@@ -50,3 +50,8 @@ def warehouse_staff_required(f):
 def field_staff_required(f):
     """Decorator to require field staff role"""
     return role_required('field_staff')(f)
+
+
+def unit_staff_required(f):
+    """Decorator to require unit staff role"""
+    return role_required('unit_staff')(f)

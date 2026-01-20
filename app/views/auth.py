@@ -34,6 +34,8 @@ def login():
                 return redirect(url_for('dashboard.warehouse_index'))
             elif user.is_field_staff():
                 return redirect(url_for('dashboard.field_index'))
+            elif user.is_unit_staff():
+                return redirect(url_for('dashboard.unit_index'))
         else:
             flash('Email atau password salah.', 'danger')
 

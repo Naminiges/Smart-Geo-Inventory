@@ -10,10 +10,16 @@ class Unit(BaseModel):
     name = db.Column(db.String(200), nullable=False, comment='Nama Gedung/Site')
     address = db.Column(db.Text, nullable=False)
     geom = db.Column(Geometry('POINT', srid=4326))  # PostGIS geometry for GIS
+    status = db.Column(db.String(50), default='available')  # available, in_use, maintenance
 
     # Relationships
     unit_details = db.relationship('UnitDetail', back_populates='unit', lazy='dynamic')
     distributions = db.relationship('Distribution', back_populates='unit', lazy='dynamic')
+
+    @property
+    def items_count(self):
+        """Get count of unit details (items) in this unit"""
+        return self.unit_details.count()
 
     def set_coordinates(self, latitude, longitude):
         """Set point geometry from latitude and longitude"""

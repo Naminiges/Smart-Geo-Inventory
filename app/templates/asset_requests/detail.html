@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Permohonan #{{ asset_request.id }} - {% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Detail Permohonan Aset #{{ asset_request.id }}</h2>
+                <a href="{{ url_for('asset_requests.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </a>
+            </div>
+
+            <!-- Request Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Informasi Permohonan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>ID Permohonan:</strong> #{{ asset_request.id }}</p>
+                            <p><strong>Unit:</strong> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+                            <p><strong>Tanggal Permohonan:</strong> {{ asset_request.request_date.strftime('%d/%m/%Y %H:%M') if asset_request.request_date else '-' }}</p>
+                            <p><strong>Diajukan oleh:</strong> {{ asset_request.requester.full_name if asset_request.requester else '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong>
+                                {% if asset_request.status == 'pending' %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% elif asset_request.status == 'verified' %}
+                                <span class="badge bg-primary">Verified</span>
+                                {% elif asset_request.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                                {% elif asset_request.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </p>
+                            {% if asset_request.verified_by %}
+                            <p><strong>Diverifikasi oleh:</strong> {{ asset_request.verifier.full_name if asset_request.verifier else '-' }}</p>
+                            <p><strong>Tanggal Verifikasi:</strong> {{ asset_request.verified_at.strftime('%d/%m/%Y %H:%M') if asset_request.verified_at else '-' }}</p>
+                            {% endif %}
+                            {% if asset_request.received_by %}
+                            <p><strong>Diterima oleh:</strong> {{ asset_request.receiver.full_name if asset_request.receiver else '-' }}</p>
+                            <p><strong>Tanggal Penerimaan:</strong> {{ asset_request.received_at.strftime('%d/%m/%Y %H:%M') if asset_request.received_at else '-' }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if asset_request.request_notes %}
+                    <div class="mt-3">
+                        <strong>Alasan Permohonan:</strong>
+                        <p>{{ asset_request.request_notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if asset_request.verification_notes %}
+                    <div class="mt-3">
+                        <strong>Catatan Verifikasi:</strong>
+                        <p>{{ asset_request.verification_notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if asset_request.notes %}
+                    <div class="mt-3">
+                        <strong>Catatan Tambahan:</strong>
+                        <p>{{ asset_request.notes }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Requested Items -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Aset yang Dimohonkan</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Aset</th>
+                                    <th>Kategori</th>
+                                    <th>Jumlah</th>
+                                    <th>Lokasi (Ruangan)</th>
+                                    <th>Catatan Ruangan</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in asset_request.items %}
+                                <tr>
+                                    <td>{{ item.item.name if item.item else '-' }}</td>
+                                    <td>{{ item.item.category.name if item.item and item.item.category else '-' }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>{{ item.unit_detail.room_name if item.unit_detail else '-' }}</td>
+                                    <td>{{ item.room_notes or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-body">
+                    {% if asset_request.status == 'pending' %}
+                        {% if current_user.is_admin() %}
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('asset_requests.verify', id=asset_request.id) }}" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Verifikasi & Setujui
+                            </a>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                <i class="fas fa-times"></i> Tolak
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Permohonan ini menunggu verifikasi dari admin.
+                        </div>
+                        {% endif %}
+                    {% elif asset_request.status == 'verified' %}
+                        {% if current_user.is_unit_staff() %}
+                        <form method="POST" action="{{ url_for('asset_requests.complete', id=asset_request.id) }}" class="d-inline">
+                            <input type="hidden" name="distribution_id" value="{{ asset_request.distribution_id if asset_request.distribution_id else '' }}">
+                            <button type="submit" class="btn btn-success" {% if not asset_request.distribution_id %}disabled{% endif %}>
+                                <i class="fas fa-check-circle"></i> Tandai Selesai (Barang Sudah Diterima)
+                            </button>
+                            {% if not asset_request.distribution_id %}
+                            <small class="text-muted ms-2">Menunggu proses distribusi dari warehouse staff</small>
+                            {% endif %}
+                        </form>
+                        {% else %}
+                        <div class="alert alert-primary">
+                            <i class="fas fa-info-circle"></i> Permohonan ini sudah diverifikasi dan menunggu proses distribusi.
+                        </div>
+                        {% endif %}
+                    {% elif asset_request.status == 'completed' %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Permohonan ini sudah selesai. Aset telah diterima oleh unit.
+                    </div>
+                    {% elif asset_request.status == 'rejected' %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-times-circle"></i> Permohonan ini ditolak.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+{% if current_user.is_admin() and asset_request.status == 'pending' %}
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('asset_requests.reject', id=asset_request.id) }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tolak Permohonan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="rejection_reason" class="form-label">Alasan Penolakan <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="rejection_reason" name="rejection_reason" rows="4" required placeholder="Jelaskan mengapa permohonan ini ditolak..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger">Tolak Permohonan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

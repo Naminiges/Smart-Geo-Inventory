@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Permohonan Aset - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Permohonan Aset{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-800">Daftar Permohonan Aset</h1>
+            <p class="text-gray-600 mt-1">Kelola permohonan aset untuk unit Anda</p>
+        </div>
+        {% if current_user.is_unit_staff() %}
+        <a href="{{ url_for('asset_requests.create') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
+            <i class="fas fa-plus mr-2"></i>Buat Permohonan
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+    <!-- Total -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Total Permohonan</p>
+                <p class="text-3xl font-bold text-gray-800">{{ stats.total }}</p>
+            </div>
+            <div class="bg-blue-100 rounded-full p-3">
+                <i class="fas fa-clipboard-list text-blue-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-600">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Menunggu Verifikasi</p>
+                <p class="text-3xl font-bold text-gray-800">{{ stats.pending }}</p>
+            </div>
+            <div class="bg-amber-100 rounded-full p-3">
+                <i class="fas fa-clock text-amber-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verified -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-600">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Sudah Diverifikasi</p>
+                <p class="text-3xl font-bold text-gray-800">{{ stats.verified }}</p>
+            </div>
+            <div class="bg-indigo-100 rounded-full p-3">
+                <i class="fas fa-check-circle text-indigo-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed -->
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm text-gray-500">Selesai</p>
+                <p class="text-3xl font-bold text-gray-800">{{ stats.completed }}</p>
+            </div>
+            <div class="bg-green-100 rounded-full p-3">
+                <i class="fas fa-check-double text-green-600 text-xl"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Buttons -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-4">
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('asset_requests.index') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if not current_filter %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Semua
+        </a>
+        <a href="{{ url_for('asset_requests.index', status='pending') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'pending' %}bg-amber-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Pending
+        </a>
+        <a href="{{ url_for('asset_requests.index', status='verified') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'verified' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Verified
+        </a>
+        <a href="{{ url_for('asset_requests.index', status='completed') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'completed' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Completed
+        </a>
+    </div>
+</div>
+
+<!-- Asset Requests Table -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-list mr-2 text-blue-600"></i>
+            Daftar Permohonan ({{ asset_requests|length }})
+        </h3>
+    </div>
+    <div class="p-6">
+        {% if asset_requests and asset_requests|length > 0 %}
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah Item</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Catatan</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in asset_requests %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-4 px-4">
+                            <span class="font-mono text-sm font-semibold text-blue-600">#{{ req.id }}</span>
+                        </td>
+                        <td class="py-4 px-4 text-gray-600">
+                            {{ req.request_date.strftime('%d/%m/%Y') if req.request_date else '-' }}
+                        </td>
+                        <td class="py-4 px-4">
+                            <div class="flex items-center">
+                                <div class="bg-orange-100 rounded p-1 mr-2">
+                                    <i class="fas fa-building text-orange-600 text-sm"></i>
+                                </div>
+                                <span class="text-gray-800 font-medium">{{ req.unit.name if req.unit else '-' }}</span>
+                            </div>
+                        </td>
+                        <td class="py-4 px-4">
+                            <span class="text-gray-800 font-semibold">{{ req.items.count() }}</span>
+                            <span class="text-gray-500 text-sm"> item</span>
+                        </td>
+                        <td class="py-4 px-4">
+                            {% if req.status == 'pending' %}
+                            <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-clock mr-1"></i>Pending
+                            </span>
+                            {% elif req.status == 'verified' %}
+                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-check-circle mr-1"></i>Verified
+                            </span>
+                            {% elif req.status == 'completed' %}
+                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-check-double mr-1"></i>Completed
+                            </span>
+                            {% elif req.status == 'rejected' %}
+                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-times-circle mr-1"></i>Rejected
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-4 text-gray-600 text-sm max-w-xs truncate">
+                            {{ req.request_notes[:50] + '...' if req.request_notes and req.request_notes|length > 50 else (req.request_notes or '-') }}
+                        </td>
+                        <td class="py-4 px-4">
+                            <div class="flex items-center justify-center space-x-2">
+                                <a href="{{ url_for('asset_requests.detail', id=req.id) }}" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">
+                                    <i class="fas fa-eye mr-1"></i> Detail
+                                </a>
+                                {% if current_user.is_admin() and req.status == 'pending' %}
+                                <a href="{{ url_for('asset_requests.verify', id=req.id) }}" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
+                                    <i class="fas fa-check mr-1"></i> Verifikasi
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-12 bg-gray-50 rounded-lg">
+            <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+            <p class="text-gray-600 font-semibold">
+                {% if current_filter %}
+                Tidak ada permohonan dengan status {{ current_filter }}.
+                {% else %}
+                Belum ada permohonan aset.
+                {% endif %}
+            </p>
+            {% if not current_filter and current_user.is_unit_staff() %}
+            <a href="{{ url_for('asset_requests.create') }}" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-plus mr-2"></i>Buat Permohonan Pertama Anda
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
