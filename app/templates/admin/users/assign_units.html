@@ -15,114 +15,86 @@
 
 <!-- User Info -->
 <div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="p-6 border-b border-gray-200">
+    <div class="p-6">
         <div class="flex items-center">
-            <div class="bg-orange-100 rounded-full p-3 mr-4">
-                <i class="fas fa-user text-orange-600 text-2xl"></i>
+            <div class="bg-yellow-100 rounded-full p-3 mr-4">
+                <i class="fas fa-user text-yellow-600 text-2xl"></i>
             </div>
             <div>
                 <h3 class="text-xl font-semibold text-gray-800">{{ user.name }}</h3>
                 <p class="text-sm text-gray-600">{{ user.email }}</p>
-                <span class="mt-2 inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">
-                    <i class="fas fa-building mr-1"></i>Unit Staff
-                </span>
+                <div class="mt-1">
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                        <i class="fas fa-building mr-1"></i>Unit Staff
+                    </span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Unit Assignment Form -->
+<!-- Assignment Form -->
 <div class="bg-white rounded-xl shadow-md">
     <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-800">
-            <i class="fas fa-building mr-2 text-orange-600"></i>
-            Pilih Unit untuk User
-        </h3>
-        <p class="text-sm text-gray-600 mt-1">Pilih satu atau lebih unit yang akan ditugaskan kepada user ini</p>
+        <div class="flex items-center">
+            <div class="bg-yellow-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-building text-yellow-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">Assignment Unit</h3>
+                <p class="text-sm text-gray-500">Pilih unit yang bisa diakses oleh user ini</p>
+            </div>
+        </div>
     </div>
 
     <form method="POST" class="p-6">
-        <!-- Units Grid -->
+        {{ form.hidden_tag() }}
+
         <div class="mb-6">
-            {% if units and units|length > 0 %}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {% for unit in units %}
-                <div class="border rounded-lg p-4 hover:border-orange-400 transition-colors {% if unit.id in current_assignments %}border-orange-500 bg-orange-50{% else %}border-gray-200{% endif %}">
-                    <label class="flex items-start cursor-pointer">
-                        <input type="checkbox"
-                               name="unit_ids"
-                               value="{{ unit.id }}"
-                               class="mt-1 w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                               {% if unit.id in current_assignments %}checked{% endif %}>
-                        <div class="ml-3 flex-1">
-                            <div class="flex items-center justify-between">
-                                <h4 class="font-semibold text-gray-800">{{ unit.name }}</h4>
-                                {% if unit.status %}
-                                <span class="ml-2 px-2 py-1 text-xs rounded-full
-                                    {% if unit.status == 'available' %}bg-green-100 text-green-700{% elif unit.status == 'in_use' %}bg-blue-100 text-blue-700{% elif unit.status == 'maintenance' %}bg-amber-100 text-amber-700{% else %}bg-gray-100 text-gray-700{% endif %}">
-                                    {{ unit.status|title }}
-                                </span>
-                                {% endif %}
-                            </div>
-                            <p class="text-sm text-gray-600 mt-1">
-                                <i class="fas fa-map-marker-alt mr-1"></i>
-                                {{ unit.address[:60] }}{{ '...' if unit.address and unit.address|length > 60 else '' }}
-                            </p>
-                            <p class="text-xs text-gray-500 mt-2">
-                                <i class="fas fa-box mr-1"></i>
-                                {{ unit.items_count }} item terinstall
-                            </p>
-                        </div>
-                    </label>
-                </div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-building mr-1 text-yellow-600"></i>
+                Pilih Unit
+            </label>
+            {{ form.unit_id(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all") }}
+            {% if form.unit_id.errors %}
+                {% for error in form.unit_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
                 {% endfor %}
-            </div>
-            {% else %}
-            <div class="text-center py-12 bg-gray-50 rounded-lg">
-                <i class="fas fa-building text-gray-400 text-5xl mb-4"></i>
-                <p class="text-gray-600 font-semibold">Belum ada data unit</p>
-                <p class="text-sm text-gray-500 mt-1">Silakan buat unit terlebih dahulu</p>
-            </div>
             {% endif %}
+            <p class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                Pilih satu unit untuk user ini
+            </p>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mb-6 p-4 bg-yellow-50 rounded-lg">
+            <div class="flex items-start">
+                <div class="bg-yellow-100 rounded-lg p-2 mr-3">
+                    <i class="fas fa-info-circle text-yellow-600 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-yellow-900 mb-2">Informasi Assignment</h4>
+                    <ul class="text-sm text-yellow-800 space-y-1">
+                        <li><i class="fas fa-check-circle mr-2"></i>User hanya bisa mengakses satu unit yang ditugaskan</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Unit staff akan bisa melihat instalasi dan distribusi di unit ini</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>User tanpa unit assignment tidak bisa mengakses fitur unit</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div class="text-sm text-gray-600">
-                <i class="fas fa-info-circle mr-1"></i>
-                {% if units and units|length > 0 %}
-                Total {{ units|length }} unit tersedia
-                {% else %}
-                Tidak ada unit tersedia
-                {% endif %}
-            </div>
-            <div class="flex space-x-3">
-                <a href="{{ url_for('users.detail', id=user.id) }}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
-                    <i class="fas fa-times mr-2"></i>Batal
-                </a>
-                {% if units and units|length > 0 %}
-                <button type="submit" class="px-6 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold">
-                    <i class="fas fa-save mr-2"></i>Simpan Assignment
-                </button>
-                {% endif %}
-            </div>
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('users.detail', id=user.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Kembali
+            </a>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i class="fas fa-save mr-2"></i>
+                Simpan Assignment
+            </button>
         </div>
     </form>
-</div>
-
-<!-- Info Card -->
-<div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-    <div class="flex items-start">
-        <i class="fas fa-info-circle text-blue-600 text-xl mr-3 mt-1"></i>
-        <div>
-            <h4 class="font-semibold text-blue-900">Informasi Assignment Unit</h4>
-            <ul class="text-sm text-blue-800 mt-2 space-y-1">
-                <li>• Unit Staff hanya bisa mengakses unit yang diassign kepadanya</li>
-                <li>• Satu user bisa diassign ke multiple unit</li>
-                <li>• User akan bisa melihat instalasi dan distribusi di unit yang diassign</li>
-                <li>• Status unit akan ditampilkan untuk informasi</li>
-            </ul>
-        </div>
-    </div>
 </div>
 {% endblock %}

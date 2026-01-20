@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from app import db
-from app.models import Unit, User, UserUnit
+from app.models import Unit, User, UserUnit, AssetRequest
 from app.forms.unit_forms import UnitForm
 from app.utils.decorators import role_required
 from sqlalchemy import or_
@@ -34,10 +34,22 @@ def index():
 
     units = query.order_by(Unit.created_at.desc()).all()
 
+    # Get asset request counts for each unit
+    unit_request_counts = {}
+    for unit in units:
+        pending_count = AssetRequest.query.filter_by(unit_id=unit.id, status='pending').count()
+        verified_count = AssetRequest.query.filter_by(unit_id=unit.id, status='verified').count()
+        unit_request_counts[unit.id] = {
+            'pending': pending_count,
+            'verified': verified_count,
+            'has_requests': pending_count > 0 or verified_count > 0
+        }
+
     return render_template('admin/units/index.html',
                          units=units,
                          search=search,
-                         status_filter=status_filter)
+                         status_filter=status_filter,
+                         unit_request_counts=unit_request_counts)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
@@ -80,9 +92,13 @@ def detail(id):
     # Get coordinates
     coordinates = unit.get_coordinates()
 
+    # Get asset requests for this unit
+    asset_requests = AssetRequest.query.filter_by(unit_id=id).order_by(AssetRequest.created_at.desc()).all()
+
     return render_template('admin/units/detail.html',
                          unit=unit,
-                         coordinates=coordinates)
+                         coordinates=coordinates,
+                         asset_requests=asset_requests)
 
 
 @bp.route('/<int:id>/edit', methods=['GET', 'POST'])

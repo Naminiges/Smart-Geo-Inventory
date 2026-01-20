@@ -32,9 +32,13 @@ def create_app(config_name='default'):
     login_manager.login_message = 'Silakan login untuk mengakses halaman ini.'
     login_manager.login_message_category = 'warning'
 
+    # Register context processors
+    from app.utils.helpers import notification_counts
+    app.context_processor(notification_counts)
+
     # Register blueprints
     from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units
-    from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement
+    from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement, api_units
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
@@ -58,6 +62,7 @@ def create_app(config_name='default'):
     app.register_blueprint(api_suppliers.bp, url_prefix='/api/suppliers')
     app.register_blueprint(api_map.bp, url_prefix='/api/map')
     app.register_blueprint(api_procurement.bp, url_prefix='/api')
+    app.register_blueprint(api_units.bp)
 
     # Root route - redirect to login or dashboard
     @app.route('/')

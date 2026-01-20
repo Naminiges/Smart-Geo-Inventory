@@ -27,12 +27,6 @@
                 </div>
             </div>
             <div class="flex space-x-2">
-                <a href="{{ url_for('installations.index') }}?unit_id={{ unit.id }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm">
-                    <i class="fas fa-desktop mr-1"></i> Lihat Instalasi
-                </a>
-                <a href="{{ url_for('units.assign_staffs', id=unit.id) }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold text-sm">
-                    <i class="fas fa-users-cog mr-1"></i> Assign Staff
-                </a>
                 <a href="{{ url_for('units.edit', id=unit.id) }}" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-semibold text-sm">
                     <i class="fas fa-edit mr-1"></i> Edit
                 </a>
@@ -127,8 +121,54 @@
     </div>
 </div>
 
+<!-- Unit Details (Ruangan) -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-door-open mr-2 text-purple-600"></i>
+            Ruangan di Unit Ini
+        </h3>
+    </div>
+    <div class="p-6">
+        {% set unit_details_list = unit.unit_details.all() %}
+        {% if unit_details_list and unit_details_list|length > 0 %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for room in unit_details_list %}
+            <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 hover:shadow-md transition-all">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex-1">
+                        <h4 class="font-semibold text-gray-800">{{ room.room_name or 'Ruangan Tanpa Nama' }}</h4>
+                        {% if room.floor %}
+                        <p class="text-sm text-gray-600">
+                            <i class="fas fa-layer-group mr-1"></i>Lantai {{ room.floor }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="bg-purple-100 rounded-lg p-2">
+                        <i class="fas fa-door-closed text-purple-600"></i>
+                    </div>
+                </div>
+                {% if room.description %}
+                <p class="text-sm text-gray-600 mb-3">{{ room.description[:80] }}{{ '...' if room.description and room.description|length > 80 else '' }}</p>
+                {% endif %}
+                <button onclick="showRoomAssets({{ room.id }}, '{{ room.room_name or 'Ruangan' }}')" class="w-full px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">
+                    <i class="fas fa-boxes mr-1"></i> Lihat Aset
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
+            <i class="fas fa-door-open text-gray-400 text-3xl mb-2"></i>
+            <p class="text-gray-600 font-semibold">Belum ada ruangan</p>
+            <p class="text-sm text-gray-500 mt-1">Unit ini belum memiliki data ruangan</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Assigned Staff -->
-<div class="bg-white rounded-xl shadow-md">
+<div class="bg-white rounded-xl shadow-md mb-6">
     <div class="p-6 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-800">
             <i class="fas fa-users mr-2 text-indigo-600"></i>
@@ -166,4 +206,171 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Asset Requests (Permohonan Pengadaan) -->
+<div id="asset-requests" class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-clipboard-list mr-2 text-emerald-600"></i>
+            Permohonan Pengadaan
+        </h3>
+    </div>
+    <div class="p-6">
+        {% if asset_requests %}
+        <div class="space-y-4">
+            {% for request in asset_requests %}
+            <div class="border rounded-lg p-4 {% if request.status == 'pending' %}border-red-200 bg-red-50{% elif request.status == 'verified' %}border-green-200 bg-green-50{% elif request.status == 'rejected' %}border-gray-200 bg-gray-50{% else %}border-blue-200 bg-blue-50{% endif %}">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h4 class="font-semibold text-gray-800">Permohonan #{{ request.id }}</h4>
+                            {% if request.status == 'pending' %}
+                            <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-clock mr-1"></i>Menunggu Verifikasi
+                            </span>
+                            {% elif request.status == 'verified' %}
+                            <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-check mr-1"></i>Terverifikasi
+                            </span>
+                            {% elif request.status == 'rejected' %}
+                            <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-times mr-1"></i>Ditolak
+                            </span>
+                            {% elif request.status == 'completed' %}
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                                <i class="fas fa-check-double mr-1"></i>Selesai
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <span class="text-gray-600">Tanggal Permohonan:</span>
+                                <span class="font-semibold ml-2">{{ request.request_date.strftime('%d/%m/%Y %H:%M') }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Total Item:</span>
+                                <span class="font-semibold ml-2">{{ request.total_quantity }} item</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Pemohon:</span>
+                                <span class="font-semibold ml-2">{{ request.requester.name }}</span>
+                            </div>
+                            {% if request.verified_by %}
+                            <div>
+                                <span class="text-gray-600">Verifier:</span>
+                                <span class="font-semibold ml-2">{{ request.verifier.name }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% if request.request_notes %}
+                        <div class="mt-3">
+                            <span class="text-gray-600 text-sm">Catatan:</span>
+                            <p class="text-gray-700 text-sm mt-1">{{ request.request_notes }}</p>
+                        </div>
+                        {% endif %}
+                        {% if request.status == 'rejected' and request.verification_notes %}
+                        <div class="mt-3">
+                            <span class="text-gray-600 text-sm">Alasan Penolakan:</span>
+                            <p class="text-red-700 text-sm mt-1">{{ request.verification_notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex gap-2">
+                        <a href="{{ url_for('asset_requests.detail', id=request.id) }}" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-semibold">
+                            <i class="fas fa-eye mr-1"></i>Detail
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
+            <i class="fas fa-clipboard-list text-gray-400 text-3xl mb-2"></i>
+            <p class="text-gray-600 font-semibold">Tidak ada permohonan pengadaan</p>
+            <p class="text-sm text-gray-500 mt-1">Unit ini belum memiliki permohonan pengadaan aset</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal: Room Assets -->
+<div id="roomAssetsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-boxes mr-2 text-purple-600"></i>
+                Aset di <span id="roomNameDisplay">Ruangan</span>
+            </h3>
+            <button onclick="closeRoomAssetsModal()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <i class="fas fa-times text-gray-500"></i>
+            </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[60vh]" id="roomAssetsContent">
+            <div class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-purple-600 text-3xl mb-2"></i>
+                <p class="text-gray-600">Memuat data aset...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showRoomAssets(roomId, roomName) {
+    document.getElementById('roomNameDisplay').textContent = roomName;
+    document.getElementById('roomAssetsModal').classList.remove('hidden');
+
+    // Fetch assets for this room
+    fetch(`/api/unit-details/${roomId}/assets`)
+        .then(response => response.json())
+        .then(data => {
+            const content = document.getElementById('roomAssetsContent');
+            if (data.assets && data.assets.length > 0) {
+                content.innerHTML = `
+                    <div class="space-y-3">
+                        ${data.assets.map(asset => `
+                            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                <div class="flex items-center">
+                                    <div class="bg-purple-100 rounded-lg p-2 mr-3">
+                                        <i class="fas fa-barcode text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-800">${asset.item_name}</h4>
+                                        <p class="text-sm text-gray-600">
+                                            <i class="fas fa-hashtag mr-1"></i>${asset.serial_number}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-1 ${asset.status === 'available' ? 'bg-green-100 text-green-700' : asset.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'} rounded-full text-xs font-semibold">
+                                    ${asset.status}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-box-open text-gray-400 text-4xl mb-3"></i>
+                        <p class="text-gray-600 font-semibold">Tidak ada aset</p>
+                        <p class="text-sm text-gray-500 mt-1">Ruangan ini belum memiliki aset terinstall</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            document.getElementById('roomAssetsContent').innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-3"></i>
+                    <p class="text-gray-600 font-semibold">Gagal memuat data</p>
+                    <p class="text-sm text-gray-500 mt-1">Silakan coba lagi nanti</p>
+                </div>
+            `;
+        });
+}
+
+function closeRoomAssetsModal() {
+    document.getElementById('roomAssetsModal').classList.add('hidden');
+}
+</script>
 {% endblock %}

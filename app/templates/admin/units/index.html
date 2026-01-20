@@ -21,24 +21,24 @@
 
     <!-- Search and Filter Form -->
     <form method="GET" class="p-6 bg-gray-50">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="flex flex-col md:flex-row gap-4">
             <!-- Search -->
-            <div>
+            <div class="flex-1">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Cari Unit</label>
                 <div class="relative">
+                    <i class="fas fa-search absolute p-4 transform -translate-y-1/2 text-gray-400"></i>
                     <input type="text"
                            name="search"
                            value="{{ search }}"
                            placeholder="Cari nama atau alamat unit..."
-                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                           class="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all">
                 </div>
             </div>
 
             <!-- Status Filter -->
-            <div>
+            <div class="md:w-64">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Filter Status</label>
-                <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
+                <select name="status" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all bg-white">
                     <option value="">Semua Status</option>
                     <option value="available" {% if status_filter == 'available' %}selected{% endif %}>Available</option>
                     <option value="in_use" {% if status_filter == 'in_use' %}selected{% endif %}>In Use</option>
@@ -48,12 +48,14 @@
 
             <!-- Action Buttons -->
             <div class="flex items-end gap-2">
-                <button type="submit" class="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold">
+                <button type="submit" class="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold">
                     <i class="fas fa-filter mr-2"></i>Filter
                 </button>
-                <a href="{{ url_for('units.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
-                    <i class="fas fa-times"></i>
+                {% if search or status_filter %}
+                <a href="{{ url_for('units.index') }}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+                    <i class="fas fa-times mr-2"></i>Reset
                 </a>
+                {% endif %}
             </div>
         </div>
     </form>
@@ -70,8 +72,7 @@
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Nama Unit</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Alamat</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah Item</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Koordinat</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Permohonan</th>
                         <th class="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
                     </tr>
                 </thead>
@@ -108,18 +109,18 @@
                             </span>
                             {% endif %}
                         </td>
-                        <td class="py-4 px-4">
-                            <span class="text-gray-800 font-semibold">{{ unit.items_count }}</span>
-                            <span class="text-gray-500 text-sm">item</span>
-                        </td>
-                        <td class="py-4 px-4 text-sm text-gray-600">
-                            {% set coords = unit.get_coordinates() %}
-                            {% if coords %}
-                            <span class="font-mono text-xs">
-                                {{ "%.6f"|format(coords.latitude) }}, {{ "%.6f"|format(coords.longitude) }}
-                            </span>
+                        <td class="py-4 px-4 text-center">
+                            {% set req_info = unit_request_counts.get(unit.id, {'pending': 0, 'verified': 0, 'has_requests': False}) %}
+                            {% if req_info.has_requests %}
+                            <a href="{{ url_for('units.detail', id=unit.id) }}#asset-requests" class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors {% if req_info.pending > 0 %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-amber-100 text-amber-700 hover:bg-amber-200{% endif %}">
+                                <i class="fas fa-clipboard-list mr-2"></i>
+                                {% if req_info.pending > 0 %}{{ req_info.pending }} Permohonan{% else %}{{ req_info.verified }} Terverifikasi{% endif %}
+                            </a>
                             {% else %}
-                            <span class="text-gray-400">-</span>
+                            <span class="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg text-sm font-semibold cursor-not-allowed">
+                                <i class="fas fa-clipboard-list mr-2"></i>
+                                Tidak Ada
+                            </span>
                             {% endif %}
                         </td>
                         <td class="py-4 px-4">
@@ -130,9 +131,6 @@
                                 <a href="{{ url_for('units.edit', id=unit.id) }}" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <button onclick="confirmDelete({{ unit.id }}, '{{ unit.name }}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             </div>
                         </td>
                     </tr>
@@ -157,37 +155,4 @@
         {% endif %}
     </div>
 </div>
-
-<!-- Delete Confirmation Modal -->
-<div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
-        <div class="text-center">
-            <div class="bg-red-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-                <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
-            </div>
-            <h3 class="text-xl font-bold text-gray-800 mb-2">Hapus Unit</h3>
-            <p class="text-gray-600 mb-6">Apakah Anda yakin ingin menghapus unit "<span id="unitName" class="font-semibold"></span>"?</p>
-            <form id="deleteForm" method="POST" class="flex space-x-3">
-                <button type="button" onclick="closeDeleteModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
-                    Batal
-                </button>
-                <button type="submit" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
-                    <i class="fas fa-trash mr-2"></i>Hapus
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function confirmDelete(id, name) {
-    document.getElementById('unitName').textContent = name;
-    document.getElementById('deleteForm').action = '/admin/units/' + id + '/delete';
-    document.getElementById('deleteModal').classList.remove('hidden');
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.add('hidden');
-}
-</script>
 {% endblock %}
