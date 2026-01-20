@@ -80,7 +80,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Permohonan</span>
-                <span class="text-sm font-semibold text-gray-900">{{ asset_request.request_date.strftime('%d/%m/%Y %H:%M') if asset_request.request_date else '-' }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.request_date, '%d/%m/%Y %H:%M') }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Diajukan oleh</span>
@@ -93,7 +93,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Verifikasi</span>
-                <span class="text-sm font-semibold text-gray-900">{{ asset_request.verified_at.strftime('%d/%m/%Y %H:%M') if asset_request.verified_at else '-' }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.verified_at, '%d/%m/%Y %H:%M') }}</span>
             </div>
             {% endif %}
             {% if asset_request.received_by %}
@@ -103,13 +103,13 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Penerimaan</span>
-                <span class="text-sm font-semibold text-gray-900">{{ asset_request.received_at.strftime('%d/%m/%Y %H:%M') if asset_request.received_at else '-' }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.received_at, '%d/%m/%Y %H:%M') }}</span>
             </div>
             {% endif %}
             {% if asset_request.distribution_id %}
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Distribusi</span>
-                <a href="{{ url_for('distribution.detail', id=asset_request.distribution_id) }}" target="_blank" class="text-sm font-semibold text-blue-600 hover:underline">
+                <a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="text-sm font-semibold text-blue-600 hover:underline">
                     #{{ asset_request.distribution_id }} <i class="fas fa-external-link-alt text-xs"></i>
                 </a>
             </div>
@@ -208,6 +208,92 @@
 <div class="bg-white rounded-xl shadow-md p-6">
     <h3 class="text-lg font-semibold text-gray-800 mb-4">Status & Progress</h3>
 
+    <!-- Timeline -->
+    <div class="space-y-4">
+        <!-- Step 1: Request Created -->
+        <div class="flex items-start">
+            <div class="flex flex-col items-center mr-4">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                    <i class="fas fa-file-alt text-green-600"></i>
+                </div>
+                {% if asset_request.verified_at or asset_request.distributed_at or asset_request.received_at %}
+                <div class="w-0.5 h-16 bg-green-200 mt-2"></div>
+                {% endif %}
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold text-gray-900">Permohonan Dibuat</p>
+                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.request_date) }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.requester.full_name if asset_request.requester else '-' }}</p>
+            </div>
+        </div>
+
+        <!-- Step 2: Verified -->
+        <div class="flex items-start {% if not asset_request.verified_at %}opacity-50{% endif %}">
+            <div class="flex flex-col items-center mr-4">
+                <div class="w-10 h-10 rounded-full {% if asset_request.verified_at %}bg-green-100{% else %}bg-gray-100{% endif %} flex items-center justify-center">
+                    <i class="fas fa-check-circle {% if asset_request.verified_at %}text-green-600{% else %}text-gray-400{% endif %}"></i>
+                </div>
+                {% if asset_request.distributed_at or asset_request.received_at %}
+                <div class="w-0.5 h-16 bg-green-200 mt-2"></div>
+                {% endif %}
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold text-gray-900">Diverifikasi Admin</p>
+                {% if asset_request.verified_at %}
+                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.verified_at) }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.verifier.full_name if asset_request.verifier else '-' }}</p>
+                {% else %}
+                <p class="text-sm text-gray-400">Menunggu verifikasi</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Step 3: Distributed -->
+        <div class="flex items-start {% if not asset_request.distributed_at %}opacity-50{% endif %}">
+            <div class="flex flex-col items-center mr-4">
+                <div class="w-10 h-10 rounded-full {% if asset_request.distributed_at %}bg-green-100{% else %}bg-gray-100{% endif %} flex items-center justify-center">
+                    <i class="fas fa-truck {% if asset_request.distributed_at %}text-green-600{% else %}text-gray-400{% endif %}"></i>
+                </div>
+                {% if asset_request.received_at %}
+                <div class="w-0.5 h-16 bg-green-200 mt-2"></div>
+                {% endif %}
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold text-gray-900">Didistribusikan</p>
+                {% if asset_request.distributed_at %}
+                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.distributed_at) }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.distributor.full_name if asset_request.distributor else '-' }}</p>
+                {% if asset_request.distribution_id %}
+                <a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="text-xs text-blue-600 hover:underline">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
+                {% endif %}
+                {% else %}
+                <p class="text-sm text-gray-400">Menunggu distribusi</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Step 4: Received/Completed -->
+        <div class="flex items-start {% if not asset_request.received_at %}opacity-50{% endif %}">
+            <div class="flex flex-col items-center mr-4">
+                <div class="w-10 h-10 rounded-full {% if asset_request.received_at %}bg-green-100{% else %}bg-gray-100{% endif %} flex items-center justify-center">
+                    <i class="fas fa-check-double {% if asset_request.received_at %}text-green-600{% else %}text-gray-400{% endif %}"></i>
+                </div>
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold text-gray-900">Diterima</p>
+                {% if asset_request.received_at %}
+                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.received_at) }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.receiver.full_name if asset_request.receiver else '-' }}</p>
+                {% else %}
+                <p class="text-sm text-gray-400">Menunggu konfirmasi penerimaan</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Status Banner -->
+    <div class="mt-6 pt-6 border-t border-gray-200">
+
     {% if asset_request.status == 'pending' %}
     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
         <div class="flex items-start">
@@ -224,6 +310,39 @@
             </div>
         </div>
     </div>
+    {% elif asset_request.status == 'distributing' %}
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-start">
+            <i class="fas fa-truck text-blue-600 text-xl mr-3 mt-1"></i>
+            <div class="flex-1">
+                <h4 class="font-semibold text-blue-900">Sedang Didistribusikan</h4>
+                <p class="text-sm text-blue-800 mt-1">
+                    {% if current_user.is_unit_staff() %}
+                    Permohonan sedang dalam proses distribusi oleh warehouse staff. Barang sedang dikirim ke lokasi Anda.
+                    {% if asset_request.distribution_id %}
+                    <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
+                    {% endif %}
+                    {% elif current_user.is_warehouse_staff() or current_user.is_admin() %}
+                    Permohonan sedang didistribusikan ke unit.
+                    {% if asset_request.distribution_id %}
+                    <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
+                    {% endif %}
+                    {% endif %}
+                </p>
+
+                {% if current_user.is_unit_staff() %}
+                <form method="POST" action="{{ url_for('asset_requests.complete', id=asset_request.id) }}" class="mt-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="distribution_id" value="{{ asset_request.distribution_id }}"/>
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Konfirmasi Penerimaan Barang
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
     {% elif asset_request.status == 'verified' %}
     <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
         <div class="flex items-start">
@@ -234,7 +353,7 @@
                     {% if current_user.is_unit_staff() %}
                     Permohonan sudah diverifikasi. Menunggu proses distribusi dari warehouse staff.
                     {% if asset_request.distribution_id %}
-                    <br><a href="{{ url_for('distribution.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
+                    <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
                     {% endif %}
                     {% else %}
                     Permohonan sudah diverifikasi dan siap untuk didistribusikan.

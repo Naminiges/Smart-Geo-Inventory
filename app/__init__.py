@@ -34,7 +34,13 @@ def create_app(config_name='default'):
 
     # Register context processors
     from app.utils.helpers import notification_counts
+    from app.utils.datetime_helper import format_wib_datetime
     app.context_processor(notification_counts)
+
+    # Make datetime helpers available in all templates
+    @app.context_processor
+    def datetime_helpers():
+        return dict(format_wib_datetime=format_wib_datetime)
 
     # Register blueprints
     from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement

@@ -1,9 +1,11 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from datetime import datetime
 from app import db
 from app.models import Distribution, ItemDetail, User, Unit, UnitDetail, AssetRequest, AssetRequestItem
 from app.forms import DistributionForm, InstallationForm
 from app.utils.decorators import role_required, warehouse_access_required
+from app.utils.datetime_helper import get_wib_now
 
 bp = Blueprint('installations', __name__, url_prefix='/installations')
 
@@ -24,6 +26,14 @@ def index():
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.all()
+
+        print(f"=== DEBUG INSTALLATIONS INDEX ===")
+        print(f"Warehouse staff ID: {current_user.id}, Warehouse ID: {current_user.warehouse_id}")
+        print(f"Task type filter: '{task_type_filter}'")
+        print(f"Found {len(installations)} distributions")
+        for inst in installations:
+            print(f"  - ID: {inst.id}, Item: {inst.item_detail.item.name if inst.item_detail else 'N/A'}, Field Staff: {inst.field_staff_id}, Status: {inst.status}")
+        print(f"==============================")
 
         # Get verified asset requests that haven't been distributed yet
         verified_requests = AssetRequest.query.filter(
@@ -383,7 +393,16 @@ def distribute_asset_request(request_id):
             if distributions_created:
                 asset_request.distribution_id = distributions_created[0].id
                 asset_request.status = 'distributing'
+                asset_request.distributed_by = current_user.id
+                asset_request.distributed_at = get_wib_now()
                 asset_request.save()
+
+            print(f"=== DEBUG DISTRIBUTION CREATED ===")
+            print(f"Created {len(distributions_created)} distributions")
+            for dist in distributions_created:
+                print(f"  - Distribution ID: {dist.id}, Item: {dist.item_detail.item.name if dist.item_detail else 'N/A'}, Field Staff ID: {dist.field_staff_id}, Warehouse ID: {dist.warehouse_id}")
+            print(f"Current warehouse staff warehouse_id: {current_user.warehouse_id}")
+            print(f"=================================")
 
             flash(f'Berhasil membuat {len(distributions_created)} distribusi untuk permohonan aset #{asset_request.id}! Field staff akan menerima task.', 'success')
             return redirect(url_for('installations.index'))

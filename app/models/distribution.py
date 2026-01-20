@@ -12,7 +12,7 @@ class Distribution(BaseModel):
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=False)
     field_staff_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
-    unit_detail_id = db.Column(db.Integer, db.ForeignKey('unit_details.id'), nullable=False)
+    unit_detail_id = db.Column(db.Integer, db.ForeignKey('unit_details.id'), nullable=True)
     address = db.Column(db.Text, nullable=False)
     geom = db.Column(Geometry('POINT', srid=4326))  # PostGIS geometry for GIS
     installed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -193,7 +193,7 @@ class Distribution(BaseModel):
             warehouse_id=warehouse_id,
             field_staff_id=field_staff_id,
             unit_id=asset_request.unit_id,
-            unit_detail_id=asset_request_item.unit_detail_id if asset_request_item.unit_detail_id else None,
+            unit_detail_id=asset_request_item.unit_detail_id if asset_request_item.unit_detail_id else asset_request.unit.unit_details[0].id if asset_request.unit and asset_request.unit.unit_details else None,
             address=asset_request.unit.address if asset_request.unit else 'Unknown',
             task_type=task_type,
             asset_request_id=asset_request.id,

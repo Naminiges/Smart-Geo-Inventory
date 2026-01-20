@@ -337,11 +337,23 @@ def complete(id):
     """Mark asset request as completed after receiving items"""
     asset_request = AssetRequest.query.get_or_404(id)
 
-    if asset_request.status != 'verified':
-        flash('Hanya permohonan yang sudah diverifikasi yang bisa diselesaikan.', 'warning')
+    # Check permission
+    from app.models import UserUnit
+    user_units = UserUnit.query.filter_by(user_id=current_user.id).all()
+    unit_ids = [uu.unit_id for uu in user_units]
+    if asset_request.unit_id not in unit_ids:
+        flash('Anda tidak memiliki izin untuk menyelesaikan permohonan ini.', 'danger')
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    if asset_request.status not in ['verified', 'distributing']:
+        flash('Hanya permohonan yang sedang didistribusikan atau sudah diverifikasi yang bisa diselesaikan.', 'warning')
         return redirect(url_for('asset_requests.detail', id=id))
 
     distribution_id = request.form.get('distribution_id', type=int)
+
+    if not distribution_id:
+        # Use the distribution_id from asset_request if available
+        distribution_id = asset_request.distribution_id
 
     if not distribution_id:
         flash('Distribution ID diperlukan.', 'danger')
