@@ -87,8 +87,9 @@
             <div class="ml-auto w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
             {% endif %}
           </a>
-          {% if not current_user.is_unit_staff() %}
 
+          <!-- Peta GIS - Hanya untuk admin dan warehouse staff -->
+          {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
           <a
             class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'map' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('map.index') }}"
@@ -98,7 +99,6 @@
             ></i>
             <span class="font-medium">Peta GIS</span>
           </a>
-
           {% endif %}
 
 

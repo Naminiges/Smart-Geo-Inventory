@@ -146,6 +146,7 @@
 
 <!-- Action Buttons -->
 <form method="POST" class="flex items-center justify-between">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <a href="{{ url_for('procurement.detail', id=procurement.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
         <i class="fas fa-arrow-left mr-2"></i>
         Batal
