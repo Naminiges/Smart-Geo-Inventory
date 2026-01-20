@@ -173,6 +173,11 @@
                   class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
                 ></i>
                 <span class="font-medium">Permohonan Aset</span>
+                {% if pending_request_count > 0 %}
+                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                    {{ pending_request_count }}
+                </span>
+                {% endif %}
               </div>
               <i
                 class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"
@@ -256,6 +261,11 @@
               class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'units' in request.endpoint else 'text-gray-400' }}"
             ></i>
             <span class="font-medium">Unit</span>
+            {% if pending_request_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                {{ pending_request_count }}
+            </span>
+            {% endif %}
           </a>
           {% endif %}
 

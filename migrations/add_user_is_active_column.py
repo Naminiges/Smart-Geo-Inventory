@@ -1,5 +1,5 @@
 """
-Migration: Add status column to units table
+Migration: Add is_active column to users table
 """
 
 import sys
@@ -13,30 +13,30 @@ def migrate():
     app = create_app()
 
     with app.app_context():
-        print("Starting migration: Add status column to units table...")
+        print("Starting migration: Add is_active column to users table...")
 
         try:
-            # Add status column
-            print("\nAdding status column to units table...")
+            # Add is_active column
+            print("\nAdding is_active column to users table...")
             db.session.execute(db.text("""
-                ALTER TABLE units
-                ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'available';
+                ALTER TABLE users
+                ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL;
             """))
             db.session.commit()
-            print("   [OK] Column 'status' added successfully")
+            print("   [OK] Column 'is_active' added successfully")
 
-            # Update existing rows to have 'available' status
+            # Update existing rows to have True value
             print("\nUpdating existing rows...")
             db.session.execute(db.text("""
-                UPDATE units
-                SET status = 'available'
-                WHERE status IS NULL;
+                UPDATE users
+                SET is_active = TRUE
+                WHERE is_active IS NULL;
             """))
             db.session.commit()
             print("   [OK] Existing rows updated")
 
             print("\n[OK] Migration completed successfully!")
-            print("\nColumn 'status' added to units table with default value 'available'")
+            print("\nColumn 'is_active' added to users table with default value TRUE")
 
         except Exception as e:
             print(f"\n[ERROR] Error during migration: {str(e)}")

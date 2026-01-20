@@ -2,6 +2,7 @@ from flask import send_file
 import math
 from geoalchemy2.functions import ST_Distance_Sphere
 from sqlalchemy import func
+from flask_login import current_user
 
 
 def generate_barcode(code, barcode_type='code128'):
@@ -121,3 +122,30 @@ def get_dashboard_stats(warehouse_id=None):
     stats['installed_count'] = Distribution.query.filter(Distribution.status == 'installed').count()
 
     return stats
+
+
+def notification_counts():
+    """Context processor to provide notification counts to templates"""
+    if not current_user.is_authenticated:
+        return {'pending_request_count': 0}
+
+    from app.models import AssetRequest, UserUnit
+
+    counts = {'pending_request_count': 0}
+
+    try:
+        if current_user.is_admin():
+            # Admin sees all pending requests
+            counts['pending_request_count'] = AssetRequest.query.filter_by(status='pending').count()
+        elif current_user.is_unit_staff():
+            # Unit staff sees pending requests for their assigned units
+            user_unit_ids = [uu.unit_id for uu in UserUnit.query.filter_by(user_id=current_user.id).all()]
+            if user_unit_ids:
+                counts['pending_request_count'] = AssetRequest.query.filter(
+                    AssetRequest.unit_id.in_(user_unit_ids),
+                    AssetRequest.status == 'pending'
+                ).count()
+    except Exception:
+        counts['pending_request_count'] = 0
+
+    return counts

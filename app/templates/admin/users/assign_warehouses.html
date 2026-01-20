@@ -36,6 +36,10 @@
                     <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                         <i class="fas fa-hard-hat mr-1"></i>Field Staff
                     </span>
+                    {% elif user.role == 'unit_staff' %}
+                    <span class="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
+                        <i class="fas fa-building mr-1"></i>Unit Staff
+                    </span>
                     {% endif %}
                 </div>
             </div>

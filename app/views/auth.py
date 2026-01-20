@@ -24,6 +24,11 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
 
         if user and user.check_password(form.password.data):
+            # Check if user is inactive
+            if not user.is_active:
+                flash('Akun Anda dinonaktifkan. Mohon hubungi admin.', 'danger')
+                return render_template('auth/login.html', form=form)
+
             login_user(user)
             ActivityLog.log_activity(user, 'LOGIN', 'users', user.id, ip_address=request.remote_addr)
 
