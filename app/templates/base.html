@@ -290,21 +290,21 @@
             <!-- Submenu Distribusi -->
             <div class="ml-8 mt-1 space-y-1 hidden" id="distribusi-submenu">
               <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('installations.index') }}"
+                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint and request.args.get('task_type') == 'installation' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                href="{{ url_for('installations.index', task_type='installation') }}"
               >
                 <i
-                  class="fas fa-network-wired w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
+                  class="fas fa-network-wired w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint and request.args.get('task_type') == 'installation' else 'text-gray-400' }}"
                 ></i>
                 <span class="text-sm">Instalasi Jaringan</span>
               </a>
 
               <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'assets' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="#"
+                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint and request.args.get('task_type') == 'delivery' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                href="{{ url_for('installations.index', task_type='delivery') }}"
               >
                 <i
-                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'assets' in request.endpoint else 'text-gray-400' }}"
+                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint and request.args.get('task_type') == 'delivery' else 'text-gray-400' }}"
                 ></i>
                 <span class="text-sm">Aset Umum</span>
               </a>

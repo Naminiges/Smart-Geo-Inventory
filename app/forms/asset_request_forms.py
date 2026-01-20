@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import SelectField, IntegerField, TextAreaField, SubmitField, StringField
+from wtforms import SelectField, IntegerField, TextAreaField, SubmitField, StringField, ValidationError
 from wtforms.validators import DataRequired, NumberRange, Optional, Length
 
 
@@ -11,5 +11,6 @@ class AssetRequestForm(FlaskForm):
 
 class AssetVerificationForm(FlaskForm):
     """Form for admin to verify asset request"""
+    warehouse_id = SelectField('Warehouse', choices=[], validate_choice=False)
     notes = TextAreaField('Catatan Verifikasi', validators=[Optional()])
     submit = SubmitField('Verifikasi & Setujui')

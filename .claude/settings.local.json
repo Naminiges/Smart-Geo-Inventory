@@ -4,7 +4,8 @@
       "Bash(python:*)",
       "Bash(set:*)",
       "Bash(findstr:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Read(//Users/nikiramandika/Documents/TI-Nikiramandika/**)"
     ]
   }
 }

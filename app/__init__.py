@@ -37,8 +37,8 @@ def create_app(config_name='default'):
     app.context_processor(notification_counts)
 
     # Register blueprints
-    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks
-    from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement, api_units
+    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement
+    from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement, api_units, api_unit_procurement
 
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
@@ -53,6 +53,7 @@ def create_app(config_name='default'):
     app.register_blueprint(asset_requests.bp)
     app.register_blueprint(units.bp)
     app.register_blueprint(field_tasks.bp)
+    app.register_blueprint(unit_procurement.bp)
 
     # Register API blueprints
     app.register_blueprint(api_auth.bp, url_prefix='/api/auth')
@@ -64,6 +65,7 @@ def create_app(config_name='default'):
     app.register_blueprint(api_map.bp, url_prefix='/api/map')
     app.register_blueprint(api_procurement.bp, url_prefix='/api')
     app.register_blueprint(api_units.bp)
+    app.register_blueprint(api_unit_procurement.bp, url_prefix='/api')
 
     # Root route - redirect to login or dashboard
     @app.route('/')

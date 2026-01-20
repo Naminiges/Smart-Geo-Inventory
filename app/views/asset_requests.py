@@ -157,12 +157,11 @@ def create():
 
 @bp.route('/<int:id>')
 @login_required
-@role_required('unit_staff', 'admin')
 def detail(id):
     """Show asset request details"""
     asset_request = AssetRequest.query.get_or_404(id)
 
-    # Check permission
+    # Check permission based on role
     if current_user.is_unit_staff():
         from app.models import UserUnit
         user_units = UserUnit.query.filter_by(user_id=current_user.id).all()
@@ -170,6 +169,12 @@ def detail(id):
         if asset_request.unit_id not in unit_ids:
             flash('Anda tidak memiliki izin untuk melihat permohonan ini.', 'danger')
             return redirect(url_for('asset_requests.index'))
+    elif current_user.is_warehouse_staff():
+        # Warehouse staff can only see verified requests
+        if asset_request.status != 'verified':
+            flash('Anda tidak memiliki izin untuk mengakses halaman ini.', 'danger')
+            return redirect(url_for('installations.index'))
+    # Admin can see all requests
 
     return render_template('asset_requests/detail.html', asset_request=asset_request)
 
@@ -179,30 +184,121 @@ def detail(id):
 @role_required('admin')
 def verify(id):
     """Verify asset request (admin only)"""
+    from app.models import Warehouse, ItemDetail
+
     asset_request = AssetRequest.query.get_or_404(id)
 
     if asset_request.status != 'pending':
         flash('Hanya permohonan dengan status pending yang bisa diverifikasi.', 'warning')
         return redirect(url_for('asset_requests.detail', id=id))
 
+    # Get all warehouses
+    warehouses = Warehouse.query.all()
+
+    # Get stock information for each warehouse
+    warehouse_stock_info = {}
+    for warehouse in warehouses:
+        warehouse_stock_info[warehouse.id] = {}
+        for item in asset_request.items:
+            # Get available stock (item_details with status 'available')
+            available_stock = ItemDetail.query.filter_by(
+                warehouse_id=warehouse.id,
+                item_id=item.item_id,
+                status='available'
+            ).count()
+            warehouse_stock_info[warehouse.id][item.item_id] = {
+                'requested': item.quantity,
+                'available': available_stock,
+                'is_sufficient': available_stock >= item.quantity
+            }
+
     form = AssetVerificationForm()
 
-    if form.validate_on_submit():
+    # Set choices for form (both GET and POST)
+    form.warehouse_id.choices = [('0', '-- Pilih Warehouse --')] + [(str(w.id), w.name) for w in warehouses]
+
+    if request.method == 'POST':
+        # DEBUG: Print all form data
+        print(f"=== DEBUG FORM SUBMISSION ===")
+        print(f"Request form keys: {list(request.form.keys())}")
+        print(f"Request form data: {dict(request.form)}")
+        print(f"warehouse_id value: {request.form.get('warehouse_id')}")
+        print(f"warehouse_id type: {type(request.form.get('warehouse_id'))}")
+        print(f"warehouse_id == '0': {request.form.get('warehouse_id') == '0'}")
+        print(f"============================")
+
+        # Manually validate CSRF token
+        if not form.validate():
+            # Form has errors (likely CSRF)
+            print(f"Form validation errors: {form.errors}")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    flash(f'{field}: {error}', 'danger')
+            return render_template('asset_requests/verify.html',
+                                 asset_request=asset_request,
+                                 form=form,
+                                 warehouse_stock_info=warehouse_stock_info,
+                                 warehouses=warehouses)
+
         try:
+            # Get warehouse ID from form data
+            warehouse_id_str = request.form.get('warehouse_id', '0')
+
+            print(f"Extracted warehouse_id_str: '{warehouse_id_str}'")
+
+            # Manually validate warehouse selection
+            if not warehouse_id_str or warehouse_id_str == '0' or warehouse_id_str.strip() == '':
+                print(f"Warehouse validation FAILED: warehouse_id_str='{warehouse_id_str}'")
+                flash('Silakan pilih warehouse terlebih dahulu.', 'warning')
+                return render_template('asset_requests/verify.html',
+                                     asset_request=asset_request,
+                                     form=form,
+                                     warehouse_stock_info=warehouse_stock_info,
+                                     warehouses=warehouses)
+
+            selected_warehouse_id = int(warehouse_id_str)
+
+            stock_warnings = []
+
+            for item in asset_request.items:
+                stock_info = warehouse_stock_info[selected_warehouse_id][item.item_id]
+                if not stock_info['is_sufficient']:
+                    stock_warnings.append(
+                        f"{item.item.name}: tersedia {stock_info['available']}, diminta {stock_info['requested']}"
+                    )
+
+            # Verify the request
             success, message = asset_request.verify(
                 user_id=current_user.id,
                 notes=form.notes.data
             )
 
             if success:
-                flash(f'{message} Permohonan siap diproses.', 'success')
+                # Store selected warehouse in the request for later use
+                # We'll use the notes field to store this info temporarily
+                if not asset_request.notes:
+                    asset_request.notes = f"warehouse_id:{selected_warehouse_id}"
+                else:
+                    asset_request.notes = f"{asset_request.notes}\nwarehouse_id:{selected_warehouse_id}"
+                asset_request.save()
+
+                if stock_warnings:
+                    warning_msg = "Peringatan Stok: " + ", ".join(stock_warnings)
+                    flash(f'{message} {warning_msg}', 'warning')
+                else:
+                    flash(f'{message} Permohonan siap diproses.', 'success')
+
                 return redirect(url_for('asset_requests.detail', id=id))
             else:
                 flash(message, 'danger')
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('asset_requests/verify.html', asset_request=asset_request, form=form)
+    return render_template('asset_requests/verify.html',
+                         asset_request=asset_request,
+                         form=form,
+                         warehouse_stock_info=warehouse_stock_info,
+                         warehouses=warehouses)
 
 
 @bp.route('/<int:id>/reject', methods=['POST'])

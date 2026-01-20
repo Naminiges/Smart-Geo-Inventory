@@ -3,6 +3,211 @@ from app import db
 from app.models.base import BaseModel
 
 
+class UnitProcurementItem(BaseModel):
+    """Individual item within a unit procurement request"""
+    __tablename__ = 'unit_procurement_items'
+
+    unit_procurement_id = db.Column(db.Integer, db.ForeignKey('unit_procurements.id'), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=True)
+    quantity = db.Column(db.Integer, nullable=False)
+
+    # Temporary new item data (if item doesn't exist)
+    new_item_name = db.Column(db.String(200))
+    new_item_category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    new_item_unit = db.Column(db.String(50))
+
+    # Track the linked procurement item after admin approval
+    linked_procurement_item_id = db.Column(db.Integer, db.ForeignKey('procurement_items.id'), nullable=True)
+
+    # Relationships
+    unit_procurement = db.relationship('UnitProcurement', backref='items')
+    item = db.relationship('Item', backref='unit_procurement_items')
+    linked_procurement_item = db.relationship('ProcurementItem', backref='unit_procurement_items')
+
+    def __repr__(self):
+        return f'<UnitProcurementItem #{self.id} {self.item.name if self.item else "N/A"} Qty:{self.quantity}>'
+
+
+class UnitProcurement(BaseModel):
+    """Procurement request model for Units - similar to warehouse procurement"""
+    __tablename__ = 'unit_procurements'
+
+    unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
+    status = db.Column(db.String(20), default='pending_verification', nullable=False)
+    # Status: pending_verification, verified, approved, rejected, in_procurement, received, completed, cancelled
+
+    # Request tracking
+    requested_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    request_date = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Admin verification tracking
+    verified_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    verification_date = db.Column(db.DateTime)
+    verification_notes = db.Column(db.Text)
+
+    # Approval tracking
+    approved_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    approval_date = db.Column(db.DateTime)
+
+    # Rejection tracking
+    rejected_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    rejection_date = db.Column(db.DateTime)
+    rejection_reason = db.Column(db.Text)
+
+    # Link to warehouse procurement created after admin approval
+    procurement_id = db.Column(db.Integer, db.ForeignKey('procurements.id'), nullable=True)
+
+    # Receipt tracking (for tracking when unit receives the items)
+    unit_received_by = db.Column(db.Integer, db.ForeignKey('users.id'))
+    unit_receipt_date = db.Column(db.DateTime)
+
+    # Notes
+    request_notes = db.Column(db.Text)  # Alasan permohonan
+    admin_notes = db.Column(db.Text)  # Catatan admin
+
+    # Relationships
+    unit = db.relationship('Unit', backref='procurement_requests')
+    requester = db.relationship('User', foreign_keys=[requested_by], backref='unit_procurement_requests')
+    verifier = db.relationship('User', foreign_keys=[verified_by], backref='verified_unit_procurements')
+    approver = db.relationship('User', foreign_keys=[approved_by], backref='approved_unit_procurements')
+    rejecter = db.relationship('User', foreign_keys=[rejected_by], backref='rejected_unit_procurements')
+    procurement = db.relationship('Procurement', backref='unit_request')
+    unit_receiver = db.relationship('User', foreign_keys=[unit_received_by], backref='received_unit_procurements')
+
+    @property
+    def total_quantity(self):
+        """Get total quantity of all items in this procurement"""
+        return sum(item.quantity for item in self.items) if self.items else 0
+
+    @property
+    def is_verified(self):
+        """Check if request has been verified by admin"""
+        return self.status not in ['pending_verification']
+
+    @property
+    def has_procurement(self):
+        """Check if warehouse procurement has been created"""
+        return self.procurement_id is not None
+
+    def get_status_display(self):
+        """Get human-readable status display"""
+        status_map = {
+            'pending_verification': 'Menunggu Verifikasi',
+            'verified': 'Terverifikasi',
+            'approved': 'Disetujui',
+            'rejected': 'Ditolak',
+            'in_procurement': 'Dalam Proses Pengadaan',
+            'received': 'Barang Diterima',
+            'completed': 'Selesai',
+            'cancelled': 'Dibatalkan'
+        }
+        return status_map.get(self.status, self.status)
+
+    def verify(self, user_id, notes=None):
+        """Verify unit procurement request (admin action)"""
+        if self.status != 'pending_verification':
+            return False, 'Hanya permohonan dengan status pending_verification yang bisa diverifikasi'
+
+        self.status = 'verified'
+        self.verified_by = user_id
+        self.verification_date = datetime.utcnow()
+        self.verification_notes = notes
+        self.save()
+        return True, 'Permohonan berhasil diverifikasi'
+
+    def approve(self, user_id):
+        """Approve verified request and create warehouse procurement (admin action)"""
+        if self.status != 'verified':
+            return False, 'Hanya permohonan yang sudah diverifikasi yang bisa disetujui'
+
+        # Create warehouse procurement
+        from app.models.procurement import Procurement, ProcurementItem
+
+        procurement = Procurement(
+            requested_by=user_id,
+            request_notes=f'Permohonan dari Unit: {self.unit.name}. {self.request_notes or ""}',
+            notes=f'Unit Request ID: {self.id}. {self.admin_notes or ""}',
+            status='pending'
+        )
+        procurement.save()
+
+        # Copy items from unit procurement to warehouse procurement
+        for unit_item in self.items:
+            procurement_item = ProcurementItem(
+                procurement_id=procurement.id,
+                item_id=unit_item.item_id,
+                quantity=unit_item.quantity,
+                new_item_name=unit_item.new_item_name,
+                new_item_category_id=unit_item.new_item_category_id,
+                new_item_unit=unit_item.new_item_unit
+            )
+            procurement_item.save()
+
+            # Link the unit procurement item to the warehouse procurement item
+            unit_item.linked_procurement_item_id = procurement_item.id
+            unit_item.save()
+
+        # Update unit procurement status
+        self.status = 'approved'
+        self.approved_by = user_id
+        self.approval_date = datetime.utcnow()
+        self.procurement_id = procurement.id
+        self.save()
+
+        return True, f'Permohonan berhasil disetujui. Pengadaan #{procurement.id} telah dibuat di Warehouse'
+
+    def reject(self, user_id, reason=None):
+        """Reject unit procurement request (admin action)"""
+        if self.status in ['completed', 'cancelled']:
+            return False, 'Tidak bisa menolak permohonan yang sudah selesai atau dibatalkan'
+
+        self.status = 'rejected'
+        self.rejected_by = user_id
+        self.rejection_date = datetime.utcnow()
+        self.rejection_reason = reason
+        self.save()
+        return True, 'Permohonan berhasil ditolak'
+
+    def update_status_from_procurement(self):
+        """Update status based on linked warehouse procurement status"""
+        if not self.procurement:
+            return False, 'Tidak ada pengadaan yang terkait'
+
+        procurement_status = self.procurement.status
+
+        # Map warehouse procurement status to unit procurement status
+        status_mapping = {
+            'pending': 'in_procurement',
+            'approved': 'in_procurement',
+            'received': 'received',
+            'completed': 'completed'
+        }
+
+        if procurement_status in status_mapping:
+            self.status = status_mapping[procurement_status]
+            self.save()
+
+            # If completed, mark as received by unit
+            if procurement_status == 'completed':
+                self.unit_receipt_date = datetime.utcnow()
+
+            return True, f'Status diperbarui: {self.status}'
+
+        return False, 'Status pengadaan tidak dikenali'
+
+    def cancel(self, user_id):
+        """Cancel the unit procurement request"""
+        if self.status in ['completed', 'in_procurement']:
+            return False, 'Tidak bisa membatalkan permohonan yang sedang diproses atau sudah selesai'
+
+        self.status = 'cancelled'
+        self.save()
+        return True, 'Permohonan berhasil dibatalkan'
+
+    def __repr__(self):
+        return f'<UnitProcurement #{self.id} Unit:{self.unit.name if self.unit else "N/A"} Status:{self.status}>'
+
+
 class ProcurementItem(BaseModel):
     """Individual item within a procurement request"""
     __tablename__ = 'procurement_items'

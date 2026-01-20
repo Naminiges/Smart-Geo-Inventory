@@ -15,6 +15,10 @@ class AssetRequestItem(BaseModel):
     unit_detail_id = db.Column(db.Integer, db.ForeignKey('unit_details.id'), nullable=True)
     room_notes = db.Column(db.Text)  # Additional notes about room/location
 
+    # Distribution tracking
+    status = db.Column(db.String(20), default='pending', nullable=False)  # pending, distributing, completed
+    distribution_id = db.Column(db.Integer, db.ForeignKey('distributions.id'))  # Link to created distribution
+
     # Relationships
     asset_request = db.relationship('AssetRequest', backref='items')
     item = db.relationship('Item', backref='asset_request_items')
@@ -64,7 +68,7 @@ class AssetRequest(BaseModel):
     requester = db.relationship('User', foreign_keys=[requested_by], backref='asset_requests_made')
     verifier = db.relationship('User', foreign_keys=[verified_by], backref='asset_requests_verified')
     receiver = db.relationship('User', foreign_keys=[received_by], backref='asset_requests_received')
-    distribution = db.relationship('Distribution', backref='asset_request')
+    distribution = db.relationship('Distribution', foreign_keys=[distribution_id], backref='asset_request_link')
 
     @property
     def total_quantity(self):

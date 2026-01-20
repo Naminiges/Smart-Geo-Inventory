@@ -33,6 +33,7 @@ class Item(BaseModel):
 
     def get_total_stock(self, warehouse_id=None):
         """Get total stock across all warehouses or specific warehouse"""
+        from app.models.inventory import Stock
         query = db.session.query(db.func.sum(Stock.quantity)).filter(Stock.item_id == self.id)
         if warehouse_id:
             query = query.filter(Stock.warehouse_id == warehouse_id)

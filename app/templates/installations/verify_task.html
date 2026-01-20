@@ -133,6 +133,7 @@
             </h3>
         </div>
         <form method="POST" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <!-- Reject Reason (hidden by default) -->
             <div id="rejectReasonContainer" class="hidden mb-4">
                 <label for="rejection_reason" class="block text-sm font-medium text-gray-700 mb-2">

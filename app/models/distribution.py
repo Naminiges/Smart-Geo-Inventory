@@ -19,6 +19,10 @@ class Distribution(BaseModel):
     status = db.Column(db.String(50), default='installing')  # installing, in_transit, installed, broken, maintenance
     note = db.Column(db.Text)
 
+    # Link to asset request (if created from asset request)
+    asset_request_id = db.Column(db.Integer, db.ForeignKey('asset_requests.id'), nullable=True)
+    asset_request_item_id = db.Column(db.Integer, db.ForeignKey('asset_request_items.id'), nullable=True)
+
     # Task type and verification fields
     task_type = db.Column(db.String(50), default='installation')  # installation, delivery
     verification_photo = db.Column(db.String(500))  # Path to uploaded verification photo
@@ -35,6 +39,8 @@ class Distribution(BaseModel):
     verifier = db.relationship('User', foreign_keys=[verified_by], backref='verified_distributions')
     unit = db.relationship('Unit', back_populates='distributions')
     unit_detail = db.relationship('UnitDetail', back_populates='distributions')
+    asset_request = db.relationship('AssetRequest', foreign_keys=[asset_request_id], backref='distributions')
+    asset_request_item = db.relationship('AssetRequestItem', foreign_keys=[asset_request_item_id], backref='distributions')
 
     def set_coordinates(self, latitude, longitude):
         """Set point geometry from latitude and longitude"""
@@ -143,3 +149,116 @@ class Distribution(BaseModel):
 
     def __repr__(self):
         return f'<Distribution Item:{self.item_detail_id} Status:{self.status}>'
+
+    @property
+    def is_networking_item(self):
+        """Check if this distribution is for networking equipment"""
+        if self.item_detail and self.item_detail.item and self.item_detail.item.category:
+            category_name = self.item_detail.item.category.name.lower()
+            # Check for networking-related categories
+            networking_keywords = ['networking', 'jaringan', 'network', 'router', 'switch', 'wifi', 'wireless', 'access point', 'ap']
+            return any(keyword in category_name for keyword in networking_keywords)
+        return False
+
+    @property
+    def requires_installation(self):
+        """Check if this distribution requires installation (networking) or just delivery"""
+        return self.is_networking_item
+
+    @staticmethod
+    def create_from_asset_request_item(asset_request_item, warehouse_id, field_staff_id, item_detail_id):
+        """
+        Create distribution from asset request item
+
+        Args:
+            asset_request_item: AssetRequestItem object
+            warehouse_id: Source warehouse ID
+            field_staff_id: Assigned field staff ID
+            item_detail_id: ItemDetail ID with serial number to distribute
+
+        Returns:
+            Distribution object
+        """
+        from app.models.asset_request import AssetRequest
+        from app.models.distribution import Distribution
+
+        asset_request = asset_request_item.asset_request
+
+        # Determine task type based on item category
+        task_type = 'installation' if asset_request_item.item.category.name.lower() in ['networking', 'jaringan'] else 'delivery'
+
+        # Create distribution
+        distribution = Distribution(
+            item_detail_id=item_detail_id,
+            warehouse_id=warehouse_id,
+            field_staff_id=field_staff_id,
+            unit_id=asset_request.unit_id,
+            unit_detail_id=asset_request_item.unit_detail_id if asset_request_item.unit_detail_id else None,
+            address=asset_request.unit.address if asset_request.unit else 'Unknown',
+            task_type=task_type,
+            asset_request_id=asset_request.id,
+            asset_request_item_id=asset_request_item.id,
+            status='installing' if task_type == 'installation' else 'in_transit'
+        )
+
+        # Set coordinates from unit if available
+        if asset_request.unit and asset_request.unit.geom:
+            distribution.geom = asset_request.unit.geom
+
+        distribution.save()
+
+        # Update item detail status
+        if item_detail_id:
+            from app.models.master_data import ItemDetail
+            item_detail = ItemDetail.query.get(item_detail_id)
+            if item_detail:
+                item_detail.status = 'processing'
+                item_detail.save()
+
+        # Update asset request item status
+        asset_request_item.status = 'distributing'
+        asset_request_item.save()
+
+        return distribution
+
+    @staticmethod
+    def bulk_create_from_asset_request(asset_request, distribution_data):
+        """
+        Bulk create distributions from asset request
+
+        Args:
+            asset_request: AssetRequest object
+            distribution_data: List of dicts with keys:
+                - asset_request_item_id
+                - warehouse_id
+                - field_staff_id
+                - item_detail_id
+
+        Returns:
+            List of created Distribution objects
+        """
+        distributions = []
+
+        for data in distribution_data:
+            from app.models.asset_request import AssetRequestItem
+
+            asset_request_item = AssetRequestItem.query.get(data['asset_request_item_id'])
+            if not asset_request_item:
+                continue
+
+            distribution = Distribution.create_from_asset_request_item(
+                asset_request_item=asset_request_item,
+                warehouse_id=data['warehouse_id'],
+                field_staff_id=data['field_staff_id'],
+                item_detail_id=data['item_detail_id']
+            )
+
+            distributions.append(distribution)
+
+        # Update asset request status and link distribution
+        if distributions:
+            asset_request.distribution_id = distributions[0].id  # Link first distribution
+            asset_request.status = 'distributing'
+            asset_request.save()
+
+        return distributions

@@ -1,136 +1,174 @@
 {% extends "base.html" %}
 
-{% block title %}Distribusi Permohonan #{{ asset_request.id }} - {% endblock %}
+{% block title %}Distribusi Permohonan #{{ asset_request.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Proses Distribusi Permohonan Aset{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>Proses Distribusi Permohonan Aset #{{ asset_request.id }}</h2>
-                <a href="{{ url_for('installations.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Kembali
-                </a>
-            </div>
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('installations.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar
+    </a>
+</div>
 
-            <!-- Asset Request Summary -->
-            <div class="card mb-4">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0">Ringkasan Permohonan</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Unit:</strong> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
-                            <p><strong>Tanggal Permohonan:</strong> {{ asset_request.request_date.strftime('%d/%m/%Y') if asset_request.request_date else '-' }}</p>
-                            <p><strong>Diajukan oleh:</strong> {{ asset_request.requester.full_name if asset_request.requester else '-' }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Status:</strong>
-                                <span class="badge bg-primary">Verified</span>
-                            </p>
-                            <p><strong>Diverifikasi oleh:</strong> {{ asset_request.verifier.full_name if asset_request.verifier else '-' }}</p>
-                            <p><strong>Tanggal Verifikasi:</strong> {{ asset_request.verified_at.strftime('%d/%m/%Y %H:%M') if asset_request.verified_at else '-' }}</p>
-                        </div>
+<!-- Page Title -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Proses Distribusi Permohonan Aset #{{ asset_request.id }}</h1>
+    <p class="text-gray-500 text-sm mt-1">Unit: {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+</div>
+
+<!-- Asset Request Summary -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <div class="flex items-center mb-4">
+        <div class="bg-blue-100 rounded-lg p-3 mr-4">
+            <i class="fas fa-clipboard-list text-blue-600 text-2xl"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800">Ringkasan Permohonan</h3>
+            <p class="text-sm text-gray-500">{{ asset_request.request_date.strftime('%d/%m/%Y %H:%M') if asset_request.request_date else '-' }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Unit</span>
+            <span class="text-sm font-semibold text-gray-900">{{ asset_request.unit.name if asset_request.unit else '-' }}</span>
+        </div>
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Diajukan oleh</span>
+            <span class="text-sm font-semibold text-gray-900">{{ asset_request.requester.full_name if asset_request.requester else '-' }}</span>
+        </div>
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Status</span>
+            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Verified</span>
+        </div>
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Diverifikasi oleh</span>
+            <span class="text-sm font-semibold text-gray-900">{{ asset_request.verifier.full_name if asset_request.verifier else '-' }}</span>
+        </div>
+    </div>
+
+    {% if asset_request.request_notes %}
+    <div class="mt-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">
+            <i class="fas fa-comment-alt text-amber-600 mr-1"></i>
+            Alasan Permohonan
+        </h4>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p class="text-sm text-gray-700">{{ asset_request.request_notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if asset_request.verification_notes %}
+    <div class="mt-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">
+            <i class="fas fa-clipboard-check text-indigo-600 mr-1"></i>
+            Catatan Verifikasi
+        </h4>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+            <p class="text-sm text-gray-700">{{ asset_request.verification_notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Requested Items with Stock Info -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-boxes text-green-600 mr-2"></i>
+        Aset yang Akan Didistribusikan ({{ asset_request.items|length }} item)
+    </h3>
+
+    <div class="space-y-4">
+        {% for item in asset_request.items %}
+        {% set available_stock = item.item.get_total_stock() %}
+        {% set stock_status = 'bg-green-100 text-green-800' if available_stock >= item.quantity else 'bg-red-100 text-red-800' %}
+        {% set stock_text = 'Tersedia' if available_stock >= item.quantity else 'Stok Tidak Cukupi' %}
+
+        <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h4 class="text-sm font-semibold text-gray-900">{{ item.item.name if item.item else '-' }}</h4>
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                            {{ item.item.category.name if item.item and item.item.category else '-' }}
+                        </span>
+                        {% if item.item.category.name.lower() in ['networking', 'jaringan'] %}
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                            <i class="fas fa-network-wired mr-1"></i>Instalasi
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded text-xs font-medium">
+                            <i class="fas fa-truck mr-1"></i>Distribusi
+                        </span>
+                        {% endif %}
                     </div>
 
-                    {% if asset_request.request_notes %}
-                    <div class="mt-3">
-                        <strong>Alasan Permohonan:</strong>
-                        <p>{{ asset_request.request_notes }}</p>
-                    </div>
-                    {% endif %}
-
-                    {% if asset_request.verification_notes %}
-                    <div class="mt-3">
-                        <strong>Catatan Verifikasi:</strong>
-                        <p>{{ asset_request.verification_notes }}</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Requested Items -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Aset yang Akan Didistribusikan</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>No</th>
-                                    <th>Aset</th>
-                                    <th>Kategori</th>
-                                    <th>Jumlah</th>
-                                    <th>Lokasi (Ruangan)</th>
-                                    <th>Catatan</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in asset_request.items %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
-                                    <td>
-                                        <strong>{{ item.item.name if item.item else '-' }}</strong>
-                                        {% if item.item and item.item.description %}
-                                        <br><small class="text-muted">{{ item.item.description }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ item.item.category.name if item.item and item.item.category else '-' }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ item.quantity }}</span>
-                                    </td>
-                                    <td>{{ item.unit_detail.room_name if item.unit_detail else '-' }}</td>
-                                    <td>{{ item.room_notes or '-' }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Confirmation Form -->
-            <div class="card mb-4">
-                <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0">Konfirmasi Distribusi</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Perhatian:</strong> Pastikan stok barang di warehouse mencukupi sebelum memproses distribusi. Setelah diproses, stok barang akan otomatis berkurang dan status barang menjadi "processing".
+                    <div class="flex flex-wrap gap-4 text-xs text-gray-600 mb-2">
+                        <span><i class="fas fa-hashtag mr-1"></i>Qty: {{ item.quantity }}</span>
+                        {% if item.unit_detail %}
+                        <span><i class="fas fa-map-marker-alt mr-1"></i>{{ item.unit_detail.room_name }} ({{ item.unit_detail.floor }})</span>
+                        {% endif %}
+                        {% if item.room_notes %}
+                        <span><i class="fas fa-sticky-note mr-1"></i>{{ item.room_notes }}</span>
+                        {% endif %}
                     </div>
 
-                    <form method="POST">
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                <i class="fas fa-check-circle"></i> Proses Distribusi
-                            </button>
-                            <a href="{{ url_for('installations.index') }}" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-times"></i> Batal
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Stock Check Information -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Informasi Stok</h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-info-circle"></i>
-                        Sistem akan otomatis mencari barang yang tersedia (status: available) di warehouse dan membuatkan distribusi untuk masing-masing barang. Jika stok tidak mencukupi, proses akan dibatalkan.
-                    </p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">Stok Tersedia:</span>
+                        <span class="px-2 py-1 {{ stock_status }} rounded-full text-xs font-bold">{{ available_stock }} unit</span>
+                        {% if available_stock < item.quantity %}
+                        <span class="text-xs text-red-600 font-semibold">(Kurang {{ item.quantity - available_stock }})</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
+        {% endfor %}
     </div>
+</div>
+
+<!-- Warning Card -->
+<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start">
+        <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mr-4 mt-1"></i>
+        <div>
+            <h4 class="font-semibold text-yellow-900 mb-2">Perhatian Penting</h4>
+            <ul class="text-sm text-yellow-800 space-y-1">
+                <li><i class="fas fa-check-circle mr-2"></i>Pastikan stok barang di warehouse mencukupi sebelum memproses distribusi</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Setelah diproses, stok barang akan otomatis berkurang dan status menjadi "processing"</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Sistem akan otomatis mendeteksi kategori barang:
+                    <ul class="ml-6 mt-1">
+                        <li>• <strong>Networking</strong> → Task Installation (Instalasi Jaringan)</li>
+                        <li>• <strong>Lainnya</strong> → Task Delivery (Distribusi Barang)</li>
+                    </ul>
+                </li>
+                <li><i class="fas fa-check-circle mr-2"></i>Field staff akan otomatis menerima task setelah distribusi dibuat</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Form -->
+<div class="bg-white rounded-xl shadow-md p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Konfirmasi Distribusi</h3>
+
+    <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end space-x-3">
+            <a href="{{ url_for('installations.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-times mr-2"></i>
+                Batal
+            </a>
+            <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                <i class="fas fa-check-circle mr-2"></i>
+                Proses Distribusi (Buat Task Field Staff)
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}

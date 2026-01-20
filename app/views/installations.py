@@ -13,23 +13,48 @@ bp = Blueprint('installations', __name__, url_prefix='/installations')
 @warehouse_access_required
 def index():
     """List all installations and verified asset requests"""
+    from sqlalchemy import or_
+
+    # Get task type filter from URL parameter
+    task_type_filter = request.args.get('task_type', '')  # 'installation' or 'delivery' or empty for all
+
     if current_user.is_warehouse_staff():
-        installations = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).all()
+        # Filter installations by task type if specified
+        installations_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id)
+        if task_type_filter:
+            installations_query = installations_query.filter_by(task_type=task_type_filter)
+        installations = installations_query.all()
+
         # Get verified asset requests that haven't been distributed yet
-        verified_requests = AssetRequest.query.filter_by(status='verified').all()
-        # Filter to only show requests that don't have a distribution yet
-        verified_requests = [req for req in verified_requests if req.distribution_id is None]
+        verified_requests = AssetRequest.query.filter(
+            AssetRequest.status == 'verified',
+            or_(AssetRequest.distribution_id == None, AssetRequest.distribution_id.is_(None))
+        ).all()
         # Get unique units and field staffs for filters
         units = Unit.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id).distinct().all()
-        field_staffs = User.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id, User.role == 'field_staff').distinct().all()
+        field_staffs = User.query.join(Distribution, User.id == Distribution.field_staff_id).filter(Distribution.warehouse_id == current_user.warehouse_id, User.role == 'field_staff').distinct().all()
     elif current_user.is_field_staff():
-        installations = Distribution.query.filter_by(field_staff_id=current_user.id).all()
+        # Filter installations by task type if specified
+        installations_query = Distribution.query.filter_by(field_staff_id=current_user.id)
+        if task_type_filter:
+            installations_query = installations_query.filter_by(task_type=task_type_filter)
+        installations = installations_query.all()
+
         verified_requests = []
         units = []
         field_staffs = []
     else:  # admin
-        installations = Distribution.query.all()
-        verified_requests = AssetRequest.query.filter_by(status='verified', distribution_id=None).all()
+        # Filter installations by task type if specified
+        installations_query = Distribution.query
+        if task_type_filter:
+            installations_query = installations_query.filter_by(task_type=task_type_filter)
+        installations = installations_query.all()
+
+        # Admin sees all verified requests that haven't been distributed
+        verified_requests = AssetRequest.query.filter(
+            AssetRequest.status == 'verified',
+            or_(AssetRequest.distribution_id == None, AssetRequest.distribution_id.is_(None))
+        ).all()
         units = Unit.query.join(Distribution).distinct().all()
         field_staffs = User.query.filter_by(role='field_staff').all()
 
@@ -37,7 +62,8 @@ def index():
                          distributions=installations,
                          verified_requests=verified_requests,
                          units=units,
-                         field_staffs=field_staffs)
+                         field_staffs=field_staffs,
+                         task_type_filter=task_type_filter)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
@@ -212,6 +238,41 @@ def detail(id):
     return render_template('installations/detail.html', installation=installation)
 
 
+@bp.route('/<int:id>/update/<string:status>', methods=['POST'])
+@login_required
+@role_required('warehouse_staff', 'admin')
+def update_status(id, status):
+    """Update distribution status"""
+    distribution = Distribution.query.get_or_404(id)
+
+    # Check access for warehouse staff
+    if current_user.is_warehouse_staff() and distribution.warehouse_id != current_user.warehouse_id:
+        flash('Anda tidak memiliki akses ke tugas ini.', 'danger')
+        return redirect(url_for('installations.index'))
+
+    # Valid status values
+    valid_statuses = ['installing', 'in_transit', 'installed', 'broken', 'maintenance']
+    if status not in valid_statuses:
+        flash('Status tidak valid.', 'danger')
+        return redirect(url_for('installations.detail', id=id))
+
+    try:
+        distribution.status = status
+        distribution.save()
+
+        # If status is installed, update item detail status
+        if status == 'installed':
+            if distribution.item_detail:
+                distribution.item_detail.status = 'used'
+                distribution.item_detail.save()
+
+        flash(f'Status berhasil diperbarui menjadi {distribution.status_display}.', 'success')
+    except Exception as e:
+        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return redirect(url_for('installations.detail', id=id))
+
+
 @bp.route('/<int:id>/cancel', methods=['POST'])
 @login_required
 @role_required('warehouse_staff', 'admin')
@@ -240,6 +301,7 @@ def cancel(id):
 @role_required('warehouse_staff', 'admin')
 def distribute_asset_request(request_id):
     """Process verified asset request and create distributions"""
+    from app.models import User
     asset_request = AssetRequest.query.get_or_404(request_id)
 
     if asset_request.status != 'verified':
@@ -252,85 +314,78 @@ def distribute_asset_request(request_id):
 
     if request.method == 'POST':
         try:
-            # For each item in the asset request, create a distribution
+            # Get available field staff
+            field_staffs = User.query.filter_by(role='field_staff').all()
+
+            if not field_staffs:
+                flash('Tidak ada field staff tersedia. Silakan tambahkan field staff terlebih dahulu.', 'danger')
+                return redirect(url_for('installations.index'))
+
+            # For each item in the asset request, create distribution
             request_items = AssetRequestItem.query.filter_by(asset_request_id=request_id).all()
 
             if not request_items:
                 flash('Tidak ada item dalam permohonan ini.', 'danger')
                 return redirect(url_for('installations.index'))
 
-            # Create distributions for each item
-            # For simplicity, we'll create one distribution per item
-            distributions_created = 0
+            distributions_created = []
+            distribution_data = []
 
             for req_item in request_items:
-                # Find available item details in warehouse
-                # This is a simplified version - you may need more complex logic
-                # to allocate specific items from stock
+                # Determine if this is networking item
+                is_networking = req_item.item.category.name.lower() in ['networking', 'jaringan']
+                task_type = 'installation' if is_networking else 'delivery'
 
-                # Get item details with available status
-                available_items = ItemDetail.query.filter_by(
-                    item_id=req_item.item_id,
-                    status='available'
+                # Find available item details in warehouse that don't already have a distribution
+                # Subquery to get item_detail_ids that already have distributions
+                from sqlalchemy import distinct
+                existing_distribution_item_ids = db.session.query(
+                    Distribution.item_detail_id
+                ).filter(
+                    Distribution.item_detail_id.isnot(None)
+                ).all()
+                existing_ids = [item_id[0] for item_id in existing_distribution_item_ids]
+
+                # Find available items excluding those already distributed
+                available_items = ItemDetail.query.filter(
+                    ItemDetail.item_id == req_item.item_id,
+                    ItemDetail.status == 'available',
+                    ~ItemDetail.id.in_(existing_ids)
                 ).limit(req_item.quantity).all()
 
                 if len(available_items) < req_item.quantity:
                     flash(f'Stok tidak mencukupi untuk {req_item.item.name}. Tersedia: {len(available_items)}, Diminta: {req_item.quantity}', 'danger')
                     return redirect(url_for('installations.index'))
 
-                # Create distribution record for each item
+                # Assign field staff (round-robin or first available)
+                # For simplicity, assign to first field staff
+                field_staff = field_staffs[0]
+
+                # Create distribution for each item detail
                 for item_detail in available_items:
-                    distribution = Distribution(
-                        item_detail_id=item_detail.id,
+                    # Use helper function to create distribution
+                    distribution = Distribution.create_from_asset_request_item(
+                        asset_request_item=req_item,
                         warehouse_id=item_detail.warehouse_id,
-                        unit_id=asset_request.unit_id,
-                        unit_detail_id=req_item.unit_detail_id,
-                        address=asset_request.unit.location if asset_request.unit else None,
-                        note=f"Aset Request #{asset_request.id}: {req_item.room_notes or asset_request.request_notes}",
-                        status='installing'
+                        field_staff_id=field_staff.id,
+                        item_detail_id=item_detail.id
                     )
 
-                    # Set coordinates if unit has location
-                    if asset_request.unit and hasattr(asset_request.unit, 'latitude') and hasattr(asset_request.unit, 'longitude'):
-                        if asset_request.unit.latitude and asset_request.unit.longitude:
-                            distribution.set_coordinates(asset_request.unit.latitude, asset_request.unit.longitude)
-
+                    # Update task type based on category
+                    distribution.task_type = task_type
+                    if task_type == 'delivery':
+                        distribution.status = 'in_transit'
                     distribution.save()
 
-                    # Update item detail status
-                    item_detail.status = 'processing'
-                    item_detail.save()
+                    distributions_created.append(distribution)
 
-                    # Log the movement
-                    from app.models import AssetMovementLog
-                    from app.utils import send_notification
+            # Link asset request to first distribution
+            if distributions_created:
+                asset_request.distribution_id = distributions_created[0].id
+                asset_request.status = 'distributing'
+                asset_request.save()
 
-                    AssetMovementLog.log_movement(
-                        item_detail=item_detail,
-                        operator=current_user,
-                        origin_type='warehouse',
-                        origin_id=item_detail.warehouse_id,
-                        destination_type='unit',
-                        destination_id=asset_request.unit_id,
-                        status_before='available',
-                        status_after='processing',
-                        note=f"Asset Request #{asset_request.id}: {req_item.room_notes or ''}"
-                    )
-
-                    distributions_created += 1
-
-            # Link the asset request to the first distribution (for tracking)
-            if distributions_created > 0:
-                first_distribution = Distribution.query.filter_by(
-                    unit_id=asset_request.unit_id,
-                    note=f"Aset Request #{asset_request.id}"
-                ).first()
-
-                if first_distribution:
-                    asset_request.distribution_id = first_distribution.id
-                    asset_request.save()
-
-            flash(f'Berhasil membuat {distributions_created} distribusi untuk permohonan aset #{asset_request.id}!', 'success')
+            flash(f'Berhasil membuat {len(distributions_created)} distribusi untuk permohonan aset #{asset_request.id}! Field staff akan menerima task.', 'success')
             return redirect(url_for('installations.index'))
 
         except Exception as e:
