@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+
+{% block title %}Distribusi Langsung - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Distribusi Langsung{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('installations.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar
+    </a>
+</div>
+
+<!-- Info Card -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-truck text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-900 mb-2">Distribusi Langsung</h4>
+            <p class="text-sm text-blue-800">
+                {% if current_user.is_admin() %}
+                Sebagai admin, Anda dapat langsung membuat distribusi aktif. Draft tidak memerlukan verifikasi.
+                {% else %}
+                Buat draft distribusi aset ke unit. Draft akan ditinjau dan disetujui oleh admin sebelum diproses.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Form -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Form Distribusi Aset</h3>
+    </div>
+    <div class="p-6">
+        <form method="POST" id="distributionForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <!-- Warehouse Selection (Admin Only) -->
+            {% if current_user.is_admin() %}
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Warehouse</label>
+                <select name="warehouse_id" id="warehouseSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">Pilih Warehouse</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <input type="hidden" name="warehouse_id" id="warehouseId" value="{{ current_user.warehouse_id }}"/>
+            {% endif %}
+
+            <!-- Unit Selection (First Step) -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Unit Tujuan</label>
+                <select name="unit_id" id="unitSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">Pilih Unit Terlebih Dahulu</option>
+                    {% for unit in units %}
+                    <option value="{{ unit.id }}" data-address="{{ unit.address }}">{{ unit.name }}</option>
+                    {% endfor %}
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pilih unit tujuan sebelum menambahkan barang</p>
+            </div>
+
+            <!-- Add Items Section -->
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Barang yang Akan Didistribusikan</label>
+                    <button type="button" id="addItemBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                        <i class="fas fa-plus mr-2"></i>Tambah Barang
+                    </button>
+                </div>
+
+                <!-- Items Container -->
+                <div id="itemsContainer">
+                    <!-- Items will be added here dynamically -->
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                    <i class="fas fa-box-open text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-500">Pilih unit terlebih dahulu</p>
+                    <p class="text-sm text-gray-400">Setelah memilih unit, Anda dapat menambahkan barang</p>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                <textarea name="notes" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Catatan tambahan..."></textarea>
+            </div>
+
+            <!-- Warning -->
+            <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h4 class="text-sm font-semibold text-amber-800 mb-2">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Penting!
+                </h4>
+                <ul class="text-sm text-amber-700 space-y-1">
+                    <li>• Pilih unit tujuan terlebih dahulu</li>
+                    <li>• Untuk setiap barang, pilih lokasi/ruangan yang sesuai dengan unit</li>
+                    <li>• Pastikan serial number yang dipilih benar dan tersedia</li>
+                    <li>• Distribusi akan dibuat untuk setiap serial number yang dipilih</li>
+                    {% if not current_user.is_admin() %}
+                    <li>• Draft distribusi akan ditinjau oleh admin sebelum diproses</li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+                <a href="{{ url_for('installations.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                    <i class="fas fa-times mr-2"></i>
+                    Batal
+                </a>
+                <button type="submit" id="submitBtn" class="submit-btn px-6 py-3 bg-gray-400 text-gray-600 rounded-lg font-semibold cursor-not-allowed" disabled>
+                    <i class="fas fa-paper-plane mr-2"></i>
+                    {% if current_user.is_admin() %}Buat Distribusi{% else %}Buat Draft{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Submit button styles */
+.submit-btn:disabled {
+    background-color: #9ca3af !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+}
+
+.submit-btn:not(:disabled) {
+    background-color: #2563eb !important;
+    color: white !important;
+    cursor: pointer !important;
+}
+
+.submit-btn:not(:disabled):hover {
+    background-color: #1d4ed8 !important;
+}
+
+/* Item card styles */
+.item-card {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<script>
+let itemCounter = 0;
+let itemsData = [];
+let warehouseId = {{ current_user.warehouse_id if current_user.is_warehouse_staff() else 'null' }};
+let selectedUnitId = null;
+
+// Warehouse change (admin only)
+{% if current_user.is_admin() %}
+document.getElementById('warehouseSelect').addEventListener('change', function() {
+    warehouseId = this.value;
+    // Reload serials for all items
+    itemsData.forEach(item => {
+        if (item.itemId) {
+            loadAvailableSerials(item.containerId, item.itemId);
+        }
+    });
+});
+{% endif %}
+
+// Unit change - enable add item button
+document.getElementById('unitSelect').addEventListener('change', function() {
+    selectedUnitId = this.value;
+    const addItemBtn = document.getElementById('addItemBtn');
+    const emptyState = document.getElementById('emptyState');
+
+    if (selectedUnitId) {
+        addItemBtn.disabled = false;
+        emptyState.innerHTML = `
+            <i class="fas fa-box-open text-4xl text-gray-400 mb-3"></i>
+            <p class="text-gray-500">Belum ada barang yang ditambahkan</p>
+            <p class="text-sm text-gray-400">Klik "Tambah Barang" untuk memulai</p>
+        `;
+    } else {
+        addItemBtn.disabled = true;
+        emptyState.innerHTML = `
+            <i class="fas fa-box-open text-4xl text-gray-400 mb-3"></i>
+            <p class="text-gray-500">Pilih unit terlebih dahulu</p>
+            <p class="text-sm text-gray-400">Setelah memilih unit, Anda dapat menambahkan barang</p>
+        `;
+    }
+});
+
+// Add item button
+document.getElementById('addItemBtn').addEventListener('click', function() {
+    if (!selectedUnitId) {
+        alert('Silakan pilih unit tujuan terlebih dahulu');
+        return;
+    }
+    addItemRow();
+});
+
+function addItemRow() {
+    itemCounter++;
+    const containerId = `item-${itemCounter}`;
+
+    const itemHtml = `
+        <div id="${containerId}" class="item-card mb-4 border border-gray-200 rounded-lg p-4" data-container-id="${containerId}">
+            <!-- Remove button at top right -->
+            <div class="flex justify-end mb-2">
+                <button type="button" onclick="removeItemRow('${containerId}')" class="text-red-500 hover:text-red-700 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Item Selection -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Barang</label>
+                <select name="item_select_${itemCounter}" class="item-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <option value="">Pilih Barang</option>
+                    {% for item in items %}
+                    <option value="{{ item.id }}">{{ item.name }} ({{ item.category.name if item.category else '-' }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Location Detail Selection -->
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Lokasi Detail / Ruangan</label>
+                <select name="unit_detail_${itemCounter}" class="unit-detail-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Lokasi Utama Unit</option>
+                </select>
+                <p class="text-xs text-gray-500 mt-1">Pilih ruangan di unit tujuan (opsional)</p>
+            </div>
+
+            <!-- Serial Selection -->
+            <div class="serial-section">
+                <div class="loading-state text-center py-4 text-gray-500">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Pilih barang untuk melihat serial numbers
+                </div>
+                <div class="serial-selection hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <h5 class="font-medium text-gray-700">Tersedia: <span class="available-count">-</span> unit</h5>
+                    </div>
+
+                    <div class="stock-warning hidden mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <i class="fas fa-exclamation-triangle text-amber-600 mr-2"></i>
+                        <span class="text-amber-800">Stok tidak tersedia</span>
+                    </div>
+
+                    <div class="serial-list border border-gray-200 rounded-lg p-2" style="max-height: 200px; overflow-y: auto;">
+                        <!-- Serial numbers will be loaded here -->
+                    </div>
+
+                    <input type="hidden" name="selected_serials_${itemCounter}" id="selected_serials_${itemCounter}" value="">
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('itemsContainer').insertAdjacentHTML('beforeend', itemHtml);
+    document.getElementById('emptyState').classList.add('hidden');
+
+    const container = document.getElementById(containerId);
+
+    // Load unit details for this item
+    loadUnitDetails(container);
+
+    // Add event listener for item selection
+    const itemSelect = container.querySelector('.item-select');
+    itemSelect.addEventListener('change', function() {
+        const itemId = this.value;
+        itemsData.push({
+            containerId: containerId,
+            itemId: itemId
+        });
+        loadAvailableSerials(containerId, itemId);
+    });
+
+    validateDistributionForm();
+}
+
+function removeItemRow(containerId) {
+    const container = document.getElementById(containerId);
+    container.remove();
+
+    // Remove from itemsData
+    itemsData = itemsData.filter(item => item.containerId !== containerId);
+
+    // Check if empty
+    if (document.querySelectorAll('.item-card').length === 0) {
+        document.getElementById('emptyState').classList.remove('hidden');
+        if (selectedUnitId) {
+            document.getElementById('emptyState').innerHTML = `
+                <i class="fas fa-box-open text-4xl text-gray-400 mb-3"></i>
+                <p class="text-gray-500">Belum ada barang yang ditambahkan</p>
+                <p class="text-sm text-gray-400">Klik "Tambah Barang" untuk memulai</p>
+            `;
+        }
+    }
+
+    validateDistributionForm();
+}
+
+function loadUnitDetails(container) {
+    const unitDetailSelect = container.querySelector('.unit-detail-select');
+
+    if (!selectedUnitId) {
+        return;
+    }
+
+    fetch(`/installations/api/unit/${selectedUnitId}/details`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.details && data.details.length > 0) {
+                // Clear existing options except the first one
+                unitDetailSelect.innerHTML = '<option value="">Lokasi Utama Unit</option>';
+
+                data.details.forEach(detail => {
+                    const option = document.createElement('option');
+                    option.value = detail.id;
+                    option.textContent = `${detail.room_name} (${detail.floor})`;
+                    unitDetailSelect.appendChild(option);
+                });
+            }
+        })
+        .catch(error => console.error('Error loading unit details:', error));
+}
+
+function loadAvailableSerials(containerId, itemId) {
+    if (!warehouseId || !itemId) {
+        return;
+    }
+
+    const container = document.getElementById(containerId);
+    const loadingState = container.querySelector('.loading-state');
+    const serialSelection = container.querySelector('.serial-selection');
+    const serialList = container.querySelector('.serial-list');
+    const availableCountSpan = container.querySelector('.available-count');
+    const stockWarning = container.querySelector('.stock-warning');
+
+    loadingState.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memuat serial numbers...';
+
+    fetch(`/installations/api/available-items/${warehouseId}/${itemId}`)
+        .then(response => response.json())
+        .then(data => {
+            loadingState.classList.add('hidden');
+            serialSelection.classList.remove('hidden');
+            availableCountSpan.textContent = data.total;
+
+            if (data.total === 0) {
+                serialList.innerHTML = '<div class="text-center py-4 text-gray-500">Tidak ada stok tersedia</div>';
+                stockWarning.classList.remove('hidden');
+                validateDistributionForm();
+                return;
+            }
+
+            stockWarning.classList.add('hidden');
+
+            serialList.innerHTML = data.items.map(item => `
+                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+                    <input type="checkbox"
+                           class="serial-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                           data-container-id="${containerId}"
+                           data-item-detail-id="${item.id}"
+                           data-serial-number="${item.serial_number}">
+                    <div class="ml-3 flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">${item.serial_number}</span>
+                            <span class="text-sm text-gray-500">${item.serial_unit || '-'}</span>
+                        </div>
+                    </div>
+                </label>
+            `).join('');
+
+            // Add event listeners to checkboxes
+            const checkboxes = serialList.querySelectorAll('.serial-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', handleSerialSelection);
+            });
+
+            validateDistributionForm();
+        })
+        .catch(error => {
+            console.error('Error loading serials:', error);
+            loadingState.innerHTML = '<div class="text-red-500 text-center">Gagal memuat serial numbers</div>';
+        });
+}
+
+function handleSerialSelection(e) {
+    const checkbox = e.target;
+    const containerId = checkbox.dataset.containerId;
+    const container = document.getElementById(containerId);
+    const hiddenInput = container.querySelector('[id^="selected_serials_"]');
+
+    // Get all selected serials for this container
+    const allCheckboxes = container.querySelectorAll('.serial-checkbox:checked');
+    const selectedIds = Array.from(allCheckboxes).map(cb => cb.dataset.itemDetailId);
+
+    // Update hidden input
+    hiddenInput.value = selectedIds.join(',');
+
+    validateDistributionForm();
+}
+
+function validateDistributionForm() {
+    const submitBtn = document.getElementById('submitBtn');
+    const itemCards = document.querySelectorAll('.item-card');
+    let allValid = true;
+    let validationDetails = [];
+
+    // Check if unit is selected
+    if (!selectedUnitId) {
+        allValid = false;
+        validationDetails.push('Unit belum dipilih');
+    }
+
+    if (itemCards.length === 0) {
+        allValid = false;
+        validationDetails.push('Belum ada barang');
+    } else {
+        itemCards.forEach(card => {
+            const itemSelect = card.querySelector('.item-select');
+            const hiddenInput = card.querySelector('[id^="selected_serials_"]');
+
+            if (!itemSelect.value) {
+                allValid = false;
+                validationDetails.push('Item belum dipilih');
+            }
+            if (!hiddenInput.value) {
+                allValid = false;
+                validationDetails.push('Serial belum dipilih');
+            }
+        });
+    }
+
+    console.log('Validation:', { allValid, validationDetails, selectedUnitId, cardCount: itemCards.length });
+
+    if (allValid) {
+        submitBtn.disabled = false;
+    } else {
+        submitBtn.disabled = true;
+    }
+}
+
+// Form validation
+document.getElementById('distributionForm').addEventListener('submit', function(e) {
+    const itemCards = document.querySelectorAll('.item-card');
+    let hasItems = false;
+    let allSelected = true;
+
+    itemCards.forEach(card => {
+        const hiddenInput = card.querySelector('[id^="selected_serials_"]');
+        if (hiddenInput.value) {
+            hasItems = true;
+        } else {
+            allSelected = false;
+        }
+    });
+
+    if (!hasItems || !allSelected) {
+        e.preventDefault();
+        alert('Silakan pilih minimal satu barang dan serial number');
+        return false;
+    }
+});
+</script>
+{% endblock %}

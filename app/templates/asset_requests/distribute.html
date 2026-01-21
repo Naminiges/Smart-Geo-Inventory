@@ -23,7 +23,7 @@
             <h4 class="font-semibold text-green-900 mb-2">Proses Permohonan Menjadi Distribusi</h4>
             <p class="text-sm text-green-800">
                 Dengan memproses permohonan ini, sistem akan membuat distribusi untuk setiap barang.
-                Barang networking akan menjadi task instalasi jaringan, barang lain menjadi delivery aset umum.
+                Pilih serial number/unit yang tersedia untuk setiap barang yang akan didistribusikan.
             </p>
         </div>
     </div>
@@ -58,88 +58,359 @@
     </div>
 </div>
 
-<!-- Items to Distribute -->
+<!-- Items to Distribute with Serial Selection -->
 <div class="bg-white rounded-xl shadow-md mb-6">
     <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-800">Barang yang Akan Didistribusikan</h3>
+        <h3 class="text-lg font-semibold text-gray-800">Pilih Serial Number Barang</h3>
+        <p class="text-sm text-gray-600 mt-1">Pilih serial number/unit untuk setiap barang yang akan didistribusikan</p>
     </div>
     <div class="p-6">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Kategori</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Quantity</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Lokasi Tujuan</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Task Type</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in asset_request.items %}
-                <tr class="border-b border-gray-100">
-                    <td class="py-3 px-4">
-                        <span class="font-semibold">{{ item.item.name }}</span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <span class="text-sm text-gray-600">{{ item.item.category.name if item.item and item.item.category else '-' }}</span>
-                    </td>
-                    <td class="py-3 px-4 font-semibold">{{ item.quantity }}</td>
-                    <td class="py-3 px-4">
-                        <span class="text-sm text-gray-600">
-                            {{ item.unit_detail.room_name if item.unit_detail else 'Main Location' }}
+        <form method="POST" id="distributeForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            {% for item in asset_request.items %}
+            <div class="mb-8 border border-gray-200 rounded-lg p-4 item-container" data-item-id="{{ item.item_id }}" data-request-item-id="{{ item.id }}" data-quantity="{{ item.quantity }}">
+                <div class="mb-4">
+                    <h4 class="font-semibold text-gray-800 text-lg">{{ item.item.name }}</h4>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm">
+                            Kategori: {{ item.item.category.name if item.item and item.item.category else '-' }}
                         </span>
-                    </td>
-                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
+                            Quantity: {{ item.quantity }} unit
+                        </span>
+                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">
+                            Lokasi: {{ item.unit_detail.room_name if item.unit_detail else 'Main Location' }}
+                        </span>
                         {% set category_name = item.item.category.name.lower() if item.item and item.item.category else '' %}
                         {% if 'jaringan' in category_name or 'network' in category_name %}
-                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                        <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-sm">
                             <i class="fas fa-network-wired mr-1"></i> Instalasi Jaringan
                         </span>
                         {% else %}
-                        <span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                        <span class="px-2 py-1 bg-orange-100 text-orange-700 rounded text-sm">
                             <i class="fas fa-archive mr-1"></i> Aset Umum
                         </span>
                         {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loading-state text-center py-4 text-gray-500">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    Memuat serial numbers yang tersedia...
+                </div>
+
+                <!-- Error State -->
+                <div class="error-state hidden text-center py-4">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
+                        <span class="text-red-700">Gagal memuat serial numbers. Silakan refresh halaman.</span>
+                    </div>
+                </div>
+
+                <!-- Serial Selection -->
+                <div class="serial-selection hidden">
+                    <div class="flex items-center justify-between mb-3">
+                        <h5 class="font-medium text-gray-700">Tersedia: <span class="available-count">-</span> unit</h5>
+                        <div class="text-sm">
+                            <span class="text-gray-600">Dipilih: </span>
+                            <span class="selected-count font-semibold text-blue-600">0</span>
+                            <span class="text-gray-600">/ {{ item.quantity }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Stock Warning -->
+                    <div class="stock-warning hidden mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <i class="fas fa-exclamation-triangle text-amber-600 mr-2"></i>
+                        <span class="text-amber-800">Stok tidak mencukupi! Tersedia <span class="stock-available-count">0</span> unit, diminta {{ item.quantity }} unit.</span>
+                    </div>
+
+                    <!-- Serial Number List -->
+                    <div class="serial-list border border-gray-200 rounded-lg" style="max-height: 200px; overflow-y: auto; scroll-behavior: smooth;">
+                        <div class="p-2">
+                            <!-- Serial numbers will be loaded here via AJAX -->
+                        </div>
+                    </div>
+
+                    <!-- Hidden input to store selected serial IDs -->
+                    <input type="hidden" name="selected_serials_{{ item.id }}" id="selected_serials_{{ item.id }}" value="">
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- Warning Card -->
+            <div class="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                <h4 class="text-sm font-semibold text-amber-800 mb-2">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Penting!
+                </h4>
+                <ul class="text-sm text-amber-700 space-y-1">
+                    <li>• Distribusi akan dibuat untuk setiap serial number yang dipilih</li>
+                    <li>• Status barang akan berubah menjadi "processing"</li>
+                    <li>• Field staff akan ditugaskan untuk instalasi/pengiriman</li>
+                    <li>• Pastikan semua barang memiliki stok yang mencukupi sebelum memproses</li>
+                    <li>• Jika salah satu barang tidak memiliki stok yang cukup, distribusi tidak bisa diproses</li>
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+                <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                    <i class="fas fa-times mr-2"></i>
+                    Batal
+                </a>
+                <button type="submit" id="submitBtn" class="submit-btn px-6 py-3 bg-gray-400 text-gray-600 rounded-lg font-semibold cursor-not-allowed" disabled>
+                    <i class="fas fa-check mr-2"></i>
+                    Proses Permohonan
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- Confirm Form -->
-<div class="bg-white rounded-xl shadow-md">
-    <div class="p-6 border-b border-gray-200">
-        <h3 class="text-lg font-semibold text-gray-800">Konfirmasi Proses</h3>
-    </div>
-    <form method="POST" class="p-6">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+<style>
+/* Submit button styles */
+.submit-btn:disabled {
+    background-color: #9ca3af !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+}
 
-        <div class="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <h4 class="text-sm font-semibold text-amber-800 mb-2">
-                <i class="fas fa-exclamation-triangle mr-1"></i>
-                Penting!
-            </h4>
-            <ul class="text-sm text-amber-700 space-y-1">
-                <li>• Distribusi akan dibuat untuk setiap barang dengan quantity yang diminta</li>
-                <li>• Status barang akan berubah menjadi "processing"</li>
-                <li>• Field staff akan ditugaskan untuk instalasi/pengiriman</li>
-                <li>• Pastikan stok barang mencukupi sebelum memproses</li>
-            </ul>
-        </div>
+.submit-btn:not(:disabled) {
+    background-color: #16a34a !important;
+    color: white !important;
+    cursor: pointer !important;
+}
 
-        <!-- Action Buttons -->
-        <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-            <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
-                <i class="fas fa-times mr-2"></i>
-                Batal
-            </a>
-            <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
-                <i class="fas fa-check mr-2"></i>
-                Proses Permohonan
-            </button>
-        </div>
-    </form>
-</div>
+.submit-btn:not(:disabled):hover {
+    background-color: #15803d !important;
+}
+</style>
+
+<script>
+const warehouseId = {{ warehouse_id }};
+const itemsData = [
+    {% for item in asset_request.items %}
+    {
+        id: {{ item.id }},
+        item_id: {{ item.item_id }},
+        quantity: {{ item.quantity }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+let selectedSerials = {};
+let stockStatus = {}; // Track stock status for each item
+
+// Function to fetch available serial numbers for an item
+async function fetchAvailableSerials(itemId, quantity, requestItemId) {
+    const container = document.querySelector(`[data-item-id="${itemId}"]`);
+    const loadingState = container.querySelector('.loading-state');
+    const errorState = container.querySelector('.error-state');
+    const serialSelection = container.querySelector('.serial-selection');
+    const serialList = container.querySelector('.serial-list > .p-2'); // Get the inner container
+    const availableCountSpan = container.querySelector('.available-count');
+    const stockWarning = container.querySelector('.stock-warning');
+    const stockAvailableCount = container.querySelector('.stock-available-count');
+
+    try {
+        const response = await fetch(`/asset-requests/api/available-items/${warehouseId}/${itemId}`);
+        const data = await response.json();
+
+        if (data.success) {
+            loadingState.classList.add('hidden');
+            serialSelection.classList.remove('hidden');
+
+            const availableItems = data.items;
+            availableCountSpan.textContent = availableItems.length;
+
+            // Initialize stock status
+            stockStatus[requestItemId] = availableItems.length >= quantity;
+
+            // Check if stock is sufficient
+            if (availableItems.length < quantity) {
+                stockWarning.classList.remove('hidden');
+                stockAvailableCount.textContent = availableItems.length;
+            }
+
+            // Initialize selected serials for this item
+            selectedSerials[requestItemId] = [];
+
+            if (availableItems.length === 0) {
+                serialList.innerHTML = `
+                    <div class="text-center py-6 text-gray-500">
+                        <i class="fas fa-box-open text-3xl mb-2"></i>
+                        <p>Tidak ada stok tersedia untuk barang ini</p>
+                    </div>
+                `;
+                validateDistributeForm();
+                return;
+            }
+
+            // Render serial numbers
+            serialList.innerHTML = availableItems.map(item => `
+                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer serial-checkbox" data-item-detail-id="${item.id}">
+                    <input type="checkbox"
+                           class="serial-checkbox-input w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                           data-request-item-id="${requestItemId}"
+                           data-item-detail-id="${item.id}"
+                           data-serial-number="${item.serial_number}"
+                           ${availableItems.length >= quantity ? '' : 'disabled'
+                           }>
+                    <div class="ml-3 flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">${item.serial_number}</span>
+                            <span class="text-sm text-gray-500">${item.serial_unit}</span>
+                        </div>
+                    </div>
+                </label>
+            `).join('');
+
+            // Add event listeners to checkboxes
+            const checkboxes = serialList.querySelectorAll('.serial-checkbox-input');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', handleSerialSelection);
+            });
+
+            validateDistributeForm();
+        } else {
+            throw new Error(data.error || 'Failed to load serial numbers');
+        }
+    } catch (error) {
+        console.error('Error fetching serial numbers:', error);
+
+        // Show more detailed error
+        loadingState.classList.add('hidden');
+
+        // Check if it's a network error vs API error
+        let errorMessage = 'Gagal memuat serial numbers. Silakan refresh halaman.';
+        if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'Gagal terhubung ke server. Periksa koneksi internet Anda.';
+        } else if (data && !data.success) {
+            errorMessage = `Server error: ${data.error || 'Unknown error'}`;
+        }
+
+        errorState.querySelector('span').textContent = errorMessage;
+        errorState.classList.remove('hidden');
+
+        stockStatus[requestItemId] = false;
+        validateDistributeForm();
+    }
+}
+
+// Handle serial number selection
+function handleSerialSelection(e) {
+    const checkbox = e.target;
+    const requestItemId = checkbox.dataset.requestItemId;
+    const itemDetailId = checkbox.dataset.itemDetailId;
+    const quantity = parseInt(checkbox.closest('[data-quantity]').dataset.quantity);
+
+    if (!selectedSerials[requestItemId]) {
+        selectedSerials[requestItemId] = [];
+    }
+
+    if (checkbox.checked) {
+        // Check if already at quantity limit
+        if (selectedSerials[requestItemId].length >= quantity) {
+            checkbox.checked = false;
+            return;
+        }
+        selectedSerials[requestItemId].push(itemDetailId);
+    } else {
+        selectedSerials[requestItemId] = selectedSerials[requestItemId].filter(id => id !== itemDetailId);
+    }
+
+    // Update selected count
+    updateSelectedCount(requestItemId, quantity);
+    validateDistributeForm();
+}
+
+// Update selected count display
+function updateSelectedCount(requestItemId, quantity) {
+    const container = document.querySelector(`[data-request-item-id="${requestItemId}"]`);
+    const selectedCountSpan = container.querySelector('.selected-count');
+    const count = selectedSerials[requestItemId] ? selectedSerials[requestItemId].length : 0;
+    selectedCountSpan.textContent = count;
+
+    // Update hidden input
+    const hiddenInput = document.getElementById(`selected_serials_${requestItemId}`);
+    if (hiddenInput) {
+        hiddenInput.value = selectedSerials[requestItemId].join(',');
+    }
+
+    // Disable unchecked checkboxes if at limit
+    const allCheckboxes = container.querySelectorAll('.serial-checkbox-input');
+    allCheckboxes.forEach(cb => {
+        if (!cb.checked && count >= quantity) {
+            cb.disabled = true;
+        } else if (!cb.checked && stockStatus[requestItemId]) {
+            cb.disabled = false;
+        }
+    });
+}
+
+// Validate form and enable/disable submit button
+function validateDistributeForm() {
+    const submitBtn = document.getElementById('submitBtn');
+    let allValid = true;
+    let allLoaded = true;
+    let validationDetails = [];
+
+    // Check if all items are loaded and valid
+    itemsData.forEach(item => {
+        const selected = selectedSerials[item.id] || [];
+        const itemStatus = stockStatus[item.id];
+
+        // Check if stock status is determined
+        if (itemStatus === undefined) {
+            allLoaded = false;
+            validationDetails.push(`Item ${item.id}: Loading...`);
+        }
+
+        // Check if stock is sufficient
+        if (itemStatus === false) {
+            allValid = false;
+            validationDetails.push(`Item ${item.id}: Stock tidak cukup`);
+        }
+
+        // Check if all serials are selected
+        if (selected.length !== item.quantity) {
+            allValid = false;
+            validationDetails.push(`Item ${item.id}: Serial dipilih ${selected.length}/${item.quantity}`);
+        } else {
+            validationDetails.push(`Item ${item.id}: OK (${selected.length}/${item.quantity})`);
+        }
+    });
+
+    // Debug log
+    console.log('Validation Status:', {
+        allLoaded,
+        allValid,
+        details: validationDetails,
+        stockStatus,
+        selectedSerials
+    });
+
+    // Only enable if all items are loaded, have sufficient stock, and all serials are selected
+    if (allLoaded && allValid) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('bg-gray-400', 'text-gray-600', 'cursor-not-allowed');
+        submitBtn.classList.add('bg-green-600', 'text-white', 'hover:bg-green-700');
+        console.log('Button ENABLED - Form is valid!');
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.classList.remove('bg-green-600', 'text-white', 'hover:bg-green-700');
+        submitBtn.classList.add('bg-gray-400', 'text-gray-600', 'cursor-not-allowed');
+        console.log('Button DISABLED - Reasons:', validationDetails);
+    }
+}
+
+// Load serial numbers for all items on page load
+document.addEventListener('DOMContentLoaded', function() {
+    itemsData.forEach(item => {
+        fetchAvailableSerials(item.item_id, item.quantity, item.id);
+    });
+});
+</script>
 {% endblock %}

@@ -389,27 +389,51 @@ def distribute(id):
     if request.method == 'POST':
         try:
             from app.models.inventory import Stock
-            # Create distributions for each item
+            # Create distributions for each item based on selected serial numbers
             distributions_created = []
+            all_items_valid = True
+            validation_errors = []
 
             for request_item in asset_request.items:
-                # Get available item_details from warehouse
-                # ItemDetails are now created during procurement receive, so we only need to query them
-                available_items = ItemDetail.query.filter_by(
-                    warehouse_id=warehouse_id,
-                    item_id=request_item.item_id,
-                    status='available'
-                ).limit(request_item.quantity).all()
+                # Get selected serial IDs from form
+                selected_serials_key = f'selected_serials_{request_item.id}'
+                selected_serials_str = request.form.get(selected_serials_key, '')
 
-                # Check if we have enough ItemDetails
-                if len(available_items) < request_item.quantity:
-                    shortage = request_item.quantity - len(available_items)
-                    flash(f'Stok tidak mencukupi untuk {request_item.item.name}. '
-                          f'Diminta: {request_item.quantity} unit, Tersedia: {len(available_items)} unit, Kurang: {shortage} unit', 'warning')
+                if not selected_serials_str:
+                    flash(f'Serial number belum dipilih untuk {request_item.item.name}. Silakan pilih serial number terlebih dahulu.', 'warning')
                     return redirect(url_for('asset_requests.distribute', id=id))
 
-                # Create distribution for each item_detail
-                for item_detail in available_items[:request_item.quantity]:
+                # Parse selected serial IDs
+                try:
+                    selected_serial_ids = [int(sid.strip()) for sid in selected_serials_str.split(',') if sid.strip()]
+                except ValueError:
+                    flash(f'Format serial number tidak valid untuk {request_item.item.name}.', 'danger')
+                    return redirect(url_for('asset_requests.distribute', id=id))
+
+                # Validate quantity
+                if len(selected_serial_ids) != request_item.quantity:
+                    flash(f'Jumlah serial number yang dipilih untuk {request_item.item.name} tidak sesuai. '
+                          f'Dipilih: {len(selected_serial_ids)}, Diminta: {request_item.quantity}', 'warning')
+                    return redirect(url_for('asset_requests.distribute', id=id))
+
+                # Get the selected item_details
+                selected_item_details = ItemDetail.query.filter(
+                    ItemDetail.id.in_(selected_serial_ids),
+                    ItemDetail.warehouse_id == warehouse_id,
+                    ItemDetail.item_id == request_item.item_id,
+                    ItemDetail.status == 'available'
+                ).all()
+
+                # Validate all selected items are valid and available
+                if len(selected_item_details) != len(selected_serial_ids):
+                    found_ids = [item.id for item in selected_item_details]
+                    missing_ids = set(selected_serial_ids) - set(found_ids)
+                    flash(f'Beberapa serial number yang dipilih tidak valid atau tidak tersedia untuk {request_item.item.name}. '
+                          f'Mohon refresh halaman dan pilih kembali.', 'danger')
+                    return redirect(url_for('asset_requests.distribute', id=id))
+
+                # Create distribution for each selected item_detail
+                for item_detail in selected_item_details:
                     # Determine task type based on category
                     category_name = item_detail.item.category.name.lower() if item_detail.item and item_detail.item.category else ''
                     task_type = 'installation' if 'jaringan' in category_name or 'network' in category_name else 'delivery'
@@ -430,7 +454,7 @@ def distribute(id):
                     distributions_created.append(distribution)
 
                 # Update item_detail status
-                for item_detail in available_items[:request_item.quantity]:
+                for item_detail in selected_item_details:
                     item_detail.status = 'processing'
                     item_detail.save()
 
@@ -449,10 +473,200 @@ def distribute(id):
             flash(f'Berhasil memproses {len(distributions_created)} distribusi. Barang sedang dipersiapkan untuk dikirim ke unit.', 'success')
             return redirect(url_for('asset_requests.detail', id=id))
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     # GET request - show summary
     return render_template('asset_requests/distribute.html', asset_request=asset_request, warehouse_id=warehouse_id)
+
+
+@bp.route('/<int:id>/confirm-receipt', methods=['GET', 'POST'])
+@login_required
+@role_required('unit_staff')
+def confirm_receipt(id):
+    """Show confirmation page with photo upload for receiving items"""
+    from app.models import Distribution
+    from werkzeug.datastructures import FileStorage
+    from io import BytesIO
+    from PIL import Image
+
+    def compress_image(image_bytes, max_size_kb=500, quality=85):
+        """
+        Compress image to reduce file size while maintaining quality
+
+        Args:
+            image_bytes: Original image bytes
+            max_size_kb: Maximum target size in KB (default: 500KB)
+            quality: Initial JPEG quality (1-100, default: 85)
+
+        Returns:
+            Compressed image bytes
+        """
+        img = Image.open(BytesIO(image_bytes))
+
+        # Convert RGBA to RGB if necessary
+        if img.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+            img = background
+
+        # Calculate new dimensions if image is too large
+        max_dimension = 1920  # Maximum width or height
+        if max(img.size) > max_dimension:
+            ratio = max_dimension / max(img.size)
+            new_size = tuple(int(dim * ratio) for dim in img.size)
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+
+        # Start with initial quality
+        output = BytesIO()
+        img.save(output, format='JPEG', quality=quality, optimize=True)
+        compressed_bytes = output.getvalue()
+
+        # If still too large, reduce quality progressively
+        min_quality = 50
+        max_iterations = 10
+        iteration = 0
+        target_size = max_size_kb * 1024
+
+        while len(compressed_bytes) > target_size and quality > min_quality and iteration < max_iterations:
+            quality -= 5
+            output = BytesIO()
+            img.save(output, format='JPEG', quality=quality, optimize=True)
+            compressed_bytes = output.getvalue()
+            iteration += 1
+
+        return compressed_bytes
+
+    asset_request = AssetRequest.query.get_or_404(id)
+
+    # Check permission
+    from app.models import UserUnit
+    user_units = UserUnit.query.filter_by(user_id=current_user.id).all()
+    unit_ids = [uu.unit_id for uu in user_units]
+    if asset_request.unit_id not in unit_ids:
+        flash('Anda tidak memiliki izin untuk mengakses halaman ini.', 'danger')
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    if asset_request.status not in ['verified', 'distributing']:
+        flash('Hanya permohonan yang sedang didistribusikan yang bisa dikonfirmasi.', 'warning')
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    # Get distributions for this asset request
+    distributions = Distribution.query.filter_by(asset_request_id=id).all()
+
+    if request.method == 'POST':
+        try:
+            # Get uploaded photo
+            photo_file = request.files.get('proof_photo')
+
+            if not photo_file:
+                flash('Harap upload foto sebagai bukti penerimaan.', 'warning')
+                return redirect(url_for('asset_requests.confirm_receipt', id=id))
+
+            # Validate file type
+            allowed_extensions = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+            filename = photo_file.filename.lower()
+            if not any(filename.endswith('.' + ext) for ext in allowed_extensions):
+                flash('Format file tidak didukung. Gunakan JPG, PNG, GIF, atau WebP.', 'danger')
+                return redirect(url_for('asset_requests.confirm_receipt', id=id))
+
+            # Read file as bytes
+            original_bytes = photo_file.read()
+
+            if len(original_bytes) > 10 * 1024 * 1024:  # 10MB limit
+                flash('Ukuran file terlalu besar. Maksimal 10MB.', 'danger')
+                return redirect(url_for('asset_requests.confirm_receipt', id=id))
+
+            # Compress image
+            try:
+                compressed_photo = compress_image(original_bytes, max_size_kb=500)
+                original_size_kb = len(original_bytes) / 1024
+                compressed_size_kb = len(compressed_photo) / 1024
+                compression_ratio = (1 - compressed_size_kb / original_size_kb) * 100
+
+                import logging
+                logging.info(f'Image compressed: {original_size_kb:.2f}KB -> {compressed_size_kb:.2f}KB ({compression_ratio:.1f}% reduction)')
+            except Exception as e:
+                import logging
+                logging.error(f'Image compression failed: {str(e)}')
+                # Use original if compression fails
+                compressed_photo = original_bytes
+
+            # Get distribution_id from form
+            distribution_id = request.form.get('distribution_id', type=int)
+            if not distribution_id:
+                distribution_id = asset_request.distribution_id
+
+            # Update all distributions with the photo
+            for dist in distributions:
+                dist.verification_photo = compressed_photo
+                dist.verification_status = 'submitted'
+                dist.verification_notes = f'Bukti penerimaan dari {current_user.name}'
+                dist.save()
+
+            # Mark asset request as completed
+            success, message = asset_request.mark_completed(
+                distribution_id=distribution_id,
+                user_id=current_user.id
+            )
+
+            if success:
+                flash(f'{message} (Foto: {compressed_size_kb:.1f}KB)', 'success')
+            else:
+                flash(message, 'danger')
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    # GET request - show confirmation form
+    return render_template('asset_requests/confirm_receipt.html',
+                         asset_request=asset_request,
+                         distributions=distributions)
+
+
+@bp.route('/<int:id>/proof-photo')
+@login_required
+def proof_photo(id):
+    """Display proof photo for asset request"""
+    from app.models import Distribution
+    from flask import send_file
+    from io import BytesIO
+
+    asset_request = AssetRequest.query.get_or_404(id)
+
+    # Get the first distribution with verification photo
+    distribution = Distribution.query.filter_by(
+        asset_request_id=id
+    ).filter(Distribution.verification_photo != None).first()
+
+    if not distribution or not distribution.verification_photo:
+        # Return placeholder image
+        # Create a simple placeholder SVG
+        placeholder_svg = '''<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="300" fill="#f3f4f6"/>
+    <text x="200" y="140" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af" text-anchor="middle">
+        <tspan x="200" dy="0">Foto tidak tersedia</tspan>
+        <tspan x="200" dy="25" font-size="14">No proof photo uploaded</tspan>
+    </text>
+    <rect x="150" y="160" width="100" height="100" fill="none" stroke="#d1d5db" stroke-width="2" rx="8"/>
+    <text x="200" y="220" font-family="Arial, sans-serif" font-size="40" fill="#d1d5db" text-anchor="middle">📷</text>
+</svg>'''
+        return send_file(BytesIO(placeholder_svg.encode('utf-8')),
+                         mimetype='image/svg+xml',
+                         as_attachment=False)
+
+    # Return the photo from database
+    return send_file(BytesIO(distribution.verification_photo),
+                     mimetype='image/jpeg',
+                     as_attachment=False)
 
 
 @bp.route('/<int:id>/complete', methods=['POST'])
@@ -583,3 +797,37 @@ def unit_assets():
     return render_template('asset_requests/unit_assets.html',
                          units=units,
                          unit_items=unit_items)
+
+
+@bp.route('/api/available-items/<int:warehouse_id>/<int:item_id>')
+@login_required
+@role_required('warehouse_staff', 'admin')
+def api_available_items(warehouse_id, item_id):
+    """API endpoint to get available item details (serial numbers) for a specific item and warehouse"""
+    from app.models import ItemDetail
+
+    try:
+        available_items = ItemDetail.query.filter(
+            ItemDetail.warehouse_id == warehouse_id,
+            ItemDetail.item_id == item_id,
+            ItemDetail.status == 'available'
+        ).all()
+
+        items_data = [{
+            'id': item.id,
+            'serial_number': item.serial_number,
+            'serial_unit': item.serial_unit or '-'
+        } for item in available_items]
+
+        return jsonify({
+            'success': True,
+            'items': items_data,
+            'total': len(items_data)
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import datetime
 from app import db
-from app.models import Distribution, ItemDetail, User, Unit, UnitDetail, AssetRequest, AssetRequestItem
+from app.models import Distribution, ItemDetail, Item, User, Unit, UnitDetail, AssetRequest, AssetRequestItem, Warehouse
 from app.forms import DistributionForm, InstallationForm
 from app.utils.decorators import role_required, warehouse_access_required
 from app.utils.datetime_helper import get_wib_now
@@ -21,11 +21,15 @@ def index():
     task_type_filter = request.args.get('task_type', '')  # 'installation' or 'delivery' or empty for all
 
     if current_user.is_warehouse_staff():
-        # Filter installations by task type if specified
-        installations_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id)
+        # Filter installations: only direct distributions (not from asset requests), newest first
+        installations_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).filter(Distribution.asset_request_id == None)
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.all()
+        installations = installations_query.order_by(Distribution.created_at.desc()).all()
+
+        # Get draft distributions, newest first
+        draft_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id, is_draft=True)
+        drafts = draft_query.order_by(Distribution.created_at.desc()).all()
 
         # Get unique units and field staffs for filters
         units = Unit.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id).distinct().all()
@@ -37,20 +41,25 @@ def index():
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.all()
 
+        drafts = []  # Field staff doesn't see drafts
         units = []
         field_staffs = []
     else:  # admin
-        # Filter installations by task type if specified
-        installations_query = Distribution.query
+        # Filter installations: only direct distributions (not from asset requests), newest first
+        installations_query = Distribution.query.filter(Distribution.asset_request_id == None)
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.all()
+        installations = installations_query.order_by(Distribution.created_at.desc()).all()
+
+        # Get all draft distributions, newest first
+        drafts = Distribution.query.filter_by(is_draft=True).order_by(Distribution.created_at.desc()).all()
 
         units = Unit.query.join(Distribution).distinct().all()
         field_staffs = User.query.filter_by(role='field_staff').all()
 
     return render_template('installations/index.html',
                          distributions=installations,
+                         drafts=drafts,
                          units=units,
                          field_staffs=field_staffs,
                          task_type_filter=task_type_filter)
@@ -223,9 +232,9 @@ def verify_task(id):
 @bp.route('/<int:id>/detail')
 @login_required
 def detail(id):
-    """View installation detail"""
-    installation = Distribution.query.get_or_404(id)
-    return render_template('installations/detail.html', installation=installation)
+    """View distribution detail"""
+    distribution = Distribution.query.get_or_404(id)
+    return render_template('installations/detail.html', distribution=distribution)
 
 
 @bp.route('/<int:id>/update/<string:status>', methods=['POST'])
@@ -393,3 +402,319 @@ def distribute_asset_request(request_id):
 
     # GET request - show confirmation
     return render_template('installations/distribute_asset_request.html', asset_request=asset_request)
+
+
+# ==============================================================================
+# GENERAL DISTRIBUTION (Distribusi Aset Umum)
+# ==============================================================================
+
+@bp.route('/general-distribution/create', methods=['GET', 'POST'])
+@login_required
+@role_required('warehouse_staff', 'admin')
+def create_general_distribution():
+    """Create draft distributions for general asset distribution"""
+    from app.models import Warehouse
+
+    if request.method == 'POST':
+        try:
+            # Get form data
+            unit_id = request.form.get('unit_id', type=int)
+            notes = request.form.get('notes', '')
+
+            # Get warehouse
+            warehouse_id = current_user.warehouse_id if current_user.is_warehouse_staff() else request.form.get('warehouse_id', type=int)
+
+            if not unit_id:
+                flash('Silakan pilih unit tujuan.', 'warning')
+                return redirect(url_for('installations.create_general_distribution'))
+
+            # Get unit
+            unit = Unit.query.get(unit_id)
+            if not unit:
+                flash('Unit tidak ditemukan.', 'danger')
+                return redirect(url_for('installations.create_general_distribution'))
+
+            # Collect item data with their unit details
+            items_to_distribute = []
+            for key in request.form.keys():
+                if key.startswith('selected_serials_'):
+                    item_num = key.replace('selected_serials_', '')
+                    serials_str = request.form.get(key)
+
+                    if serials_str:
+                        unit_detail_key = f'unit_detail_{item_num}'
+                        unit_detail_id = request.form.get(unit_detail_key, type=int) or None
+
+                        serial_ids = [int(s) for s in serials_str.split(',') if s.strip()]
+                        items_to_distribute.append({
+                            'serial_ids': serial_ids,
+                            'unit_detail_id': unit_detail_id
+                        })
+
+            if not items_to_distribute:
+                flash('Silakan pilih minimal satu barang.', 'warning')
+                return redirect(url_for('installations.create_general_distribution'))
+
+            # Collect all serial IDs and validate
+            all_serial_ids = []
+            for item in items_to_distribute:
+                all_serial_ids.extend(item['serial_ids'])
+
+            # Validate all item details are available
+            item_details = ItemDetail.query.filter(ItemDetail.id.in_(all_serial_ids)).all()
+            if len(item_details) != len(all_serial_ids):
+                flash('Beberapa barang tidak ditemukan.', 'danger')
+                return redirect(url_for('installations.create_general_distribution'))
+
+            for item_detail in item_details:
+                if item_detail.status != 'available':
+                    flash(f'Barang {item_detail.serial_number} tidak tersedia.', 'danger')
+                    return redirect(url_for('installations.create_general_distribution'))
+
+            # Create draft distributions for each selected item
+            # All distributions in this batch will have the same draft_batch_id for grouping
+            import uuid
+            draft_batch_id = str(uuid.uuid4())
+
+            distributions_created = []
+            for item_group in items_to_distribute:
+                group_item_details = ItemDetail.query.filter(ItemDetail.id.in_(item_group['serial_ids'])).all()
+
+                for item_detail in group_item_details:
+                    distribution = Distribution(
+                        item_detail_id=item_detail.id,
+                        warehouse_id=warehouse_id,
+                        unit_id=unit_id,
+                        unit_detail_id=item_group['unit_detail_id'],
+                        address=unit.address if unit else 'Unknown',
+                        status='draft',
+                        is_draft=True,
+                        draft_created_by=current_user.id,
+                        draft_notes=notes,
+                        note=f"Batch ID: {draft_batch_id}"  # Store batch ID in note for grouping
+                    )
+
+                    # Set coordinates from unit if available
+                    if unit and unit.geom:
+                        distribution.geom = unit.geom
+
+                    distribution.save()
+                    distributions_created.append(distribution)
+
+            # If admin, directly approve (verify) all drafts in this batch
+            if current_user.is_admin():
+                for distribution in distributions_created:
+                    distribution.verify_draft(current_user.id)
+                flash(f'{len(distributions_created)} distribusi berhasil dibuat dan disetujui.', 'success')
+            else:
+                flash(f'{len(distributions_created)} draft distribusi berhasil dibuat. Menunggu verifikasi admin.', 'success')
+
+            return redirect(url_for('installations.index'))
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            db.session.rollback()
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    # GET request - show form
+    warehouses = Warehouse.query.all() if current_user.is_admin() else []
+    units = Unit.query.all()
+    items = Item.query.all()
+
+    return render_template('installations/create_general_distribution.html',
+                         warehouses=warehouses,
+                         units=units,
+                         items=items)
+
+
+@bp.route('/general-distribution/<int:id>/verify')
+@login_required
+@role_required('admin')
+def verify_general_distribution(id):
+    """Verify and approve/reject draft distribution batch"""
+    from sqlalchemy import and_
+
+    # Get the reference distribution
+    ref_distribution = Distribution.query.get_or_404(id)
+
+    if not ref_distribution.is_draft:
+        flash('Ini bukan draft distribusi.', 'warning')
+        return redirect(url_for('installations.index'))
+
+    # Get all draft distributions from the same batch (same user, same unit, same time window)
+    # Group by draft_created_by, unit_id, and created_at (within 1 minute)
+    from datetime import timedelta
+    time_threshold = ref_distribution.created_at - timedelta(minutes=1)
+    time_upper = ref_distribution.created_at + timedelta(minutes=1)
+
+    batch_distributions = Distribution.query.filter(
+        and_(
+            Distribution.is_draft == True,
+            Distribution.draft_created_by == ref_distribution.draft_created_by,
+            Distribution.unit_id == ref_distribution.unit_id,
+            Distribution.created_at >= time_threshold,
+            Distribution.created_at <= time_upper,
+            Distribution.draft_notes == ref_distribution.draft_notes
+        )
+    ).all()
+
+    # Group items by unit_detail for better display
+    items_by_location = {}
+    for dist in batch_distributions:
+        location_key = dist.unit_detail_id if dist.unit_detail_id else 'main'
+        if location_key not in items_by_location:
+            items_by_location[location_key] = {
+                'unit_detail': dist.unit_detail,
+                'items': []
+            }
+        if dist.item_detail:
+            items_by_location[location_key]['items'].append(dist.item_detail)
+
+    return render_template('installations/verify_general_distribution.html',
+                         ref_distribution=ref_distribution,
+                         batch_distributions=batch_distributions,
+                         items_by_location=items_by_location,
+                         total_items=len(batch_distributions))
+
+
+@bp.route('/general-distribution/<int:id>/approve', methods=['POST'])
+@login_required
+@role_required('admin')
+def approve_general_distribution(id):
+    """Approve all draft distributions in the same batch"""
+    from sqlalchemy import and_
+    from datetime import timedelta
+
+    # Get the reference distribution
+    ref_distribution = Distribution.query.get_or_404(id)
+
+    if not ref_distribution.is_draft:
+        return jsonify({'success': False, 'message': 'Ini bukan draft distribusi'}), 400
+
+    try:
+        # Get all distributions in the same batch
+        time_threshold = ref_distribution.created_at - timedelta(minutes=1)
+        time_upper = ref_distribution.created_at + timedelta(minutes=1)
+
+        batch_distributions = Distribution.query.filter(
+            and_(
+                Distribution.is_draft == True,
+                Distribution.draft_created_by == ref_distribution.draft_created_by,
+                Distribution.unit_id == ref_distribution.unit_id,
+                Distribution.created_at >= time_threshold,
+                Distribution.created_at <= time_upper,
+                Distribution.draft_notes == ref_distribution.draft_notes
+            )
+        ).all()
+
+        # Verify all distributions in the batch
+        verified_count = 0
+        for distribution in batch_distributions:
+            success, message = distribution.verify_draft(current_user.id)
+            if success:
+                verified_count += 1
+
+        flash(f'{verified_count} distribusi berhasil disetujui.', 'success')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return redirect(url_for('installations.index'))
+
+
+@bp.route('/general-distribution/<int:id>/reject', methods=['POST'])
+@login_required
+@role_required('admin')
+def reject_general_distribution(id):
+    """Reject all draft distributions in the same batch"""
+    from sqlalchemy import and_
+    from datetime import timedelta
+
+    # Get the reference distribution
+    ref_distribution = Distribution.query.get_or_404(id)
+
+    if not ref_distribution.is_draft:
+        return jsonify({'success': False, 'message': 'Ini bukan draft distribusi'}), 400
+
+    reason = request.form.get('reason', '')
+
+    try:
+        # Get all distributions in the same batch
+        time_threshold = ref_distribution.created_at - timedelta(minutes=1)
+        time_upper = ref_distribution.created_at + timedelta(minutes=1)
+
+        batch_distributions = Distribution.query.filter(
+            and_(
+                Distribution.is_draft == True,
+                Distribution.draft_created_by == ref_distribution.draft_created_by,
+                Distribution.unit_id == ref_distribution.unit_id,
+                Distribution.created_at >= time_threshold,
+                Distribution.created_at <= time_upper,
+                Distribution.draft_notes == ref_distribution.draft_notes
+            )
+        ).all()
+
+        # Reject all distributions in the batch
+        rejected_count = 0
+        for distribution in batch_distributions:
+            success, message = distribution.reject_draft(current_user.id, reason)
+            if success:
+                rejected_count += 1
+
+        flash(f'{rejected_count} distribusi berhasil ditolak.', 'success')
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return redirect(url_for('installations.index'))
+
+
+@bp.route('/api/available-items/<int:warehouse_id>/<int:item_id>')
+@login_required
+@role_required('warehouse_staff', 'admin')
+def api_available_items_general(warehouse_id, item_id):
+    """API endpoint to get available item details for general distribution"""
+    available_items = ItemDetail.query.filter(
+        ItemDetail.warehouse_id == warehouse_id,
+        ItemDetail.item_id == item_id,
+        ItemDetail.status == 'available'
+    ).all()
+
+    items_data = [{
+        'id': item.id,
+        'serial_number': item.serial_number,
+        'serial_unit': item.serial_unit or '-'
+    } for item in available_items]
+
+    return jsonify({
+        'success': True,
+        'items': items_data,
+        'total': len(items_data)
+    })
+
+
+@bp.route('/api/unit/<int:unit_id>/details')
+@login_required
+def api_unit_details(unit_id):
+    """API endpoint to get unit details (rooms) for a unit"""
+    try:
+        unit_details = UnitDetail.query.filter_by(unit_id=unit_id).all()
+
+        details_data = [{
+            'id': ud.id,
+            'room_name': ud.room_name,
+            'floor': ud.floor
+        } for ud in unit_details]
+
+        return jsonify({
+            'success': True,
+            'details': details_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

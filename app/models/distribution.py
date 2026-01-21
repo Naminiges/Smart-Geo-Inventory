@@ -5,27 +5,35 @@ from app.models.base import BaseModel
 
 
 class Distribution(BaseModel):
-    """Distribution model for field installations"""
+    """Distribution model for field installations and general distribution"""
     __tablename__ = 'distributions'
 
     item_detail_id = db.Column(db.Integer, db.ForeignKey('item_details.id'), unique=True, nullable=False)
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=False)
-    field_staff_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    field_staff_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # Made nullable for draft status
     unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
     unit_detail_id = db.Column(db.Integer, db.ForeignKey('unit_details.id'), nullable=True)
     address = db.Column(db.Text, nullable=False)
     geom = db.Column(Geometry('POINT', srid=4326))  # PostGIS geometry for GIS
     installed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    status = db.Column(db.String(50), default='installing')  # installing, in_transit, installed, broken, maintenance
+    status = db.Column(db.String(50), default='installing')  # draft, installing, in_transit, installed, broken, maintenance
     note = db.Column(db.Text)
 
     # Link to asset request (if created from asset request)
     asset_request_id = db.Column(db.Integer, db.ForeignKey('asset_requests.id'), nullable=True)
     asset_request_item_id = db.Column(db.Integer, db.ForeignKey('asset_request_items.id'), nullable=True)
 
+    # Draft verification fields (for general distribution by warehouse staff)
+    is_draft = db.Column(db.Boolean, default=False)  # True if this is a draft distribution awaiting admin verification
+    draft_created_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Warehouse staff who created the draft
+    draft_notes = db.Column(db.Text)  # Notes from warehouse staff when creating draft
+    draft_verified_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Admin who verified the draft
+    draft_verified_at = db.Column(db.DateTime)  # When draft was verified
+    draft_rejection_reason = db.Column(db.Text)  # Reason if draft was rejected
+
     # Task type and verification fields
     task_type = db.Column(db.String(50), default='installation')  # installation, delivery
-    verification_photo = db.Column(db.String(500))  # Path to uploaded verification photo
+    verification_photo = db.Column(db.LargeBinary)  # BLOB to store verification photo as bytes
     verification_notes = db.Column(db.Text)  # Notes from field staff
     verified_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Warehouse staff who verified
     verified_at = db.Column(db.DateTime)  # When warehouse staff verified
@@ -37,6 +45,8 @@ class Distribution(BaseModel):
     warehouse = db.relationship('Warehouse', back_populates='distributions')
     field_staff = db.relationship('User', foreign_keys=[field_staff_id], back_populates='distributions')
     verifier = db.relationship('User', foreign_keys=[verified_by], backref='verified_distributions')
+    draft_creator = db.relationship('User', foreign_keys=[draft_created_by], backref='draft_distributions_created')
+    draft_verifier = db.relationship('User', foreign_keys=[draft_verified_by], backref='draft_distributions_verified')
     unit = db.relationship('Unit', back_populates='distributions')
     unit_detail = db.relationship('UnitDetail', back_populates='distributions')
     asset_request = db.relationship('AssetRequest', foreign_keys=[asset_request_id], backref='distributions')
@@ -73,12 +83,12 @@ class Distribution(BaseModel):
         self.status = 'maintenance'
         self.save()
 
-    def submit_verification(self, photo_path=None, notes=None):
+    def submit_verification(self, photo_bytes=None, notes=None):
         """Submit verification by field staff"""
         if self.verification_status == 'verified':
             return False, 'Tugas ini sudah diverifikasi'
         self.verification_status = 'submitted'
-        self.verification_photo = photo_path
+        self.verification_photo = photo_bytes  # Store photo as BLOB
         self.verification_notes = notes
         self.save()
         return True, 'Verifikasi berhasil dikirim'
@@ -109,6 +119,53 @@ class Distribution(BaseModel):
         self.verification_rejection_reason = reason
         self.save()
         return True, 'Verifikasi ditolak'
+
+    def verify_draft(self, user_id, notes=None):
+        """Verify draft distribution by admin - converts draft to active distribution"""
+        if not self.is_draft:
+            return False, 'Ini bukan draft distribusi'
+
+        self.is_draft = False
+        self.draft_verified_by = user_id
+        self.draft_verified_at = datetime.utcnow()
+        if notes:
+            self.draft_notes = notes
+
+        # Set field_staff to admin if not assigned
+        if not self.field_staff_id:
+            self.field_staff_id = user_id
+
+        # Determine initial status based on task type
+        category_name = self.item_detail.item.category.name.lower() if self.item_detail and self.item_detail.item and self.item_detail.item.category else ''
+        self.task_type = 'installation' if 'jaringan' in category_name or 'network' in category_name else 'delivery'
+        self.status = 'installing' if self.task_type == 'installation' else 'in_transit'
+
+        # Update item detail status to processing
+        if self.item_detail:
+            self.item_detail.status = 'processing'
+            self.item_detail.save()
+
+        self.save()
+        return True, 'Draft distribusi berhasil diverifikasi'
+
+    def reject_draft(self, user_id, reason=None):
+        """Reject draft distribution by admin"""
+        if not self.is_draft:
+            return False, 'Ini bukan draft distribusi'
+
+        self.is_draft = False  # Mark as not draft anymore
+        self.draft_verified_by = user_id
+        self.draft_verified_at = datetime.utcnow()
+        self.draft_rejection_reason = reason
+        self.status = 'rejected'
+        self.save()
+
+        # Return item detail status to available
+        if self.item_detail:
+            self.item_detail.status = 'available'
+            self.item_detail.save()
+
+        return True, 'Draft distribusi berhasil ditolak'
 
     def mark_in_transit(self):
         """Mark distribution as in transit (for delivery tasks)"""

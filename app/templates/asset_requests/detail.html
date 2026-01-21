@@ -60,12 +60,9 @@
             {% endif %}
             {% if asset_request.status == 'verified' and current_user.is_unit_staff() %}
             {% if asset_request.distribution_id %}
-            <form method="POST" action="{{ url_for('asset_requests.complete', id=asset_request.id) }}" class="inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <i class="fas fa-check-circle mr-2"></i>Tandai Selesai
-                </button>
-            </form>
+            <a href="{{ url_for('asset_requests.confirm_receipt', id=asset_request.id) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-check-circle mr-2"></i>Tandai Selesai
+            </a>
             {% else %}
             <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg">
                 <i class="fas fa-clock mr-2"></i>Menunggu distribusi
@@ -98,12 +95,12 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Diajukan oleh</span>
-                <span class="text-sm font-semibold text-gray-900">{{ asset_request.requester.full_name if asset_request.requester else '-' }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ asset_request.requester.name if asset_request.requester else '-' }}</span>
             </div>
             {% if asset_request.verified_by %}
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Diverifikasi oleh</span>
-                <span class="text-sm font-semibold text-gray-900">{{ asset_request.verifier.full_name if asset_request.verifier else '-' }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ asset_request.verifier.name if asset_request.verifier else '-' }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Verifikasi</span>
@@ -118,14 +115,6 @@
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Penerimaan</span>
                 <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.received_at, '%d/%m/%Y %H:%M') }}</span>
-            </div>
-            {% endif %}
-            {% if asset_request.distribution_id %}
-            <div class="flex justify-between">
-                <span class="text-sm text-gray-500">Distribusi</span>
-                <a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="text-sm font-semibold text-blue-600 hover:underline">
-                    #{{ asset_request.distribution_id }} <i class="fas fa-external-link-alt text-xs"></i>
-                </a>
             </div>
             {% endif %}
         </div>
@@ -237,7 +226,7 @@
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Permohonan Dibuat</p>
                 <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.request_date) }}</p>
-                <p class="text-xs text-gray-500">oleh {{ asset_request.requester.full_name if asset_request.requester else '-' }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.requester.name if asset_request.requester else '-' }}</p>
             </div>
         </div>
 
@@ -255,7 +244,7 @@
                 <p class="font-semibold text-gray-900">Diverifikasi Admin</p>
                 {% if asset_request.verified_at %}
                 <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.verified_at) }}</p>
-                <p class="text-xs text-gray-500">oleh {{ asset_request.verifier.full_name if asset_request.verifier else '-' }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.verifier.name if asset_request.verifier else '-' }}</p>
                 {% else %}
                 <p class="text-sm text-gray-400">Menunggu verifikasi</p>
                 {% endif %}
@@ -276,7 +265,7 @@
                 <p class="font-semibold text-gray-900">Didistribusikan</p>
                 {% if asset_request.distributed_at %}
                 <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.distributed_at) }}</p>
-                <p class="text-xs text-gray-500">oleh {{ asset_request.distributor.full_name if asset_request.distributor else '-' }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.distributor.name if asset_request.distributor else '-' }}</p>
                 {% if asset_request.distribution_id %}
                 <a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="text-xs text-blue-600 hover:underline">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
                 {% endif %}
@@ -297,7 +286,21 @@
                 <p class="font-semibold text-gray-900">Diterima</p>
                 {% if asset_request.received_at %}
                 <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.received_at) }}</p>
-                <p class="text-xs text-gray-500">oleh {{ asset_request.receiver.full_name if asset_request.receiver else '-' }}</p>
+                <p class="text-xs text-gray-500">oleh {{ asset_request.receiver.name if asset_request.receiver else '-' }}</p>
+
+                <!-- Proof Photo -->
+                <div class="mt-3">
+                    <button onclick="toggleProofPhoto()" class="text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center">
+                        <i class="fas fa-camera mr-1"></i>
+                        <span id="photoToggleText">Lihat Bukti Foto</span>
+                    </button>
+                    <div id="proofPhotoContainer" class="hidden mt-3">
+                        <img src="{{ url_for('asset_requests.proof_photo', id=asset_request.id) }}"
+                             alt="Bukti Penerimaan"
+                             class="max-w-md rounded-lg border border-gray-300 shadow-md"
+                             onerror="this.parentElement.innerHTML='<div class=\'p-4 bg-gray-100 rounded-lg text-gray-500 text-center\'><i class=\'fas fa-image text-4xl mb-2\'></i><p class=\'text-sm\'>Foto tidak tersedia</p></div>'">
+                    </div>
+                </div>
                 {% else %}
                 <p class="text-sm text-gray-400">Menunggu konfirmasi penerimaan</p>
                 {% endif %}
@@ -345,14 +348,10 @@
                 </p>
 
                 {% if current_user.is_unit_staff() %}
-                <form method="POST" action="{{ url_for('asset_requests.complete', id=asset_request.id) }}" class="mt-4">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <input type="hidden" name="distribution_id" value="{{ asset_request.distribution_id }}"/>
-                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
-                        <i class="fas fa-check-circle mr-2"></i>
-                        Konfirmasi Penerimaan Barang
-                    </button>
-                </form>
+                <a href="{{ url_for('asset_requests.confirm_receipt', id=asset_request.id) }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold mt-4">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Konfirmasi Penerimaan Barang
+                </a>
                 {% endif %}
             </div>
         </div>
@@ -406,6 +405,7 @@
 <div id="rejectModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
         <form method="POST" action="{{ url_for('asset_requests.reject', id=asset_request.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="p-6 border-b border-gray-200">
                 <h3 class="text-lg font-semibold text-gray-900">Tolak Permohonan</h3>
             </div>
@@ -439,6 +439,19 @@ function toggleRejectModal() {
     } else {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+    }
+}
+
+function toggleProofPhoto() {
+    const container = document.getElementById('proofPhotoContainer');
+    const toggleText = document.getElementById('photoToggleText');
+
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        toggleText.textContent = 'Sembunyikan Bukti Foto';
+    } else {
+        container.classList.add('hidden');
+        toggleText.textContent = 'Lihat Bukti Foto';
     }
 }
 </script>

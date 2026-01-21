@@ -181,13 +181,9 @@
                                 </a>
                                 {% endif %}
                                 {% if current_user.is_unit_staff() and req.status == 'distributing' %}
-                                <form method="POST" action="{{ url_for('asset_requests.complete', id=req.id) }}" class="inline">
-                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <input type="hidden" name="distribution_id" value="{{ req.distribution_id }}"/>
-                                    <button type="submit" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold" onclick="return confirm('Konfirmasi penerimaan barang untuk permohonan #{{ req.id }}?')">
-                                        <i class="fas fa-check-circle mr-1"></i> Terima
-                                    </button>
-                                </form>
+                                <a href="{{ url_for('asset_requests.confirm_receipt', id=req.id) }}" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold inline-flex items-center">
+                                    <i class="fas fa-check-circle mr-1"></i> Terima
+                                </a>
                                 {% endif %}
                             </div>
                         </td>

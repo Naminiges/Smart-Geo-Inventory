@@ -260,24 +260,6 @@
           </a>
           {% endif %}
 
-          <!-- Permohonan Aset (Warehouse Staff & Admin) -->
-          {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
-          <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
-            href="{{ url_for('asset_requests.index') }}"
-          >
-            <i
-              class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
-            ></i>
-            <span class="font-medium">Permohonan Aset</span>
-            {% if verified_request_count > 0 %}
-            <span class="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
-                {{ verified_request_count }}
-            </span>
-            {% endif %}
-          </a>
-          {% endif %}
-
           <!-- Distribusi -->
           <div class="mb-1">
             <button
@@ -298,24 +280,32 @@
 
             <!-- Submenu Distribusi -->
             <div class="ml-8 mt-1 space-y-1 hidden" id="distribusi-submenu">
+              <!-- Permohonan Aset (Warehouse Staff & Admin) -->
+              {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
               <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint and request.args.get('task_type') == 'installation' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('installations.index', task_type='installation') }}"
+                class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+                href="{{ url_for('asset_requests.index') }}"
               >
                 <i
-                  class="fas fa-network-wired w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint and request.args.get('task_type') == 'installation' else 'text-gray-400' }}"
+                  class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
                 ></i>
-                <span class="text-sm">Instalasi Jaringan</span>
+                <span class="font-medium">Permohonan Unit</span>
+                {% if verified_request_count > 0 %}
+                <span class="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
+                    {{ verified_request_count }}
+                </span>
+                {% endif %}
               </a>
+              {% endif %}
 
               <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_loans' in request.endpoint and 'warehouse' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('asset_loans.warehouse_index') }}"
+                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                href="{{ url_for('installations.index') }}"
               >
                 <i
-                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'asset_loans' in request.endpoint and 'warehouse' in request.endpoint else 'text-gray-400' }}"
+                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
                 ></i>
-                <span class="text-sm">Aset Umum</span>
+                <span class="text-sm">Distribusi Langsung</span>
               </a>
             </div>
           </div>
