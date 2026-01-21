@@ -107,10 +107,18 @@
 <!-- Actions -->
 <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
     <div class="flex flex-wrap gap-2">
+        {% if current_user.is_warehouse_staff() %}
         <a href="{{ url_for('procurement.create_request') }}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
             <i class="fas fa-plus-circle mr-2"></i>
             Buat Permohonan
         </a>
+        {% endif %}
+        {% if current_user.is_admin() %}
+        <a href="{{ url_for('procurement.create_request') }}" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+            <i class="fas fa-plus-circle mr-2"></i>
+            Tambah Pengadaan
+        </a>
+        {% endif %}
         <a href="{{ url_for('procurement.index') }}" class="inline-flex items-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold">
             <i class="fas fa-list mr-2"></i>
             Semua
@@ -245,9 +253,11 @@
         <div class="text-center text-gray-500 py-12">
             <i class="fas fa-shopping-cart text-6xl mb-4 opacity-30"></i>
             <p class="text-lg mb-0">Belum ada data pengadaan</p>
+            {% if current_user.is_warehouse_staff() %}
             <a href="{{ url_for('procurement.create_request') }}" class="inline-block mt-4 text-blue-600 hover:text-blue-700 font-semibold">
                 <i class="fas fa-plus-circle mr-1"></i> Buat Pengadaan Baru
             </a>
+            {% endif %}
         </div>
         {% endif %}
     </div>

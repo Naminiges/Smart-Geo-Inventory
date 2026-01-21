@@ -121,15 +121,44 @@ class AssetRequest(BaseModel):
 
     def mark_completed(self, distribution_id, user_id):
         """Mark asset request as completed after distribution"""
+        from app.models.distribution import Distribution
+        from app.models.master_data import ItemDetail
+
         if self.status not in ['verified', 'distributing']:
             return False, 'Hanya permohonan yang sedang didistribusikan atau sudah diverifikasi yang bisa diselesaikan'
+
+        # Get all distributions for this request
+        distributions = Distribution.query.filter_by(asset_request_id=self.id).all()
+
+        # Update each distribution and associated item_detail
+        items_count = 0
+        for dist in distributions:
+            if dist.item_detail:
+                # Update item detail status to 'in_unit' to indicate it's now at the unit
+                # Keep warehouse_id unchanged (still references where it came from)
+                dist.item_detail.status = 'in_unit'
+                dist.item_detail.save()
+                items_count += 1
+
+            # Update distribution status
+            dist.status = 'installed'
+            dist.verification_status = 'verified'
+            dist.verified_by = user_id
+            dist.verified_at = get_wib_now()
+            dist.save()
+
+        # Update asset request items status
+        for item in self.items:
+            item.status = 'completed'
+            item.save()
 
         self.status = 'completed'
         self.distribution_id = distribution_id
         self.received_by = user_id
         self.received_at = get_wib_now()
         self.save()
-        return True, 'Permohonan aset berhasil diselesaikan'
+
+        return True, f'Permohonan aset berhasil diselesaikan. {items_count} barang telah diterima di unit.'
 
     def __repr__(self):
         return f'<AssetRequest #{self.id} Unit:{self.unit.name if self.unit else "N/A"} Status:{self.status}>'

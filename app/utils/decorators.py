@@ -29,9 +29,12 @@ def warehouse_access_required(f):
             flash('Silakan login terlebih dahulu.', 'warning')
             return redirect(url_for('auth.login'))
 
-        if current_user.is_warehouse_staff() and not current_user.warehouse_id:
-            flash('Anda belum ditugaskan ke gudang manapun.', 'danger')
-            return redirect(url_for('dashboard.index'))
+        if current_user.is_warehouse_staff():
+            # Check if user has any warehouse assignments via UserWarehouse
+            user_warehouse_count = current_user.user_warehouses.count()
+            if user_warehouse_count == 0:
+                flash('Anda belum ditugaskan ke gudang manapun.', 'danger')
+                return redirect(url_for('dashboard.index'))
 
         return f(*args, **kwargs)
     return decorated_function

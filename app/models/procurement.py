@@ -497,14 +497,26 @@ class Procurement(BaseModel):
         try:
             items_created = 0
             items_skipped = 0
+            total_quantity_added = 0
+
+            print(f"=== DEBUG PROCUREMENT COMPLETE ===")
+            print(f"Procurement ID: {self.id}")
+            print(f"Items count: {len(self.items) if self.items else 0}")
 
             # Process each procurement item
             for procurement_item in self.items:
+                print(f"\n--- Processing ProcurementItem #{procurement_item.id} ---")
+                print(f"Item ID: {procurement_item.item_id}")
+                print(f"Requested Quantity: {procurement_item.quantity}")
+                print(f"Actual Quantity (received): {procurement_item.actual_quantity}")
+                print(f"Serial Numbers: {procurement_item.serial_numbers}")
+
                 if not procurement_item.item_id:
                     return False, f'Item {procurement_item.new_item_name if procurement_item.new_item_name else "Unknown"} harus diisi sebelum menyelesaikan pengadaan'
 
                 # Get serial numbers
                 serial_numbers = json.loads(procurement_item.serial_numbers) if procurement_item.serial_numbers else []
+                print(f"Parsed serial numbers count: {len(serial_numbers)}")
 
                 # Create ItemDetail for each serial number (skip if already exists)
                 for serial_number in serial_numbers:
@@ -528,7 +540,7 @@ class Procurement(BaseModel):
                     item_detail.save()
                     items_created += 1
 
-                # Add to stock
+                # Add to stock - count by actual serial numbers received
                 stock = Stock.query.filter_by(
                     item_id=procurement_item.item_id,
                     warehouse_id=warehouse_id
@@ -538,9 +550,14 @@ class Procurement(BaseModel):
                     stock = Stock(item_id=procurement_item.item_id, warehouse_id=warehouse_id, quantity=0)
                     stock.save()
 
-                # Use actual_quantity (total received)
-                quantity_to_add = procurement_item.actual_quantity if procurement_item.actual_quantity else procurement_item.quantity
+                # Use actual count of serial numbers received
+                quantity_to_add = procurement_item.actual_quantity if procurement_item.actual_quantity else len(serial_numbers)
+                print(f"Quantity to add to stock: {quantity_to_add}")
+                total_quantity_added += quantity_to_add
+
+                old_quantity = stock.quantity
                 stock.add_stock(quantity_to_add)
+                print(f"Stock updated: {old_quantity} -> {stock.quantity}")
 
                 # Log transaction
                 transaction = StockTransaction(
@@ -552,20 +569,31 @@ class Procurement(BaseModel):
                 )
                 transaction.save()
 
+            print(f"\n=== COMPLETE ===")
+            print(f"ItemDetails created: {items_created}")
+            print(f"ItemDetails skipped: {items_skipped}")
+            print(f"Total quantity added to stock: {total_quantity_added}")
+            print(f"===============================\n")
+
             # Update procurement status
             self.status = 'completed'
             self.completed_by = user_id
             self.completion_date = datetime.utcnow()
             self.save()
 
-            # Build success message
+            # Build success message - show actual quantity added to stock
             message_parts = []
-            message_parts.append(f'{items_created} unit baru ditambahkan ke stok')
+            message_parts.append(f'{total_quantity_added} unit berhasil ditambahkan ke stok')
+            if items_created > 0:
+                message_parts.append(f'{items_created} item detail baru dibuat')
             if items_skipped > 0:
-                message_parts.append(f'{items_skipped} unit sudah ada sebelumnya (dilewati)')
+                message_parts.append(f'{items_skipped} serial number sudah ada sebelumnya')
 
             return True, f'Pengadaan berhasil diselesaikan. {", ".join(message_parts)}.'
         except Exception as e:
+            import traceback
+            print(f"ERROR in complete(): {str(e)}")
+            print(traceback.format_exc())
             return False, f'Error menyelesaikan pengadaan: {str(e)}'
 
     def __repr__(self):

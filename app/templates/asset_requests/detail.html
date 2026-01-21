@@ -17,12 +17,16 @@
 {% set status_colors = {
     'pending': 'bg-yellow-100 border-yellow-300 text-yellow-800',
     'verified': 'bg-indigo-100 border-indigo-300 text-indigo-800',
+    'distributing': 'bg-blue-100 border-blue-300 text-blue-800',
+    'processing': 'bg-blue-100 border-blue-300 text-blue-800',
     'completed': 'bg-green-100 border-green-300 text-green-800',
     'rejected': 'bg-red-100 border-red-300 text-red-800'
 } %}
 {% set status_labels = {
     'pending': 'Menunggu Verifikasi',
     'verified': 'Terverifikasi',
+    'distributing': 'Sedang Didistribusikan',
+    'processing': 'Sedang Diproses',
     'completed': 'Selesai',
     'rejected': 'Ditolak'
 } %}
@@ -43,6 +47,16 @@
             <button type="button" onclick="toggleRejectModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
                 <i class="fas fa-times mr-2"></i>Tolak
             </button>
+            {% endif %}
+            {% if asset_request.status == 'verified' and (current_user.is_warehouse_staff() or current_user.is_admin()) %}
+            <a href="{{ url_for('asset_requests.distribute', id=asset_request.id) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-truck mr-2"></i>Proses Distribusi
+            </a>
+            {% endif %}
+            {% if asset_request.status == 'distributing' and current_user.is_unit_staff() %}
+            <div class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
+                <i class="fas fa-truck mr-2"></i>Barang sedang didistribusikan
+            </div>
             {% endif %}
             {% if asset_request.status == 'verified' and current_user.is_unit_staff() %}
             {% if asset_request.distribution_id %}
@@ -99,7 +113,7 @@
             {% if asset_request.received_by %}
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Diterima oleh</span>
-                <span class="text-sm font-semibold text-gray-900">{{ asset_request.receiver.full_name if asset_request.receiver else '-' }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ asset_request.receiver.name if asset_request.receiver else '-' }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Penerimaan</span>
@@ -355,6 +369,8 @@
                     {% if asset_request.distribution_id %}
                     <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
                     {% endif %}
+                    {% elif current_user.is_warehouse_staff() or current_user.is_admin() %}
+                    Permohonan sudah diverifikasi dan siap untuk didistribusikan. Silakan klik tombol "Proses Distribusi" untuk membuat distribusi.
                     {% else %}
                     Permohonan sudah diverifikasi dan siap untuk didistribusikan.
                     {% endif %}

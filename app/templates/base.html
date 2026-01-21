@@ -162,52 +162,43 @@
             Menu Unit Staff
           </p>
 
-          <!-- Permohonan Aset -->
-          <div class="mb-1">
-            <button
-              class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-              onclick="toggleAssetRequestsMenu()"
-            >
-              <div class="flex items-center">
-                <i
-                  class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
-                ></i>
-                <span class="font-medium">Permohonan Aset</span>
-                {% if pending_request_count > 0 %}
-                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
-                    {{ pending_request_count }}
-                </span>
-                {% endif %}
-              </div>
-              <i
-                class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"
-                id="asset-requests-icon"
-              ></i>
-            </button>
+          <!-- Daftar Permohonan -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'asset_requests.index' or request.endpoint == 'asset_requests.create' or request.endpoint == 'asset_requests.detail' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_requests.index') }}"
+          >
+            <i
+              class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'asset_requests.index' or request.endpoint == 'asset_requests.create' or request.endpoint == 'asset_requests.detail' else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Daftar Permohonan</span>
+            {% if pending_request_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ pending_request_count }}
+            </span>
+            {% endif %}
+          </a>
 
-            <!-- Submenu Permohonan Aset -->
-            <div class="ml-8 mt-1 space-y-1 hidden" id="asset-requests-submenu">
-              <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'asset_requests.index' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('asset_requests.index') }}"
-              >
-                <i
-                  class="fas fa-list w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if request.endpoint == 'asset_requests.index' else 'text-gray-400' }}"
-                ></i>
-                <span class="text-sm">Daftar Permohonan</span>
-              </a>
+          <!-- Aset di Unit -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'asset_requests.unit_assets' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_requests.unit_assets') }}"
+          >
+            <i
+              class="fas fa-boxes w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'asset_requests.unit_assets' else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Aset di Unit</span>
+          </a>
 
-              <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'asset_requests.unit_assets' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('asset_requests.unit_assets') }}"
-              >
-                <i
-                  class="fas fa-boxes w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if request.endpoint == 'asset_requests.unit_assets' else 'text-gray-400' }}"
-                ></i>
-                <span class="text-sm">Aset di Unit</span>
-              </a>
-            </div>
-          </div>
+          <!-- Peminjaman Aset -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_loans' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_loans.unit_index') }}"
+          >
+            <i
+              class="fas fa-hand-holding w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_loans' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Peminjaman Aset</span>
+          </a>
           {% endif %}
 
           {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
@@ -269,6 +260,24 @@
           </a>
           {% endif %}
 
+          <!-- Permohonan Aset (Warehouse Staff & Admin) -->
+          {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_requests.index') }}"
+          >
+            <i
+              class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Permohonan Aset</span>
+            {% if verified_request_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
+                {{ verified_request_count }}
+            </span>
+            {% endif %}
+          </a>
+          {% endif %}
+
           <!-- Distribusi -->
           <div class="mb-1">
             <button
@@ -300,11 +309,11 @@
               </a>
 
               <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint and request.args.get('task_type') == 'delivery' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('installations.index', task_type='delivery') }}"
+                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_loans' in request.endpoint and 'warehouse' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                href="{{ url_for('asset_loans.warehouse_index') }}"
               >
                 <i
-                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint and request.args.get('task_type') == 'delivery' else 'text-gray-400' }}"
+                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'asset_loans' in request.endpoint and 'warehouse' in request.endpoint else 'text-gray-400' }}"
                 ></i>
                 <span class="text-sm">Aset Umum</span>
               </a>
@@ -524,20 +533,6 @@
         }
       }
 
-      // Toggle Asset Requests submenu
-      function toggleAssetRequestsMenu() {
-        const submenu = document.getElementById("asset-requests-submenu");
-        const icon = document.getElementById("asset-requests-icon");
-
-        if (submenu.classList.contains("hidden")) {
-          submenu.classList.remove("hidden");
-          icon.classList.add("rotate-180");
-        } else {
-          submenu.classList.add("hidden");
-          icon.classList.remove("rotate-180");
-        }
-      }
-
       // Toggle Field Tasks submenu
       function toggleFieldTasksMenu() {
         const submenu = document.getElementById("field-tasks-submenu");
@@ -567,19 +562,6 @@
           const submenu = document.getElementById("distribusi-submenu");
           const icon = document.getElementById("distribusi-icon");
           if (submenu) {
-            submenu.classList.remove("hidden");
-            icon.classList.add("rotate-180");
-          }
-        }
-
-        // Check if current page is under Asset Requests submenu
-        const isAssetRequestsPage =
-          currentEndpoint && currentEndpoint.includes("asset_requests");
-
-        if (isAssetRequestsPage) {
-          const submenu = document.getElementById("asset-requests-submenu");
-          const icon = document.getElementById("asset-requests-icon");
-          if (submenu && icon) {
             submenu.classList.remove("hidden");
             icon.classList.add("rotate-180");
           }

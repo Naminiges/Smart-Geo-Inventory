@@ -11,7 +11,7 @@ bp = Blueprint('asset_requests', __name__, url_prefix='/asset-requests')
 
 @bp.route('/')
 @login_required
-@role_required('unit_staff', 'admin')
+@role_required('unit_staff', 'admin', 'warehouse_staff')
 def index():
     """List all asset requests"""
     from app.models import UserUnit
@@ -29,27 +29,47 @@ def index():
         # Get unit IDs from user_units
         unit_ids = [uu.unit_id for uu in user_units]
         query = AssetRequest.query.filter(AssetRequest.unit_id.in_(unit_ids))
+    elif current_user.is_warehouse_staff():
+        # Warehouse staff can see requests that need processing or are being processed
+        # They can see: verified (ready to distribute), distributing (in process), completed (done)
+        query = AssetRequest.query.filter(AssetRequest.status.in_(['verified', 'distributing', 'completed']))
     else:  # admin
         query = AssetRequest.query
 
+    # Apply additional status filter if specified
     if status_filter:
-        query = query.filter_by(status=status_filter)
+        # For warehouse staff, only allow filtering through their visible statuses
+        if current_user.is_warehouse_staff():
+            allowed_statuses = ['verified', 'distributing', 'completed']
+            if status_filter in allowed_statuses:
+                query = query.filter_by(status=status_filter)
+            # If invalid filter, don't apply it (show all visible)
+        else:
+            query = query.filter_by(status=status_filter)
 
     asset_requests = query.order_by(AssetRequest.created_at.desc()).all()
 
     # Convert to list to avoid len() error
     asset_requests_list = list(asset_requests)
 
-    # Get statistics
+    # Get statistics based on role
     if current_user.is_unit_staff():
         total_requests = AssetRequest.query.filter(AssetRequest.unit_id.in_(unit_ids)).count()
         pending_count = AssetRequest.query.filter(AssetRequest.unit_id.in_(unit_ids), AssetRequest.status == 'pending').count()
         verified_count = AssetRequest.query.filter(AssetRequest.unit_id.in_(unit_ids), AssetRequest.status == 'verified').count()
+        distributing_count = AssetRequest.query.filter(AssetRequest.unit_id.in_(unit_ids), AssetRequest.status == 'distributing').count()
         completed_count = AssetRequest.query.filter(AssetRequest.unit_id.in_(unit_ids), AssetRequest.status == 'completed').count()
-    else:
+    elif current_user.is_warehouse_staff():
+        total_requests = AssetRequest.query.filter(AssetRequest.status.in_(['verified', 'distributing', 'completed'])).count()
+        pending_count = 0  # Warehouse staff doesn't see pending
+        verified_count = AssetRequest.query.filter_by(status='verified').count()
+        distributing_count = AssetRequest.query.filter_by(status='distributing').count()
+        completed_count = AssetRequest.query.filter_by(status='completed').count()
+    else:  # admin
         total_requests = AssetRequest.query.count()
         pending_count = AssetRequest.query.filter_by(status='pending').count()
         verified_count = AssetRequest.query.filter_by(status='verified').count()
+        distributing_count = AssetRequest.query.filter_by(status='distributing').count()
         completed_count = AssetRequest.query.filter_by(status='completed').count()
 
     return render_template('asset_requests/index.html',
@@ -58,6 +78,7 @@ def index():
                              'total': total_requests,
                              'pending': pending_count,
                              'verified': verified_count,
+                             'distributing': distributing_count,
                              'completed': completed_count,
                              'rejected': 0  # Will calculate if needed
                          },
@@ -170,10 +191,10 @@ def detail(id):
             flash('Anda tidak memiliki izin untuk melihat permohonan ini.', 'danger')
             return redirect(url_for('asset_requests.index'))
     elif current_user.is_warehouse_staff():
-        # Warehouse staff can only see verified requests
-        if asset_request.status != 'verified':
+        # Warehouse staff can see verified, distributing, and completed requests
+        if asset_request.status not in ['verified', 'distributing', 'completed']:
             flash('Anda tidak memiliki izin untuk mengakses halaman ini.', 'danger')
-            return redirect(url_for('installations.index'))
+            return redirect(url_for('asset_requests.index'))
     # Admin can see all requests
 
     return render_template('asset_requests/detail.html', asset_request=asset_request)
@@ -185,6 +206,7 @@ def detail(id):
 def verify(id):
     """Verify asset request (admin only)"""
     from app.models import Warehouse, ItemDetail
+    from app.models.inventory import Stock
 
     asset_request = AssetRequest.query.get_or_404(id)
 
@@ -200,16 +222,27 @@ def verify(id):
     for warehouse in warehouses:
         warehouse_stock_info[warehouse.id] = {}
         for item in asset_request.items:
-            # Get available stock (item_details with status 'available')
-            available_stock = ItemDetail.query.filter_by(
+            # Get available item_details with status 'available'
+            available_details = ItemDetail.query.filter_by(
                 warehouse_id=warehouse.id,
                 item_id=item.item_id,
                 status='available'
             ).count()
+
+            # Get stock quantity from Stock table
+            stock_record = Stock.query.filter_by(
+                item_id=item.item_id,
+                warehouse_id=warehouse.id
+            ).first()
+            available_stock_qty = stock_record.quantity if stock_record else 0
+
+            # Total available = ItemDetail + Stock quantity
+            total_available = available_details + available_stock_qty
+
             warehouse_stock_info[warehouse.id][item.item_id] = {
                 'requested': item.quantity,
-                'available': available_stock,
-                'is_sufficient': available_stock >= item.quantity
+                'available': total_available,
+                'is_sufficient': total_available >= item.quantity
             }
 
     form = AssetVerificationForm()
@@ -330,6 +363,138 @@ def reject(id):
     return redirect(url_for('asset_requests.detail', id=id))
 
 
+@bp.route('/<int:id>/distribute', methods=['GET', 'POST'])
+@login_required
+@role_required('warehouse_staff', 'admin')
+def distribute(id):
+    """Process verified asset request into distribution (warehouse/admin)"""
+    from app.models import Distribution, ItemDetail, Warehouse
+
+    asset_request = AssetRequest.query.get_or_404(id)
+
+    # Check if request is verified
+    if asset_request.status != 'verified':
+        flash('Hanya permohonan yang sudah diverifikasi yang bisa diproses.', 'warning')
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    # Extract warehouse_id from notes if available
+    warehouse_id = None
+    if asset_request.notes and 'warehouse_id:' in asset_request.notes:
+        try:
+            for line in asset_request.notes.split('\n'):
+                if 'warehouse_id:' in line:
+                    warehouse_id = int(line.split('warehouse_id:')[1].strip())
+                    break
+        except:
+            pass
+
+    if not warehouse_id:
+        # Get first warehouse as default
+        warehouse = Warehouse.query.first()
+        if not warehouse:
+            flash('Warehouse tidak tersedia.', 'danger')
+            return redirect(url_for('asset_requests.detail', id=id))
+        warehouse_id = warehouse.id
+
+    if request.method == 'POST':
+        try:
+            from app.models.inventory import Stock
+            # Create distributions for each item
+            distributions_created = []
+
+            for request_item in asset_request.items:
+                # Get available item_details from warehouse
+                available_items = ItemDetail.query.filter_by(
+                    warehouse_id=warehouse_id,
+                    item_id=request_item.item_id,
+                    status='available'
+                ).limit(request_item.quantity).all()
+
+                # If not enough ItemDetails, check Stock for quantity-based items
+                needed = request_item.quantity - len(available_items)
+                if needed > 0:
+                    stock = Stock.query.filter_by(
+                        item_id=request_item.item_id,
+                        warehouse_id=warehouse_id
+                    ).first()
+
+                    if stock and stock.quantity >= needed:
+                        # Create dummy ItemDetails for quantity-based items
+                        for i in range(needed):
+                            dummy_detail = ItemDetail(
+                                item_id=request_item.item_id,
+                                serial_number=f'BATCH-{asset_request.id}-{request_item.id}-{i}',
+                                status='available',
+                                warehouse_id=warehouse_id,
+                                specification_notes=f'Batch item tanpa serial number (Permohonan #{asset_request.id})'
+                            )
+                            dummy_detail.save()
+                            available_items.append(dummy_detail)
+
+                            # Reduce stock quantity
+                            stock.remove_stock(1)
+                    else:
+                        available_stock = stock.quantity if stock else 0
+                        total_available = len(available_items) + available_stock
+                        shortage = request_item.quantity - total_available
+                        flash(f'Stok tidak mencukupi untuk {request_item.item.name}. '
+                              f'Diminta: {request_item.quantity} unit, Tersedia: {total_available} unit, Kurang: {shortage} unit', 'warning')
+                        return redirect(url_for('asset_requests.distribute', id=id))
+
+                # Double check after attempting to create dummy details
+                if len(available_items) < request_item.quantity:
+                    shortage = request_item.quantity - len(available_items)
+                    flash(f'Stok tidak mencukupi untuk {request_item.item.name}. '
+                          f'Diminta: {request_item.quantity} unit, Tersedia: {len(available_items)} unit, Kurang: {shortage} unit', 'warning')
+                    return redirect(url_for('asset_requests.distribute', id=id))
+
+                # Create distribution for each item_detail
+                for item_detail in available_items[:request_item.quantity]:
+                    # Determine task type based on category
+                    category_name = item_detail.item.category.name.lower() if item_detail.item and item_detail.item.category else ''
+                    task_type = 'installation' if 'jaringan' in category_name or 'network' in category_name else 'delivery'
+
+                    distribution = Distribution(
+                        item_detail_id=item_detail.id,
+                        warehouse_id=warehouse_id,
+                        field_staff_id=current_user.id,  # Set to current user (warehouse staff)
+                        unit_id=asset_request.unit_id,
+                        unit_detail_id=request_item.unit_detail_id,
+                        address=asset_request.unit.address if asset_request.unit else 'Unknown',
+                        task_type=task_type,
+                        asset_request_id=asset_request.id,
+                        asset_request_item_id=request_item.id,
+                        status='installing' if task_type == 'installation' else 'in_transit'
+                    )
+                    distribution.save()
+                    distributions_created.append(distribution)
+
+                # Update item_detail status
+                for item_detail in available_items[:request_item.quantity]:
+                    item_detail.status = 'processing'
+                    item_detail.save()
+
+                # Update asset request item status
+                request_item.status = 'distributing'
+                request_item.save()
+
+            # Update asset request status
+            from datetime import datetime
+            asset_request.status = 'distributing'
+            asset_request.distribution_id = distributions_created[0].id if distributions_created else None
+            asset_request.distributed_at = datetime.utcnow()
+            asset_request.distributed_by = current_user.id
+            asset_request.save()
+
+            flash(f'Berhasil memproses {len(distributions_created)} distribusi. Barang sedang dipersiapkan untuk dikirim ke unit.', 'success')
+            return redirect(url_for('asset_requests.detail', id=id))
+        except Exception as e:
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    # GET request - show summary
+    return render_template('asset_requests/distribute.html', asset_request=asset_request, warehouse_id=warehouse_id)
+
+
 @bp.route('/<int:id>/complete', methods=['POST'])
 @login_required
 @role_required('unit_staff')
@@ -382,6 +547,9 @@ def unit_assets():
     """Show all assets in the unit staff's units"""
     from app.models import UserUnit
     from app.models.distribution import Distribution
+    from app.models.master_data import ItemDetail
+    from app.models.asset_request import AssetRequest
+    from collections import defaultdict
 
     # Get user's units
     user_units = UserUnit.query.filter_by(user_id=current_user.id).all()
@@ -392,22 +560,62 @@ def unit_assets():
     # Get all unit IDs
     unit_ids = [uu.unit_id for uu in user_units]
 
-    # Get all distributions to these units that are completed
+    # Get all distributions to these units that are installed/completed
     distributions = Distribution.query.filter(
         Distribution.unit_id.in_(unit_ids),
-        Distribution.status == 'completed'
+        Distribution.status.in_(['installed', 'completed'])
     ).all()
 
+    # Group items by item_id
+    items_dict = defaultdict(lambda: {
+        'item': None,
+        'details': [],
+        'total_quantity': 0
+    })
+
     # Collect all items from distributions
-    unit_items = []
     for dist in distributions:
-        if dist.item:
-            unit_items.append({
-                'item': dist.item,
-                'quantity': dist.quantity,
-                'distribution_date': dist.created_at,
-                'location': f"{dist.unit.name} - {dist.unit_detail.room_name if dist.unit_detail else 'N/A'}"
+        if dist.item_detail and dist.item_detail.item:
+            item_id = dist.item_detail.item_id
+            items_dict[item_id]['item'] = dist.item_detail.item
+            items_dict[item_id]['details'].append({
+                'item_detail': dist.item_detail,
+                'serial_number': dist.item_detail.serial_number,
+                'distribution_date': dist.installed_at or dist.created_at,
+                'location': f"{dist.unit.name} - {dist.unit_detail.room_name if dist.unit_detail else 'N/A'}",
+                'status': dist.item_detail.status
             })
+            items_dict[item_id]['total_quantity'] += 1
+
+    # Also get items directly from ItemDetail with status 'in_unit' for this unit's distributions
+    for unit_id in unit_ids:
+        unit_distributions = Distribution.query.filter_by(unit_id=unit_id).all()
+
+        if unit_distributions:
+            item_details = ItemDetail.query.filter(
+                ItemDetail.id.in_([d.item_detail_id for d in unit_distributions if d.item_detail_id]),
+                ItemDetail.status == 'in_unit'
+            ).all()
+
+            for item_detail in item_details:
+                if item_detail.item:
+                    item_id = item_detail.item_id
+                    items_dict[item_id]['item'] = item_detail.item
+
+                    # Check if already added
+                    existing_sn = [d['serial_number'] for d in items_dict[item_id]['details']]
+                    if item_detail.serial_number not in existing_sn:
+                        items_dict[item_id]['details'].append({
+                            'item_detail': item_detail,
+                            'serial_number': item_detail.serial_number,
+                            'distribution_date': item_detail.updated_at,
+                            'location': f"Unit {unit_id}",
+                            'status': item_detail.status
+                        })
+                        items_dict[item_id]['total_quantity'] += 1
+
+    # Convert to list for template
+    unit_items = list(items_dict.values())
 
     # Get all units for display
     units = [uu.unit for uu in user_units]

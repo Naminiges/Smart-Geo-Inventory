@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Lihat Bukti Pengembalian - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Lihat Bukti Pengembalian{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('asset_loans.warehouse_detail', id=loan.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail
+    </a>
+</div>
+
+<!-- Item Info -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Informasi Barang</h3>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <span class="text-gray-600 text-sm">Nama Barang:</span>
+                <p class="font-semibold">{{ loan_item.item_detail.item.name if loan_item.item_detail and loan_item.item_detail.item else '-' }}</p>
+            </div>
+            <div>
+                <span class="text-gray-600 text-sm">Serial Number:</span>
+                <p class="font-semibold"><code>{{ loan_item.item_detail.serial_number if loan_item.item_detail else '-' }}</code></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Return Proof -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Bukti Pengembalian</h3>
+    </div>
+    <div class="p-6">
+        <div class="mb-4">
+            <img src="{{ loan_item.return_photo }}" alt="Bukti Pengembalian" class="max-w-2xl h-auto rounded-lg border border-gray-200 shadow-md">
+        </div>
+        <a href="{{ loan_item.return_photo }}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
+            <i class="fas fa-external-link-alt mr-1"></i>Buka di tab baru
+        </a>
+
+        {% if loan_item.return_notes %}
+        <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Catatan Pengembalian</h4>
+            <p class="text-gray-600">{{ loan_item.return_notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

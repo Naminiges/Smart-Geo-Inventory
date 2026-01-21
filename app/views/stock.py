@@ -14,8 +14,15 @@ bp = Blueprint('stock', __name__, url_prefix='/stock')
 @warehouse_access_required
 def index():
     """List all stock"""
+    from app.models.user import UserWarehouse
+
     if current_user.is_warehouse_staff():
-        stocks = Stock.query.filter_by(warehouse_id=current_user.warehouse_id).all()
+        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            stocks = Stock.query.filter(Stock.warehouse_id.in_(user_warehouse_ids)).all()
+        else:
+            stocks = []
     else:
         stocks = Stock.query.all()
 
@@ -33,7 +40,12 @@ def add():
     form.item_id.choices = [(i.id, f"{i.item_code} - {i.name}") for i in Item.query.all()]
 
     if current_user.is_warehouse_staff():
-        form.warehouse_id.choices = [(current_user.warehouse.id, current_user.warehouse.name)]
+        # Get warehouses from UserWarehouse assignments (many-to-many)
+        user_warehouses = current_user.user_warehouses.all()
+        if user_warehouses:
+            form.warehouse_id.choices = [(uw.warehouse.id, uw.warehouse.name) for uw in user_warehouses]
+        else:
+            form.warehouse_id.choices = []
     else:
         form.warehouse_id.choices = [(w.id, w.name) for w in Warehouse.query.all()]
 
@@ -90,7 +102,12 @@ def remove():
     form.item_id.choices = [(i.id, f"{i.item_code} - {i.name}") for i in Item.query.all()]
 
     if current_user.is_warehouse_staff():
-        form.warehouse_id.choices = [(current_user.warehouse.id, current_user.warehouse.name)]
+        # Get warehouses from UserWarehouse assignments (many-to-many)
+        user_warehouses = current_user.user_warehouses.all()
+        if user_warehouses:
+            form.warehouse_id.choices = [(uw.warehouse.id, uw.warehouse.name) for uw in user_warehouses]
+        else:
+            form.warehouse_id.choices = []
     else:
         form.warehouse_id.choices = [(w.id, w.name) for w in Warehouse.query.all()]
 
@@ -145,7 +162,12 @@ def low_stock():
 def transactions():
     """Show stock transaction history"""
     if current_user.is_warehouse_staff():
-        transactions = StockTransaction.query.filter_by(warehouse_id=current_user.warehouse_id).order_by(StockTransaction.transaction_date.desc()).all()
+        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            transactions = StockTransaction.query.filter(StockTransaction.warehouse_id.in_(user_warehouse_ids)).order_by(StockTransaction.transaction_date.desc()).all()
+        else:
+            transactions = []
     else:
         transactions = StockTransaction.query.order_by(StockTransaction.transaction_date.desc()).all()
 

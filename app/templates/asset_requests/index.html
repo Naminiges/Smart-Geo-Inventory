@@ -87,6 +87,9 @@
         <a href="{{ url_for('asset_requests.index', status='verified') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'verified' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
             Verified
         </a>
+        <a href="{{ url_for('asset_requests.index', status='distributing') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'distributing' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+            Distributing
+        </a>
         <a href="{{ url_for('asset_requests.index', status='completed') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'completed' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
             Completed
         </a>
@@ -146,7 +149,7 @@
                             <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
                                 <i class="fas fa-check-circle mr-1"></i>Verified
                             </span>
-                            {% elif req.status == 'distributing' %}
+                            {% elif req.status == 'distributing' or req.status == 'processing' %}
                             <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                                 <i class="fas fa-truck mr-1"></i>Distributing
                             </span>
@@ -157,6 +160,10 @@
                             {% elif req.status == 'rejected' %}
                             <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
                                 <i class="fas fa-times-circle mr-1"></i>Rejected
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
+                                {{ req.status|title }}
                             </span>
                             {% endif %}
                         </td>
