@@ -231,33 +231,78 @@ def receive_goods(id):
 
     if form.validate_on_submit():
         try:
+            from app.models.master_data import ItemDetail, Item
+            import json
+
             # Prepare items data from form
             items_data = []
             for procurement_item in procurement.items:
                 quantity_key = f'quantity_{procurement_item.id}'
                 serials_key = f'serial_numbers_{procurement_item.id}'
+                serial_units_key = f'serial_units_{procurement_item.id}'
 
                 quantity_received = request.form.get(quantity_key, type=int)
                 serial_numbers_str = request.form.get(serials_key, '')
+                serial_units_str = request.form.get(serial_units_key, '')
 
                 # Skip if no quantity provided
                 if not quantity_received or quantity_received <= 0:
                     continue
 
-                # Parse serial numbers
-                serial_numbers = []
-                if serial_numbers_str:
-                    serial_numbers = [sn.strip() for sn in serial_numbers_str.split('\n') if sn.strip()]
+                # Determine if this is networking/server category
+                category_name = procurement_item.item.category.name.lower() if procurement_item.item and procurement_item.item.category else ''
+                is_networking = any(keyword in category_name for keyword in ['jaringan', 'network', 'server'])
 
-                # Validate quantity matches serial numbers count
-                if serial_numbers and len(serial_numbers) != quantity_received:
-                    flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) harus sama dengan jumlah barang ({quantity_received})!', 'warning')
-                    return render_template('procurement/receive.html', procurement=procurement, form=form)
+                # Auto-generate serial units for ALL items (both networking and non-networking)
+                item_code = procurement_item.item.item_code if procurement_item.item else 'ITEM'
+
+                # Get the last serial unit for this item to continue the sequence
+                last_serial_unit = ItemDetail.query.filter(
+                    ItemDetail.serial_unit.like(f'{item_code}-%')
+                ).order_by(ItemDetail.serial_unit.desc()).first()
+
+                start_num = 1
+                if last_serial_unit and last_serial_unit.serial_unit:
+                    try:
+                        last_num = int(last_serial_unit.serial_unit.split('-')[-1])
+                        start_num = last_num + 1
+                    except:
+                        start_num = 1
+
+                # Generate serial units
+                serial_units = []
+                for i in range(quantity_received):
+                    serial_unit = f"{item_code}-{str(start_num + i).zfill(3)}"
+                    serial_units.append(serial_unit)
+
+                # For networking items: require manual serial numbers
+                if is_networking:
+                    serial_numbers = []
+                    if serial_numbers_str:
+                        serial_numbers = [sn.strip() for sn in serial_numbers_str.split('\n') if sn.strip()]
+
+                    # Validate quantity matches serial numbers count for networking items
+                    if len(serial_numbers) != quantity_received:
+                        flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) harus sama dengan jumlah barang ({quantity_received}) untuk kategori jaringan!', 'warning')
+                        return render_template('procurement/receive.html', procurement=procurement, form=form)
+
+                    # Check for duplicate serial numbers
+                    existing_serials = ItemDetail.query.filter(
+                        ItemDetail.serial_number.in_(serial_numbers)
+                    ).all()
+                    if existing_serials:
+                        existing_list = [sn.serial_number for sn in existing_serials]
+                        flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Serial number sudah terdaftar: {", ".join(existing_list)}', 'warning')
+                        return render_template('procurement/receive.html', procurement=procurement, form=form)
+                else:
+                    # For non-networking items: use serial_units as serial_numbers (both fields same)
+                    serial_numbers = serial_units
 
                 items_data.append({
                     'procurement_item_id': procurement_item.id,
                     'quantity_received': quantity_received,
-                    'serial_numbers': serial_numbers
+                    'serial_numbers': serial_numbers,  # Manual for networking, auto-generated for non-networking
+                    'serial_units': serial_units  # Always auto-generated
                 })
 
             if not items_data:

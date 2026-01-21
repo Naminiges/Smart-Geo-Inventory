@@ -258,9 +258,17 @@ class ProcurementItem(BaseModel):
             return json.loads(self.receipt_history)
         return []
 
-    def add_receipt_to_history(self, quantity_received, serial_numbers_list, user_id):
-        """Add a delivery update to the history (single invoice, multiple deliveries)"""
+    def add_receipt_to_history(self, quantity_received, serial_numbers_list, serial_units_list, user_id):
+        """Add a delivery update to the history (single invoice, multiple deliveries)
+
+        Args:
+            quantity_received: Number of items received in this delivery
+            serial_numbers_list: List of serial numbers (manual for networking, auto-generated for non-networking)
+            serial_units_list: List of serial units (always auto-generated for ALL items)
+            user_id: ID of user receiving the goods
+        """
         import json
+        from app.models.master_data import ItemDetail
 
         # Get existing history
         history = self.get_receipt_history()
@@ -275,13 +283,50 @@ class ProcurementItem(BaseModel):
         if duplicates:
             return False, f'Serial number sudah terdaftar di pengiriman sebelumnya: {", ".join(duplicates[:5])}{"..." if len(duplicates) > 5 else ""}'
 
+        # Create ItemDetail records immediately upon receipt
+        # Get procurement object to access supplier_id
+        from app.models.procurement import Procurement
+        procurement = Procurement.query.filter(
+            Procurement.items.any(id=self.id)
+        ).first()
+
+        items_created = 0
+        for i in range(quantity_received):
+            serial_number = serial_numbers_list[i] if i < len(serial_numbers_list) else serial_units_list[i]
+            serial_unit = serial_units_list[i] if i < len(serial_units_list) else serial_number
+
+            # Check if ItemDetail with this serial_number already exists globally
+            existing_detail = ItemDetail.query.filter_by(serial_number=serial_number).first()
+            if existing_detail:
+                continue
+
+            # Check if ItemDetail with this serial_unit already exists globally
+            existing_unit = ItemDetail.query.filter_by(serial_unit=serial_unit).first()
+            if existing_unit:
+                continue
+
+            # Create new ItemDetail with status 'available' (in warehouse, not yet distributed)
+            item_detail = ItemDetail(
+                item_id=self.item_id,
+                serial_number=serial_number,  # Manual for networking, auto-generated for non-networking
+                serial_unit=serial_unit,  # Always auto-generated
+                status='available',
+                supplier_id=procurement.supplier_id if procurement else None,
+                warehouse_id=None,  # Will be assigned when distributed/added to stock
+                specification_notes=f'Diterima melalui procurement #{procurement.id if procurement else "N/A"}'
+            )
+            item_detail.save()
+            items_created += 1
+
         # Add new delivery record
         new_delivery = {
             'date': datetime.utcnow().isoformat(),
             'quantity': quantity_received,
             'serials': serial_numbers_list,
+            'serial_units': serial_units_list,
             'received_by': user_id,
-            'cumulative_total': (self.actual_quantity or 0) + quantity_received
+            'cumulative_total': (self.actual_quantity or 0) + quantity_received,
+            'item_details_created': items_created
         }
         history.append(new_delivery)
 
@@ -296,7 +341,7 @@ class ProcurementItem(BaseModel):
         self.serial_numbers = json.dumps(all_serials)
 
         self.save()
-        return True, f'Penerimaan berhasil dicatat. Total: {self.actual_quantity} unit.'
+        return True, f'Penerimaan berhasil dicatat. {items_created} ItemDetail dibuat. Total: {self.actual_quantity} unit.'
 
     def __repr__(self):
         return f'<ProcurementItem #{self.id} {self.item.name if self.item else "N/A"} Qty:{self.quantity}>'
@@ -416,7 +461,12 @@ class Procurement(BaseModel):
         """
         Record goods receipt for multiple items
         items_data format: [
-            {'procurement_item_id': 1, 'quantity_received': 5, 'serial_numbers': ['SN1', 'SN2', ...]},
+            {
+                'procurement_item_id': 1,
+                'quantity_received': 5,
+                'serial_numbers': ['SN1', 'SN2', ...],  # Manual for networking, auto-generated for non-networking
+                'serial_units': ['SU-001', 'SU-002', ...]  # Always auto-generated
+            },
             ...
         ]
         """
@@ -441,6 +491,7 @@ class Procurement(BaseModel):
             procurement_item_id = item_data.get('procurement_item_id')
             quantity_received = item_data.get('quantity_received')
             serial_numbers = item_data.get('serial_numbers', [])
+            serial_units = item_data.get('serial_units', [])
 
             # Find the procurement item
             procurement_item = None
@@ -466,8 +517,14 @@ class Procurement(BaseModel):
                 all_success = False
                 continue
 
+            # Validate quantity matches serial units count
+            if len(serial_units) != quantity_received:
+                results.append(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial unit tidak sesuai')
+                all_success = False
+                continue
+
             # Add to receipt history
-            success, message = procurement_item.add_receipt_to_history(quantity_received, serial_numbers, user_id)
+            success, message = procurement_item.add_receipt_to_history(quantity_received, serial_numbers, serial_units, user_id)
             if success:
                 results.append(f'{procurement_item.item.name if procurement_item.item else "Item"}: {quantity_received} unit diterima')
             else:
@@ -518,27 +575,22 @@ class Procurement(BaseModel):
                 serial_numbers = json.loads(procurement_item.serial_numbers) if procurement_item.serial_numbers else []
                 print(f"Parsed serial numbers count: {len(serial_numbers)}")
 
-                # Create ItemDetail for each serial number (skip if already exists)
+                # Update warehouse_id for existing ItemDetails (created during receive_goods)
+                # ItemDetails were created with warehouse_id=None, now assign them to the warehouse
+                items_updated = 0
                 for serial_number in serial_numbers:
-                    # Check if ItemDetail already exists for this serial number
                     existing_detail = ItemDetail.query.filter_by(serial_number=serial_number).first()
+                    if existing_detail and existing_detail.warehouse_id is None:
+                        existing_detail.warehouse_id = warehouse_id
+                        existing_detail.save()
+                        items_updated += 1
+                        items_created += 1  # Count as "processed" for message
+                    elif existing_detail and existing_detail.warehouse_id == warehouse_id:
+                        items_created += 1  # Already in correct warehouse
+                    elif existing_detail:
+                        items_skipped += 1  # Already in different warehouse
 
-                    if existing_detail:
-                        # Skip if already exists
-                        items_skipped += 1
-                        continue
-
-                    # Create new ItemDetail
-                    item_detail = ItemDetail(
-                        item_id=procurement_item.item_id,
-                        serial_number=serial_number,
-                        status='available',
-                        supplier_id=self.supplier_id,
-                        warehouse_id=warehouse_id,
-                        specification_notes=f'Diterima melalui pengadaan #{self.id}'
-                    )
-                    item_detail.save()
-                    items_created += 1
+                print(f"ItemDetails updated: {items_updated}, skipped: {items_skipped}")
 
                 # Add to stock - count by actual serial numbers received
                 stock = Stock.query.filter_by(
