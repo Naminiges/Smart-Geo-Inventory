@@ -64,9 +64,7 @@
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Kode Barang</th>
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Nama Barang</th>
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Kategori</th>
-                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Unit</th>
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Total Stok</th>
-                        <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Serial Numbers</th>
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Aksi</th>
                     </tr>
                 </thead>
@@ -78,10 +76,6 @@
                             <td class="py-3 px-2">{{ item.name }}</td>
                             <td class="py-3 px-2">
                                 <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">{{ item.category.name }}</span>
-                            </td>
-                            <td class="py-3 px-2">{{ item.unit }}</td>
-                            <td class="py-3 px-2">
-                                <h6 class="text-base mb-0">{{ item.total_stock or 0 }}</h6>
                             </td>
                             <td class="py-3 px-2">
                                 <span class="inline-block bg-sky-100 text-sky-800 px-2 py-1 rounded text-sm">{{ item.total_details or 0 }}</span>

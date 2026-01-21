@@ -162,11 +162,13 @@
                             </label>
                             <input type="number"
                                    name="quantity_{{ proc_item.id }}"
+                                   id="quantity_{{ proc_item.id }}"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
                                    placeholder="0"
                                    min="0"
                                    max="{{ proc_item.remaining_quantity }}"
                                    value="{% if proc_item.remaining_quantity > 0 %}{{ proc_item.remaining_quantity }}{% endif %}"
+                                   onchange="updateSerialUnits({{ proc_item.id }}, '{{ proc_item.item.item_code if proc_item.item else 'N/A' }}')"
                                    {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}>
                             {% if proc_item.remaining_quantity == 0 %}
                             <p class="mt-1 text-xs text-green-600">
@@ -176,17 +178,35 @@
                             {% endif %}
                         </div>
 
-                        <!-- Serial Numbers for this item -->
-                        <div>
+                        <!-- Serial Numbers (ONLY for Networking/Server) -->
+                        <div id="serial_number_div_{{ proc_item.id }}" style="{% if proc_item.item and proc_item.item.category and ('jaringan' in proc_item.item.category.name.lower() or 'network' in proc_item.item.category.name.lower() or 'server' in proc_item.item.category.name.lower()) %}display:block;{% else %}display:none;{% endif %}">
                             <label class="block text-xs font-semibold text-gray-700 mb-1">
-                                Serial Numbers (Opsional)
+                                Serial Number <span class="text-red-500">*</span>
                             </label>
                             <textarea name="serial_numbers_{{ proc_item.id }}"
+                                      id="serial_numbers_{{ proc_item.id }}"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm"
                                       rows="3"
-                                      placeholder="Satu serial number per baris"
+                                      placeholder="Contoh:&#13;&#10;SN-001&#13;&#10;SN-002&#13;&#10;SN-003"
+                                      oninput="updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }})"
                                       {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}></textarea>
+                            <div class="mt-1 flex items-center justify-between">
+                                <p class="text-xs text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Wajib untuk kategori Jaringan/Network/Server
+                                </p>
+                                <p id="sn_counter_{{ proc_item.id }}" class="text-xs font-semibold">
+                                    <span id="sn_count_{{ proc_item.id }}" class="text-amber-600">0</span> / {{ proc_item.remaining_quantity }}
+                                </p>
+                            </div>
+                            <p id="sn_warning_{{ proc_item.id }}" class="mt-1 text-xs hidden">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                <span></span>
+                            </p>
                         </div>
+
+                        <!-- Serial Units - Hidden field only -->
+                        <input type="hidden" name="serial_units_{{ proc_item.id }}" id="serial_units_{{ proc_item.id }}">
                     </div>
                 </div>
                 {% endfor %}
@@ -225,11 +245,99 @@
             <ul class="text-sm text-blue-800 space-y-1">
                 <li><i class="fas fa-check-circle mr-2"></i>Pastikan nomor tanda terima sesuai dengan dokumen dari supplier</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Cek kembali jumlah barang yang diterima untuk setiap item</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Serial numbers bersifat opsional, tapi sangat disarankan untuk tracking</li>
+                <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Number</strong>: Wajib diisi untuk kategori Jaringan/Network/Server (satu per baris)</li>
+                <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Unit</strong>: Otomatis di-generate oleh sistem untuk semua barang</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Anda bisa menerima barang sebagian (partial receiving)</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Setelah semua barang lengkap, pengadaan siap diselesaikan</li>
             </ul>
         </div>
     </div>
 </div>
+
+<script>
+// Store the starting number for each procurement item
+const serialUnitCounters = {};
+
+function updateSerialUnits(procurementItemId, itemCode) {
+    const quantityInput = document.getElementById('quantity_' + procurementItemId);
+    const quantity = parseInt(quantityInput.value) || 0;
+
+    // Initialize counter if not exists
+    if (!serialUnitCounters[procurementItemId]) {
+        serialUnitCounters[procurementItemId] = 1;
+    }
+
+    if (quantity > 0) {
+        // Generate serial units (will be submitted as hidden field)
+        const serialUnits = [];
+        for (let i = 0; i < quantity; i++) {
+            const numStr = String(serialUnitCounters[procurementItemId] + i).padStart(3, '0');
+            serialUnits.push(`${itemCode}-${numStr}`);
+        }
+
+        // Update the hidden field with newline-separated values
+        const hiddenField = document.getElementById('serial_units_' + procurementItemId);
+        if (hiddenField) {
+            hiddenField.value = serialUnits.join('\n');
+        }
+    }
+}
+
+function updateSerialNumberCounter(procurementItemId, expectedCount) {
+    const textarea = document.getElementById('serial_numbers_' + procurementItemId);
+    const countSpan = document.getElementById('sn_count_' + procurementItemId);
+    const warningP = document.getElementById('sn_warning_' + procurementItemId);
+
+    if (!textarea || !countSpan) return;
+
+    // Count non-empty lines
+    const lines = textarea.value.split('\n').filter(line => line.trim() !== '');
+    const count = lines.length;
+
+    // Update counter display
+    countSpan.textContent = count;
+
+    // Update color based on count
+    countSpan.classList.remove('text-amber-600', 'text-green-600', 'text-red-600');
+    if (count === 0) {
+        countSpan.classList.add('text-amber-600');
+    } else if (count === expectedCount) {
+        countSpan.classList.add('text-green-600');
+    } else if (count < expectedCount) {
+        countSpan.classList.add('text-amber-600');
+    } else {
+        countSpan.classList.add('text-red-600');
+    }
+
+    // Show/hide warning message
+    if (warningP) {
+        if (count > expectedCount) {
+            warningP.classList.remove('hidden');
+            warningP.classList.add('text-red-600');
+            warningP.querySelector('span').textContent = `Terlalu banyak! Harap masukkan tepat ${expectedCount} serial number.`;
+        } else if (count > 0 && count < expectedCount) {
+            warningP.classList.remove('hidden');
+            warningP.classList.add('text-amber-600');
+            warningP.querySelector('span').textContent = `Masih kurang ${expectedCount - count} serial number lagi.`;
+        } else {
+            warningP.classList.add('hidden');
+        }
+    }
+}
+
+// Call on page load to initialize serial units for ALL items
+document.addEventListener('DOMContentLoaded', function() {
+    {% for proc_item in procurement.items %}
+    {% if proc_item.item %}
+    // Initialize serial units on page load
+    updateSerialUnits({{ proc_item.id }}, '{{ proc_item.item.item_code }}');
+
+    // Initialize serial number counter for networking items
+    {% if proc_item.item and proc_item.item.category and ('jaringan' in proc_item.item.category.name.lower() or 'network' in proc_item.item.category.name.lower() or 'server' in proc_item.item.category.name.lower()) %}
+    updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }});
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+});
+</script>
 {% endblock %}

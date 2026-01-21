@@ -206,7 +206,6 @@ def detail(id):
 def verify(id):
     """Verify asset request (admin only)"""
     from app.models import Warehouse, ItemDetail
-    from app.models.inventory import Stock
 
     asset_request = AssetRequest.query.get_or_404(id)
 
@@ -223,26 +222,17 @@ def verify(id):
         warehouse_stock_info[warehouse.id] = {}
         for item in asset_request.items:
             # Get available item_details with status 'available'
+            # Ini adalah source of truth untuk ketersediaan barang
             available_details = ItemDetail.query.filter_by(
                 warehouse_id=warehouse.id,
                 item_id=item.item_id,
                 status='available'
             ).count()
 
-            # Get stock quantity from Stock table
-            stock_record = Stock.query.filter_by(
-                item_id=item.item_id,
-                warehouse_id=warehouse.id
-            ).first()
-            available_stock_qty = stock_record.quantity if stock_record else 0
-
-            # Total available = ItemDetail + Stock quantity
-            total_available = available_details + available_stock_qty
-
             warehouse_stock_info[warehouse.id][item.item_id] = {
                 'requested': item.quantity,
-                'available': total_available,
-                'is_sufficient': total_available >= item.quantity
+                'available': available_details,
+                'is_sufficient': available_details >= item.quantity
             }
 
     form = AssetVerificationForm()
@@ -404,44 +394,14 @@ def distribute(id):
 
             for request_item in asset_request.items:
                 # Get available item_details from warehouse
+                # ItemDetails are now created during procurement receive, so we only need to query them
                 available_items = ItemDetail.query.filter_by(
                     warehouse_id=warehouse_id,
                     item_id=request_item.item_id,
                     status='available'
                 ).limit(request_item.quantity).all()
 
-                # If not enough ItemDetails, check Stock for quantity-based items
-                needed = request_item.quantity - len(available_items)
-                if needed > 0:
-                    stock = Stock.query.filter_by(
-                        item_id=request_item.item_id,
-                        warehouse_id=warehouse_id
-                    ).first()
-
-                    if stock and stock.quantity >= needed:
-                        # Create dummy ItemDetails for quantity-based items
-                        for i in range(needed):
-                            dummy_detail = ItemDetail(
-                                item_id=request_item.item_id,
-                                serial_number=f'BATCH-{asset_request.id}-{request_item.id}-{i}',
-                                status='available',
-                                warehouse_id=warehouse_id,
-                                specification_notes=f'Batch item tanpa serial number (Permohonan #{asset_request.id})'
-                            )
-                            dummy_detail.save()
-                            available_items.append(dummy_detail)
-
-                            # Reduce stock quantity
-                            stock.remove_stock(1)
-                    else:
-                        available_stock = stock.quantity if stock else 0
-                        total_available = len(available_items) + available_stock
-                        shortage = request_item.quantity - total_available
-                        flash(f'Stok tidak mencukupi untuk {request_item.item.name}. '
-                              f'Diminta: {request_item.quantity} unit, Tersedia: {total_available} unit, Kurang: {shortage} unit', 'warning')
-                        return redirect(url_for('asset_requests.distribute', id=id))
-
-                # Double check after attempting to create dummy details
+                # Check if we have enough ItemDetails
                 if len(available_items) < request_item.quantity:
                     shortage = request_item.quantity - len(available_items)
                     flash(f'Stok tidak mencukupi untuk {request_item.item.name}. '

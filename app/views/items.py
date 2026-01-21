@@ -94,10 +94,19 @@ def details(id):
     # Get filter parameters
     location_filter = request.args.get('location', '')
     search_filter = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', '')
 
     # Build query for item details
     query = ItemDetail.query.filter_by(item_id=id)
     item_details = query.all()
+
+    # Filter by status
+    if status_filter:
+        if status_filter == 'used_in_unit':
+            # Gabungkan status 'used' dan 'in_unit'
+            item_details = [d for d in item_details if d.status in ['used', 'in_unit']]
+        else:
+            item_details = [d for d in item_details if d.status == status_filter]
 
     # Filter by location
     if location_filter:
@@ -135,7 +144,7 @@ def details(id):
 
     return render_template('items/details.html', item=item, item_details=item_details,
                           locations=locations, location_filter=location_filter,
-                          search_filter=search_filter)
+                          status_filter=status_filter, search_filter=search_filter)
 
 
 @bp.route('/detail/create', methods=['GET', 'POST'])
