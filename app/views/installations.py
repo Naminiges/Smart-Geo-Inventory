@@ -14,7 +14,7 @@ bp = Blueprint('installations', __name__, url_prefix='/installations')
 @login_required
 @warehouse_access_required
 def index():
-    """List all installations and verified asset requests"""
+    """List all installations"""
     from sqlalchemy import or_
 
     # Get task type filter from URL parameter
@@ -27,19 +27,6 @@ def index():
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.all()
 
-        print(f"=== DEBUG INSTALLATIONS INDEX ===")
-        print(f"Warehouse staff ID: {current_user.id}, Warehouse ID: {current_user.warehouse_id}")
-        print(f"Task type filter: '{task_type_filter}'")
-        print(f"Found {len(installations)} distributions")
-        for inst in installations:
-            print(f"  - ID: {inst.id}, Item: {inst.item_detail.item.name if inst.item_detail else 'N/A'}, Field Staff: {inst.field_staff_id}, Status: {inst.status}")
-        print(f"==============================")
-
-        # Get verified asset requests that haven't been distributed yet
-        verified_requests = AssetRequest.query.filter(
-            AssetRequest.status == 'verified',
-            or_(AssetRequest.distribution_id == None, AssetRequest.distribution_id.is_(None))
-        ).all()
         # Get unique units and field staffs for filters
         units = Unit.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id).distinct().all()
         field_staffs = User.query.join(Distribution, User.id == Distribution.field_staff_id).filter(Distribution.warehouse_id == current_user.warehouse_id, User.role == 'field_staff').distinct().all()
@@ -50,7 +37,6 @@ def index():
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.all()
 
-        verified_requests = []
         units = []
         field_staffs = []
     else:  # admin
@@ -60,17 +46,11 @@ def index():
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.all()
 
-        # Admin sees all verified requests that haven't been distributed
-        verified_requests = AssetRequest.query.filter(
-            AssetRequest.status == 'verified',
-            or_(AssetRequest.distribution_id == None, AssetRequest.distribution_id.is_(None))
-        ).all()
         units = Unit.query.join(Distribution).distinct().all()
         field_staffs = User.query.filter_by(role='field_staff').all()
 
     return render_template('installations/index.html',
                          distributions=installations,
-                         verified_requests=verified_requests,
                          units=units,
                          field_staffs=field_staffs,
                          task_type_filter=task_type_filter)

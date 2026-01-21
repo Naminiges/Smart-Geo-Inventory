@@ -128,16 +128,20 @@ def get_dashboard_stats(warehouse_id=None):
 def notification_counts():
     """Context processor to provide notification counts to templates"""
     if not current_user.is_authenticated:
-        return {'pending_request_count': 0}
+        return {'pending_request_count': 0, 'verified_request_count': 0}
 
     from app.models import AssetRequest, UserUnit
 
-    counts = {'pending_request_count': 0}
+    counts = {'pending_request_count': 0, 'verified_request_count': 0}
 
     try:
         if current_user.is_admin():
-            # Admin sees all pending requests
+            # Admin sees all pending requests and verified requests
             counts['pending_request_count'] = AssetRequest.query.filter_by(status='pending').count()
+            counts['verified_request_count'] = AssetRequest.query.filter_by(status='verified').count()
+        elif current_user.is_warehouse_staff():
+            # Warehouse staff sees verified requests
+            counts['verified_request_count'] = AssetRequest.query.filter_by(status='verified').count()
         elif current_user.is_unit_staff():
             # Unit staff sees pending requests for their assigned units
             user_unit_ids = [uu.unit_id for uu in UserUnit.query.filter_by(user_id=current_user.id).all()]
@@ -148,5 +152,6 @@ def notification_counts():
                 ).count()
     except Exception:
         counts['pending_request_count'] = 0
+        counts['verified_request_count'] = 0
 
     return counts

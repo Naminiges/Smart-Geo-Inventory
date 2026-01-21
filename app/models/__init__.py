@@ -7,6 +7,7 @@ from app.models.distribution import Distribution
 from app.models.logging import ActivityLog, AssetMovementLog
 from app.models.procurement import Procurement, ProcurementItem, UnitProcurement, UnitProcurementItem
 from app.models.asset_request import AssetRequest, AssetRequestItem
+from app.models.asset_loan import AssetLoan, AssetLoanItem
 
 __all__ = [
     'BaseModel',
@@ -17,5 +18,6 @@ __all__ = [
     'Distribution',
     'ActivityLog', 'AssetMovementLog',
     'Procurement', 'ProcurementItem', 'UnitProcurement', 'UnitProcurementItem',
-    'AssetRequest', 'AssetRequestItem'
+    'AssetRequest', 'AssetRequestItem',
+    'AssetLoan', 'AssetLoanItem'
 ]

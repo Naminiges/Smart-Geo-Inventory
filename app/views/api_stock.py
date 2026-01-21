@@ -12,7 +12,12 @@ bp = Blueprint('api_stock', __name__)
 def api_list():
     """Get all stock"""
     if current_user.is_warehouse_staff():
-        stocks = Stock.query.filter_by(warehouse_id=current_user.warehouse_id).all()
+        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            stocks = Stock.query.filter(Stock.warehouse_id.in_(user_warehouse_ids)).all()
+        else:
+            stocks = []
     else:
         stocks = Stock.query.all()
 
@@ -90,9 +95,14 @@ def api_low_stock():
 def api_transactions():
     """Get transaction history"""
     if current_user.is_warehouse_staff():
-        transactions = StockTransaction.query.filter_by(
-            warehouse_id=current_user.warehouse_id
-        ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
+        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            transactions = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids)
+            ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
+        else:
+            transactions = []
     else:
         transactions = StockTransaction.query.order_by(
             StockTransaction.transaction_date.desc()

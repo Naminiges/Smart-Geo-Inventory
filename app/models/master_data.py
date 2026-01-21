@@ -31,6 +31,23 @@ class Item(BaseModel):
     item_details = db.relationship('ItemDetail', back_populates='item', lazy='dynamic')
     stocks = db.relationship('Stock', back_populates='item', lazy='dynamic')
 
+    @property
+    def total_stock(self):
+        """Get total stock across all warehouses"""
+        from app.models.inventory import Stock
+        result = db.session.query(db.func.sum(Stock.quantity)).filter(Stock.item_id == self.id).scalar()
+        return result or 0
+
+    @property
+    def total_details(self):
+        """Get total item details (serial numbers) count"""
+        return self.item_details.count()
+
+    @property
+    def available_details(self):
+        """Get total available item details count"""
+        return self.item_details.filter_by(status='available').count()
+
     def get_total_stock(self, warehouse_id=None):
         """Get total stock across all warehouses or specific warehouse"""
         from app.models.inventory import Stock

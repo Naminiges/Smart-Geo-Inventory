@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Peminjaman #{{ loan.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Detail Peminjaman #{{ loan.id }}{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('asset_loans.warehouse_index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Peminjaman
+    </a>
+</div>
+
+<!-- Status Card -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-1">Status Peminjaman</h3>
+                <p class="text-sm text-gray-500">ID: #{{ loan.id }}</p>
+            </div>
+            <div>
+                {% if loan.status == 'pending' %}
+                <span class="px-4 py-2 bg-amber-100 text-amber-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-clock mr-2"></i>Menunggu Persetujuan
+                </span>
+                {% elif loan.status == 'approved' %}
+                <span class="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-check mr-2"></i>Disetujui
+                </span>
+                {% elif loan.status == 'shipped' %}
+                <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-truck mr-2"></i>Sedang Dikirim
+                </span>
+                {% elif loan.status == 'active' %}
+                <span class="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-box mr-2"></i>Aktif
+                </span>
+                {% elif loan.status == 'returned' %}
+                <span class="px-4 py-2 bg-orange-100 text-orange-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-undo mr-2"></i>Proses Retur
+                </span>
+                {% elif loan.status == 'completed' %}
+                <span class="px-4 py-2 bg-teal-100 text-teal-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-check-double mr-2"></i>Selesai
+                </span>
+                {% elif loan.status == 'cancelled' %}
+                <span class="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                    <i class="fas fa-times mr-2"></i>Dibatalkan
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">Informasi Unit</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Unit:</span>
+                        <span class="font-semibold">{{ loan.unit.name if loan.unit else '-' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Total Quantity:</span>
+                        <span class="font-semibold">{{ loan.total_quantity }} barang</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">Informasi Peminjaman</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Tanggal Permohonan:</span>
+                        <span class="font-semibold">{{ loan.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Diajukan oleh:</span>
+                        <span class="font-semibold">{{ loan.requester.name if loan.requester else '-' }}</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">Status Retur</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Dikembalikan:</span>
+                        <span class="font-semibold">{{ loan.total_returned }}/{{ loan.total_quantity }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Status:</span>
+                        <span class="font-semibold {% if loan.is_fully_returned %}text-green-600{% else %}text-amber-600{% endif %}">
+                            {% if loan.is_fully_returned %}Lengkap{% else %}Belum Lengkap{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Alasan Peminjaman</h4>
+            <p class="text-gray-600">{{ loan.request_notes or '-' }}</p>
+        </div>
+
+        {% if loan.approval_notes %}
+        <div class="mt-4 p-4 bg-green-50 rounded-lg">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Catatan Persetujuan</h4>
+            <p class="text-gray-600">{{ loan.approval_notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if loan.shipment_notes %}
+        <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Catatan Pengiriman</h4>
+            <p class="text-gray-600">{{ loan.shipment_notes }}</p>
+        </div>
+        {% endif %}
+
+        {% if loan.return_reason %}
+        <div class="mt-4 p-4 bg-orange-50 rounded-lg">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Alasan Retur</h4>
+            <p class="text-gray-600">{{ loan.return_reason }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Items Card -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Daftar Barang</h3>
+    </div>
+    <div class="p-6 overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Quantity</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status Retur</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in loan.items %}
+                <tr class="border-b border-gray-100">
+                    <td class="py-3 px-4">
+                        <span class="font-semibold">{{ item.item_detail.item.name if item.item_detail and item.item_detail.item else '-' }}</span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <code class="text-sm bg-gray-100 px-2 py-1 rounded">{{ item.item_detail.serial_number if item.item_detail else '-' }}</code>
+                    </td>
+                    <td class="py-3 px-4 font-semibold">{{ item.quantity }}</td>
+                    <td class="py-3 px-4">
+                        {% if item.return_verification_status == 'verified' %}
+                        <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-check mr-1"></i>Dikembalikan
+                        </span>
+                        {% elif item.return_verification_status == 'submitted' %}
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-hourglass-half mr-1"></i>Menunggu Verifikasi
+                        </span>
+                        {% elif item.return_verification_status == 'rejected' %}
+                        <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-times mr-1"></i>Ditolak
+                        </span>
+                        {% else %}
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-clock mr-1"></i>Belum
+                        </span>
+                        {% endif %}
+
+                        {% if item.return_photo %}
+                        <a href="{{ url_for('asset_loans.warehouse_view_proof', item_id=item.id) }}" class="ml-2 text-blue-600 hover:text-blue-800 text-xs">
+                            <i class="fas fa-image mr-1"></i>Lihat Bukti
+                        </a>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex flex-wrap gap-1">
+                            {% if loan.status == 'returned' and item.return_verification_status in ['pending', 'rejected'] %}
+                            <a href="{{ url_for('asset_loans.warehouse_verify_return', item_id=item.id) }}"
+                               class="px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 transition-colors text-xs font-semibold"
+                               title="Verifikasi Retur">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi</h3>
+        <div class="flex flex-wrap gap-3">
+            {% if loan.status == 'pending' %}
+            <a href="{{ url_for('asset_loans.warehouse_approve', id=loan.id) }}" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                <i class="fas fa-check mr-2"></i>
+                Setujui
+            </a>
+            <form action="{{ url_for('asset_loans.warehouse_reject', id=loan.id) }}" method="POST" onsubmit="return confirm('Tolak permohonan ini?');" class="inline">
+                <button type="submit" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                    <i class="fas fa-times mr-2"></i>
+                    Tolak
+                </button>
+            </form>
+            {% endif %}
+
+            {% if loan.status == 'approved' %}
+            <a href="{{ url_for('asset_loans.warehouse_ship', id=loan.id) }}" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i class="fas fa-truck mr-2"></i>
+                Kirim Barang
+            </a>
+            {% endif %}
+
+            {% if loan.status == 'returned' %}
+            <a href="{{ url_for('asset_loans.warehouse_approve_return', id=loan.id) }}" class="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold">
+                <i class="fas fa-undo mr-2"></i>
+                Setujui Retur
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

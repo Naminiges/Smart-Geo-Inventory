@@ -92,43 +92,38 @@
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Nama Aset</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Kategori</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Lokasi</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal Distribusi</th>
+                        <th class="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in unit_items %}
+                    {% for item_group in unit_items %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
                         <td class="py-4 px-4">
                             <div class="flex items-center">
                                 <div class="bg-blue-100 rounded-lg p-2 mr-3">
                                     <i class="fas fa-box text-blue-600"></i>
                                 </div>
-                                <div>
-                                    <strong class="text-gray-800">{{ item.item.name }}</strong>
-                                    {% if item.item.serial_number %}
-                                    <p class="text-xs text-gray-500">SN: {{ item.item.serial_number }}</p>
-                                    {% endif %}
-                                </div>
+                                <strong class="text-gray-800">{{ item_group.item.name }}</strong>
                             </div>
                         </td>
                         <td class="py-4 px-4">
-                            {% if item.item.category %}
+                            {% if item_group.item.category %}
                             <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
-                                {{ item.item.category.name }}
+                                {{ item_group.item.category.name }}
                             </span>
                             {% else %}
                             <span class="text-gray-400">-</span>
                             {% endif %}
                         </td>
                         <td class="py-4 px-4">
-                            <span class="text-gray-800 font-semibold">{{ item.quantity }}</span>
+                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
+                                {{ item_group.total_quantity }}
+                            </span>
                         </td>
-                        <td class="py-4 px-4 text-gray-600 text-sm">
-                            {{ item.location }}
-                        </td>
-                        <td class="py-4 px-4 text-gray-600 text-sm">
-                            {{ item.distribution_date.strftime('%d/%m/%Y') }}
+                        <td class="py-4 px-4 text-center">
+                            <button onclick="openModal({{ loop.index }})" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">
+                                <i class="fas fa-eye mr-1"></i> See Detail
+                            </button>
                         </td>
                     </tr>
                     {% endfor %}
@@ -147,4 +142,82 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Detail Modals -->
+{% for item_group in unit_items %}
+<div id="detailModal-{{ loop.index }}" class="fixed inset-0 backdrop-blur-sm bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-hidden">
+        <div class="p-6 border-b border-gray-200 bg-blue-50">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">{{ item_group.item.name }}</h3>
+                    <p class="text-sm text-gray-500">{{ item_group.item.category.name if item_group.item.category else '-' }}</p>
+                </div>
+                <button onclick="closeModal({{ loop.index }})" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-96">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                <i class="fas fa-list mr-1"></i>Detail Barang ({{ item_group.details|length }})
+            </h4>
+            <div class="space-y-2">
+                {% for detail in item_group.details %}
+                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-semibold text-gray-800">
+                            {% if detail.serial_number %}
+                            <i class="fas fa-barcode mr-1"></i>SN: {{ detail.serial_number }}
+                            {% else %}
+                            <i class="fas fa-box mr-1"></i>Tanpa Serial Number
+                            {% endif %}
+                        </span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                            {{ detail.status|title }}
+                        </span>
+                    </div>
+                    <div class="text-xs text-gray-600 space-y-1">
+                        <p><i class="fas fa-map-marker-alt mr-1 text-red-500"></i>{{ detail.location }}</p>
+                        {% if detail.distribution_date %}
+                        <p><i class="fas fa-calendar mr-1 text-green-500"></i>{{ detail.distribution_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+            <button onclick="closeModal({{ loop.index }})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+function openModal(index) {
+    const modal = document.getElementById('detailModal-' + index);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeModal(index) {
+    const modal = document.getElementById('detailModal-' + index);
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+// Close modal on outside click
+document.addEventListener('click', function(event) {
+    if (event.target.classList.contains('bg-gray-600')) {
+        const modals = document.querySelectorAll('[id^="detailModal-"]');
+        modals.forEach(function(modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+    }
+});
+</script>
 {% endblock %}

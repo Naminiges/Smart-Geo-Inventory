@@ -5,7 +5,9 @@
       "Bash(set:*)",
       "Bash(findstr:*)",
       "Bash(pip install:*)",
-      "Read(//Users/nikiramandika/Documents/TI-Nikiramandika/**)"
+      "Read(//Users/nikiramandika/Documents/TI-Nikiramandika/**)",
+      "Bash(flask db migrate:*)",
+      "Bash(if not exist \"migrations\" mkdir migrations)"
     ]
   }
 }

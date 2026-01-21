@@ -27,13 +27,19 @@ def index():
 @role_required('warehouse_staff')
 def warehouse_index():
     """Warehouse staff dashboard"""
+    from app.models import AssetRequest
+
     warehouse_id = current_user.warehouse_id
     stats = get_dashboard_stats(warehouse_id)
+
+    # Get verified asset requests count for warehouse staff
+    verified_request_count = AssetRequest.query.filter_by(status='verified').count()
 
     return render_template('dashboard/warehouse_index.html',
                          stats=stats,
                          warehouse=current_user.warehouse,
-                         user=current_user)
+                         user=current_user,
+                         verified_request_count=verified_request_count)
 
 
 @bp.route('/admin')
@@ -41,11 +47,21 @@ def warehouse_index():
 @role_required('admin')
 def admin_index():
     """Admin dashboard"""
+    from app.models import AssetRequest, UserUnit, Unit
+
     stats = get_dashboard_stats()
+
+    # Get pending request count (units with pending status)
+    pending_request_count = Unit.query.filter_by(status='pending').count()
+
+    # Get verified asset requests count
+    verified_request_count = AssetRequest.query.filter_by(status='verified').count()
 
     return render_template('dashboard/admin_index.html',
                          stats=stats,
-                         user=current_user)
+                         user=current_user,
+                         pending_request_count=pending_request_count,
+                         verified_request_count=verified_request_count)
 
 
 @bp.route('/field')

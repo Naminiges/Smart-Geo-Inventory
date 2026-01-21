@@ -43,7 +43,7 @@ def create_app(config_name='default'):
         return dict(format_wib_datetime=format_wib_datetime)
 
     # Register blueprints
-    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement
+    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans
     from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement, api_units, api_unit_procurement
 
     app.register_blueprint(auth.bp)
@@ -60,6 +60,7 @@ def create_app(config_name='default'):
     app.register_blueprint(units.bp)
     app.register_blueprint(field_tasks.bp)
     app.register_blueprint(unit_procurement.bp)
+    app.register_blueprint(asset_loans.bp)
 
     # Register API blueprints
     app.register_blueprint(api_auth.bp, url_prefix='/api/auth')
