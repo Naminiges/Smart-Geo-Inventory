@@ -34,16 +34,20 @@ def utc_to_wib(utc_datetime):
 
 def format_wib_datetime(dt, format_str='%d/%m/%Y - %H:%M'):
     """
-    Format datetime to string (assumes already in WIB)
+    Format datetime to WIB (GMT+7) string
+    Converts from UTC to WIB if needed
     """
     if dt is None:
         return '-'
 
-    # If timezone-aware, convert to naive WIB
+    # Convert to WIB
     if dt.tzinfo is not None:
-        wib_dt = dt.astimezone(WIB).replace(tzinfo=None)
+        # Already timezone-aware, convert to WIB
+        wib_dt = dt.astimezone(WIB)
     else:
-        # Assume already in WIB and naive
-        wib_dt = dt
+        # Naive datetime, assume it's UTC and convert to WIB
+        utc_dt = dt.replace(tzinfo=timezone.utc)
+        wib_dt = utc_dt.astimezone(WIB)
 
-    return wib_dt.strftime(format_str)
+    # Return as naive datetime string (without timezone info)
+    return wib_dt.replace(tzinfo=None).strftime(format_str)

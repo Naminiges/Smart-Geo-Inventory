@@ -56,51 +56,89 @@ def draft_list():
 @login_required
 @role_required('admin', 'warehouse_staff')
 def rejected_list():
-    """List all rejected draft distributions"""
-    # Get all rejected draft distributions, newest first
-    # Note: rejected drafts have is_draft=False but draft_rejected=True and draft_created_by is not None
+    """List all rejected draft distributions from rejected_distributions table"""
+    from app.models import RejectedDistribution, DistributionGroup
+
+    # Get rejected distribution groups first
     if current_user.is_admin():
-        # Admin sees all rejected drafts they rejected
-        rejected = Distribution.query.filter(
-            Distribution.draft_created_by.isnot(None),
-            Distribution.draft_rejected == True,
-            Distribution.draft_rejected_by == current_user.id
-        ).order_by(Distribution.draft_rejected_at.desc()).all()
+        # Admin sees all rejected groups
+        rejected_groups = DistributionGroup.query.filter(
+            DistributionGroup.status == 'rejected'
+        ).order_by(DistributionGroup.rejected_at.desc()).all()
     else:  # warehouse staff
-        # Warehouse staff sees rejected drafts from their warehouse
-        rejected = Distribution.query.filter(
-            Distribution.warehouse_id == current_user.warehouse_id,
-            Distribution.draft_created_by.isnot(None),
-            Distribution.draft_rejected == True
-        ).order_by(Distribution.draft_rejected_at.desc()).all()
+        # Warehouse staff sees rejected groups from their warehouse
+        rejected_groups = DistributionGroup.query.filter(
+            DistributionGroup.warehouse_id == current_user.warehouse_id,
+            DistributionGroup.status == 'rejected'
+        ).order_by(DistributionGroup.rejected_at.desc()).all()
 
-    # Group rejected drafts by batch
+    # Get rejected distributions that are not part of any group (old style, if any)
+    if current_user.is_admin():
+        orphan_rejected = RejectedDistribution.query.filter(
+            RejectedDistribution.distribution_group_id == None
+        ).order_by(RejectedDistribution.rejected_at.desc()).all()
+    else:
+        orphan_rejected = RejectedDistribution.query.filter(
+            RejectedDistribution.warehouse_id == current_user.warehouse_id,
+            RejectedDistribution.distribution_group_id == None
+        ).order_by(RejectedDistribution.rejected_at.desc()).all()
+
+    # Prepare rejected batches from groups
     rejected_batches = []
-    if rejected:
-        batch_dict = {}
-        for draft in rejected:
-            time_window = draft.draft_rejected_at.replace(second=0, microsecond=0) if draft.draft_rejected_at else draft.created_at.replace(second=0, microsecond=0)
-            batch_key = (draft.draft_created_by, draft.unit_id, draft.draft_notes, time_window)
 
-            if batch_key not in batch_dict:
-                batch_dict[batch_key] = []
-            batch_dict[batch_key].append(draft)
+    # Process rejected groups
+    for group in rejected_groups:
+        # Get all rejected distributions for this group
+        rejected_dist = RejectedDistribution.query.filter(
+            RejectedDistribution.distribution_group_id == group.id
+        ).all()
 
-        for batch_key, batch_drafts in batch_dict.items():
-            creator_id, unit_id, notes, time_window = batch_key
+        if rejected_dist:
             rejected_batches.append({
-                'drafts': batch_drafts,
-                'creator': batch_drafts[0].draft_creator if batch_drafts[0].draft_creator else None,
-                'unit': batch_drafts[0].unit if batch_drafts[0].unit else None,
-                'notes': notes,
-                'rejected_at': batch_drafts[0].draft_rejected_at,
-                'rejector': batch_drafts[0].draft_rejector if batch_drafts[0].draft_rejector else None,
-                'rejection_reason': batch_drafts[0].draft_rejection_reason,
-                'total_items': len(batch_drafts),
-                'ref_id': batch_drafts[0].id
+                'drafts': rejected_dist,
+                'creator': group.creator,
+                'unit': group.unit,
+                'notes': group.notes,
+                'rejected_at': group.rejected_at,
+                'rejector': group.rejector,
+                'rejection_reason': group.rejection_reason,
+                'total_items': len(rejected_dist),
+                'ref_id': rejected_dist[0].id,
+                'batch_code': group.batch_code,
+                'is_group': True
             })
 
-        rejected_batches.sort(key=lambda x: x['rejected_at'], reverse=True)
+    # Process orphan rejected distributions (not part of any group)
+    # Group them by time window
+    if orphan_rejected:
+        from collections import defaultdict
+        from datetime import timedelta
+
+        batch_dict = defaultdict(list)
+        for rejected in orphan_rejected:
+            # Group by creator, unit, notes, and time window (1 minute)
+            time_window = rejected.rejected_at.replace(second=0, microsecond=0)
+            batch_key = (rejected.draft_created_by, rejected.unit_id, rejected.draft_notes, time_window)
+            batch_dict[batch_key].append(rejected)
+
+        for batch_key, batch_items in batch_dict.items():
+            creator_id, unit_id, notes, time_window = batch_key
+            rejected_batches.append({
+                'drafts': batch_items,
+                'creator': batch_items[0].draft_creator,
+                'unit': batch_items[0].unit,
+                'notes': notes,
+                'rejected_at': batch_items[0].rejected_at,
+                'rejector': batch_items[0].rejector,
+                'rejection_reason': batch_items[0].rejection_reason,
+                'total_items': len(batch_items),
+                'ref_id': batch_items[0].id,
+                'batch_code': None,
+                'is_group': False
+            })
+
+    # Sort by rejected_at
+    rejected_batches.sort(key=lambda x: x['rejected_at'], reverse=True)
 
     return render_template('installations/rejected_list.html', rejected_batches=rejected_batches)
 
@@ -127,7 +165,7 @@ def index():
         )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.order_by(Distribution.created_at.desc()).all()
+        installations = installations_query.order_by(Distribution.draft_verified_at.desc()).all()
 
         # Get draft distributions from this warehouse only, newest first
         draft_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id, is_draft=True)
@@ -160,7 +198,7 @@ def index():
         )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.order_by(Distribution.created_at.desc()).all()
+        installations = installations_query.order_by(Distribution.draft_verified_at.desc()).all()
 
         # Get all draft distributions, newest first
         drafts = Distribution.query.filter_by(is_draft=True).order_by(Distribution.created_at.desc()).all()
@@ -207,13 +245,14 @@ def index():
                 'creator': creator,
                 'unit': batch_distributions[0].unit if batch_distributions[0].unit else None,
                 'created_at': batch_distributions[0].created_at,
+                'verified_at': batch_distributions[0].draft_verified_at,  # Tambahkan verified_at
                 'total_items': len(batch_distributions),
                 'ref_id': batch_distributions[0].id,  # Use first distribution ID for detail link
                 'statuses': list(set([d.status for d in batch_distributions]))  # Unique statuses in batch
             })
 
-        # Sort by created_at descending
-        active_batches.sort(key=lambda x: x['created_at'], reverse=True)
+        # Sort by verified_at descending (waktu verifikasi admin)
+        active_batches.sort(key=lambda x: (x['verified_at'] or datetime.min), reverse=True)
 
     # Group drafts by batch for admin/warehouse staff verification
     # A batch is defined by: draft_created_by, unit_id, draft_notes, and created_at (within 1 minute)
@@ -494,13 +533,17 @@ def batch_detail(id):
     # If created by admin (no draft_created_by), it doesn't require verification
     requires_verification = ref_distribution.draft_created_by is not None
 
+    # Get distributions that have verification photos (received by unit)
+    verified_distributions = [dist for dist in batch_distributions if dist.verification_photo is not None]
+
     return render_template('installations/batch_detail.html',
                          ref_distribution=ref_distribution,
                          batch_distributions=batch_distributions,
                          items_by_location=items_by_location,
                          total_items=len(batch_distributions),
                          creator=creator,
-                         requires_verification=requires_verification)
+                         requires_verification=requires_verification,
+                         verified_distributions=verified_distributions)
 
 
 @bp.route('/<int:id>/update/<string:status>', methods=['POST'])
@@ -679,7 +722,7 @@ def distribute_asset_request(request_id):
 @role_required('warehouse_staff', 'admin')
 def create_general_distribution():
     """Create draft distributions for general asset distribution"""
-    from app.models import Warehouse
+    from app.models import Warehouse, DistributionGroup
 
     if request.method == 'POST':
         try:
@@ -737,11 +780,21 @@ def create_general_distribution():
                     flash(f'Barang {item_detail.serial_number} tidak tersedia.', 'danger')
                     return redirect(url_for('installations.create_general_distribution'))
 
-            # Create draft distributions for each selected item
-            # All distributions in this batch will have the same draft_batch_id for grouping
-            import uuid
-            draft_batch_id = str(uuid.uuid4())
+            # Create a DistributionGroup for this batch
+            batch_code = DistributionGroup.generate_batch_code()
+            distribution_group = DistributionGroup(
+                name=f"Batch {batch_code}",
+                batch_code=batch_code,
+                created_by=current_user.id,
+                warehouse_id=warehouse_id,
+                unit_id=unit_id,
+                notes=notes,
+                is_draft=True,
+                status='pending'
+            )
+            distribution_group.save()
 
+            # Create draft distributions for each selected item
             distributions_created = []
             for item_group in items_to_distribute:
                 group_item_details = ItemDetail.query.filter(ItemDetail.id.in_(item_group['serial_ids'])).all()
@@ -757,7 +810,7 @@ def create_general_distribution():
                         is_draft=True,
                         draft_created_by=current_user.id,
                         draft_notes=notes,
-                        note=f"Batch ID: {draft_batch_id}"  # Store batch ID in note for grouping
+                        distribution_group_id=distribution_group.id  # Link to distribution group
                     )
 
                     # Set coordinates from unit if available
@@ -769,9 +822,11 @@ def create_general_distribution():
 
             # If admin, directly approve (verify) all drafts in this batch
             if current_user.is_admin():
-                for distribution in distributions_created:
-                    distribution.verify_draft(current_user.id)
-                flash(f'{len(distributions_created)} distribusi berhasil dibuat dan disetujui.', 'success')
+                success, message = distribution_group.approve(current_user.id)
+                if success:
+                    flash(f'{len(distributions_created)} distribusi berhasil dibuat dan disetujui.', 'success')
+                else:
+                    flash(message, 'danger')
             else:
                 flash(f'{len(distributions_created)} draft distribusi berhasil dibuat. Menunggu verifikasi admin.', 'success')
 
@@ -798,8 +853,8 @@ def create_general_distribution():
 @login_required
 @role_required('admin')
 def verify_general_distribution(id):
-    """Verify and approve/reject draft distribution batch"""
-    from sqlalchemy import and_
+    """Verify and approve/reject draft distribution batch using DistributionGroup"""
+    from app.models import DistributionGroup
 
     # Get the reference distribution
     ref_distribution = Distribution.query.get_or_404(id)
@@ -808,22 +863,15 @@ def verify_general_distribution(id):
         flash('Ini bukan draft distribusi.', 'warning')
         return redirect(url_for('installations.index'))
 
-    # Get all draft distributions from the same batch (same user, same unit, same time window)
-    # Group by draft_created_by, unit_id, and created_at (within 1 minute)
-    from datetime import timedelta
-    time_threshold = ref_distribution.created_at - timedelta(minutes=1)
-    time_upper = ref_distribution.created_at + timedelta(minutes=1)
+    # Get the distribution group
+    if not ref_distribution.distribution_group_id:
+        flash('Draft distribusi ini tidak terkait dengan batch manapun.', 'warning')
+        return redirect(url_for('installations.index'))
 
-    batch_distributions = Distribution.query.filter(
-        and_(
-            Distribution.is_draft == True,
-            Distribution.draft_created_by == ref_distribution.draft_created_by,
-            Distribution.unit_id == ref_distribution.unit_id,
-            Distribution.created_at >= time_threshold,
-            Distribution.created_at <= time_upper,
-            Distribution.draft_notes == ref_distribution.draft_notes
-        )
-    ).all()
+    distribution_group = DistributionGroup.query.get_or_404(ref_distribution.distribution_group_id)
+
+    # Get all distributions in this group
+    batch_distributions = distribution_group.distributions
 
     # Group items by unit_detail for better display
     items_by_location = {}
@@ -839,6 +887,7 @@ def verify_general_distribution(id):
 
     return render_template('installations/verify_general_distribution.html',
                          ref_distribution=ref_distribution,
+                         distribution_group=distribution_group,
                          batch_distributions=batch_distributions,
                          items_by_location=items_by_location,
                          total_items=len(batch_distributions))
@@ -848,9 +897,8 @@ def verify_general_distribution(id):
 @login_required
 @role_required('admin')
 def approve_general_distribution(id):
-    """Approve all draft distributions in the same batch"""
-    from sqlalchemy import and_
-    from datetime import timedelta
+    """Approve all draft distributions in the same batch using DistributionGroup"""
+    from app.models import DistributionGroup
 
     # Get the reference distribution
     ref_distribution = Distribution.query.get_or_404(id)
@@ -858,30 +906,20 @@ def approve_general_distribution(id):
     if not ref_distribution.is_draft:
         return jsonify({'success': False, 'message': 'Ini bukan draft distribusi'}), 400
 
+    if not ref_distribution.distribution_group_id:
+        return jsonify({'success': False, 'message': 'Draft distribusi ini tidak terkait dengan batch manapun'}), 400
+
     try:
-        # Get all distributions in the same batch
-        time_threshold = ref_distribution.created_at - timedelta(minutes=1)
-        time_upper = ref_distribution.created_at + timedelta(minutes=1)
+        # Get the distribution group
+        distribution_group = DistributionGroup.query.get_or_404(ref_distribution.distribution_group_id)
 
-        batch_distributions = Distribution.query.filter(
-            and_(
-                Distribution.is_draft == True,
-                Distribution.draft_created_by == ref_distribution.draft_created_by,
-                Distribution.unit_id == ref_distribution.unit_id,
-                Distribution.created_at >= time_threshold,
-                Distribution.created_at <= time_upper,
-                Distribution.draft_notes == ref_distribution.draft_notes
-            )
-        ).all()
+        # Approve the entire group
+        success, message = distribution_group.approve(current_user.id)
 
-        # Verify all distributions in the batch
-        verified_count = 0
-        for distribution in batch_distributions:
-            success, message = distribution.verify_draft(current_user.id)
-            if success:
-                verified_count += 1
-
-        flash(f'{verified_count} distribusi berhasil disetujui.', 'success')
+        if success:
+            flash(message, 'success')
+        else:
+            flash(message, 'danger')
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -894,9 +932,8 @@ def approve_general_distribution(id):
 @login_required
 @role_required('admin')
 def reject_general_distribution(id):
-    """Reject all draft distributions in the same batch"""
-    from sqlalchemy import and_
-    from datetime import timedelta
+    """Reject all draft distributions in the same batch using DistributionGroup"""
+    from app.models import DistributionGroup
 
     # Get the reference distribution
     ref_distribution = Distribution.query.get_or_404(id)
@@ -904,32 +941,22 @@ def reject_general_distribution(id):
     if not ref_distribution.is_draft:
         return jsonify({'success': False, 'message': 'Ini bukan draft distribusi'}), 400
 
+    if not ref_distribution.distribution_group_id:
+        return jsonify({'success': False, 'message': 'Draft distribusi ini tidak terkait dengan batch manapun'}), 400
+
     reason = request.form.get('reason', '')
 
     try:
-        # Get all distributions in the same batch
-        time_threshold = ref_distribution.created_at - timedelta(minutes=1)
-        time_upper = ref_distribution.created_at + timedelta(minutes=1)
+        # Get the distribution group
+        distribution_group = DistributionGroup.query.get_or_404(ref_distribution.distribution_group_id)
 
-        batch_distributions = Distribution.query.filter(
-            and_(
-                Distribution.is_draft == True,
-                Distribution.draft_created_by == ref_distribution.draft_created_by,
-                Distribution.unit_id == ref_distribution.unit_id,
-                Distribution.created_at >= time_threshold,
-                Distribution.created_at <= time_upper,
-                Distribution.draft_notes == ref_distribution.draft_notes
-            )
-        ).all()
+        # Reject the entire group
+        success, message = distribution_group.reject(current_user.id, reason)
 
-        # Reject all distributions in the batch
-        rejected_count = 0
-        for distribution in batch_distributions:
-            success, message = distribution.reject_draft(current_user.id, reason)
-            if success:
-                rejected_count += 1
-
-        flash(f'{rejected_count} distribusi berhasil ditolak.', 'success')
+        if success:
+            flash(message, 'success')
+        else:
+            flash(message, 'danger')
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -943,10 +970,28 @@ def reject_general_distribution(id):
 @role_required('warehouse_staff', 'admin')
 def api_available_items_general(warehouse_id, item_id):
     """API endpoint to get available item details for general distribution"""
+    from sqlalchemy import and_, not_
+
+    # Subquery to find item_detail_ids that have active distributions
+    # (Rejected distributions are moved to rejected_distributions table, so not here)
+    active_distribution_ids = db.session.query(
+        Distribution.item_detail_id
+    ).filter(
+        Distribution.item_detail_id.isnot(None)
+    ).subquery()
+
+    # Get available items that:
+    # 1. Are in the specified warehouse
+    # 2. Match the item type
+    # 3. Have status 'available'
+    # 4. Don't have any active distributions
     available_items = ItemDetail.query.filter(
-        ItemDetail.warehouse_id == warehouse_id,
-        ItemDetail.item_id == item_id,
-        ItemDetail.status == 'available'
+        and_(
+            ItemDetail.warehouse_id == warehouse_id,
+            ItemDetail.item_id == item_id,
+            ItemDetail.status == 'available',
+            not_(ItemDetail.id.in_(active_distribution_ids))
+        )
     ).all()
 
     items_data = [{

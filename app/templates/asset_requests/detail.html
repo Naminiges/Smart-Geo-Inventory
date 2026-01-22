@@ -91,7 +91,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Permohonan</span>
-                <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.request_date, '%d/%m/%Y %H:%M') }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ asset_request.request_date|format_wib_datetime }}</span>
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Diajukan oleh</span>
@@ -104,7 +104,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Verifikasi</span>
-                <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.verified_at, '%d/%m/%Y %H:%M') }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ asset_request.verified_at|format_wib_datetime }}</span>
             </div>
             {% endif %}
             {% if asset_request.received_by %}
@@ -114,7 +114,7 @@
             </div>
             <div class="flex justify-between">
                 <span class="text-sm text-gray-500">Tanggal Penerimaan</span>
-                <span class="text-sm font-semibold text-gray-900">{{ format_wib_datetime(asset_request.received_at, '%d/%m/%Y %H:%M') }}</span>
+                <span class="text-sm font-semibold text-gray-900">{{ asset_request.received_at|format_wib_datetime }}</span>
             </div>
             {% endif %}
         </div>
@@ -227,7 +227,7 @@
             </div>
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Permohonan Dibuat</p>
-                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.request_date) }}</p>
+                <p class="text-sm text-gray-600">{{ asset_request.request_date|format_wib_datetime }}</p>
                 <p class="text-xs text-gray-500">oleh {{ asset_request.requester.name if asset_request.requester else '-' }}</p>
             </div>
         </div>
@@ -242,7 +242,7 @@
             </div>
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Ditolak</p>
-                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.updated_at) }}</p>
+                <p class="text-sm text-gray-600">{{ asset_request.updated_at|format_wib_datetime }}</p>
                 {% if asset_request.rejection_reason %}
                 <p class="text-sm text-red-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>{{ asset_request.rejection_reason }}</p>
                 {% endif %}
@@ -264,7 +264,7 @@
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Diverifikasi Admin</p>
                 {% if asset_request.verified_at %}
-                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.verified_at) }}</p>
+                <p class="text-sm text-gray-600">{{ asset_request.verified_at|format_wib_datetime }}</p>
                 <p class="text-xs text-gray-500">oleh {{ asset_request.verifier.name if asset_request.verifier else '-' }}</p>
                 {% else %}
                 <p class="text-sm text-gray-400">Menunggu verifikasi</p>
@@ -287,7 +287,7 @@
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Didistribusikan</p>
                 {% if asset_request.distributed_at %}
-                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.distributed_at) }}</p>
+                <p class="text-sm text-gray-600">{{ asset_request.distributed_at|format_wib_datetime }}</p>
                 <p class="text-xs text-gray-500">oleh {{ asset_request.distributor.name if asset_request.distributor else '-' }}</p>
                 {% else %}
                 <p class="text-sm text-gray-400">Menunggu distribusi</p>
@@ -307,7 +307,7 @@
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Diterima</p>
                 {% if asset_request.received_at %}
-                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.received_at) }}</p>
+                <p class="text-sm text-gray-600">{{ asset_request.received_at|format_wib_datetime }}</p>
                 <p class="text-xs text-gray-500">oleh {{ asset_request.receiver.name if asset_request.receiver else '-' }}</p>
 
                 <!-- Proof Photo -->

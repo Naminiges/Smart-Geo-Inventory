@@ -4,6 +4,8 @@ from app.models.facilities import Unit, UnitDetail
 from app.models.inventory import Stock, StockTransaction
 from app.models.user import User, UserWarehouse, UserUnit
 from app.models.distribution import Distribution
+from app.models.distribution_group import DistributionGroup
+from app.models.rejected_distribution import RejectedDistribution
 from app.models.logging import ActivityLog, AssetMovementLog
 from app.models.procurement import Procurement, ProcurementItem, UnitProcurement, UnitProcurementItem
 from app.models.asset_request import AssetRequest, AssetRequestItem
@@ -15,7 +17,7 @@ __all__ = [
     'Unit', 'UnitDetail',
     'Stock', 'StockTransaction',
     'User', 'UserWarehouse', 'UserUnit',
-    'Distribution',
+    'Distribution', 'DistributionGroup', 'RejectedDistribution',
     'ActivityLog', 'AssetMovementLog',
     'Procurement', 'ProcurementItem', 'UnitProcurement', 'UnitProcurementItem',
     'AssetRequest', 'AssetRequestItem',

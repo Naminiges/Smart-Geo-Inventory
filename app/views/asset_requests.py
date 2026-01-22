@@ -804,13 +804,26 @@ def unit_assets():
 @role_required('warehouse_staff', 'admin')
 def api_available_items(warehouse_id, item_id):
     """API endpoint to get available item details (serial numbers) for a specific item and warehouse"""
-    from app.models import ItemDetail
+    from app.models import ItemDetail, Distribution
+    from sqlalchemy import not_
 
     try:
+        # Subquery to get item_detail_ids that have active distributions
+        # We need to exclude items that are already in distributions table
+        active_distribution_ids = db.session.query(Distribution.item_detail_id).filter(
+            Distribution.item_detail_id.isnot(None)
+        ).subquery()
+
+        # Get items that are:
+        # 1. In the specified warehouse
+        # 2. Of the specified item type
+        # 3. Have status 'available'
+        # 4. NOT already in the distributions table (to avoid duplicates)
         available_items = ItemDetail.query.filter(
             ItemDetail.warehouse_id == warehouse_id,
             ItemDetail.item_id == item_id,
-            ItemDetail.status == 'available'
+            ItemDetail.status == 'available',
+            not_(ItemDetail.id.in_(active_distribution_ids))
         ).all()
 
         items_data = [{

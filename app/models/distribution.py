@@ -19,6 +19,9 @@ class Distribution(BaseModel):
     status = db.Column(db.String(50), default='installing')  # draft, installing, in_transit, installed, broken, maintenance
     note = db.Column(db.Text)
 
+    # Link to distribution group (for batch distribution)
+    distribution_group_id = db.Column(db.Integer, db.ForeignKey('distribution_groups.id'), nullable=True, index=True)
+
     # Link to asset request (if created from asset request)
     asset_request_id = db.Column(db.Integer, db.ForeignKey('asset_requests.id'), nullable=True)
     asset_request_item_id = db.Column(db.Integer, db.ForeignKey('asset_request_items.id'), nullable=True)
@@ -55,6 +58,7 @@ class Distribution(BaseModel):
     unit_detail = db.relationship('UnitDetail', back_populates='distributions')
     asset_request = db.relationship('AssetRequest', foreign_keys=[asset_request_id], backref='distributions')
     asset_request_item = db.relationship('AssetRequestItem', foreign_keys=[asset_request_item_id], backref='distributions')
+    distribution_group = db.relationship('DistributionGroup', back_populates='distributions')
 
     def set_coordinates(self, latitude, longitude):
         """Set point geometry from latitude and longitude"""
@@ -153,24 +157,27 @@ class Distribution(BaseModel):
         return True, 'Draft distribusi berhasil diverifikasi'
 
     def reject_draft(self, user_id, reason=None):
-        """Reject draft distribution by admin"""
+        """Reject draft distribution by admin and move to rejected_distributions table"""
         if not self.is_draft:
             return False, 'Ini bukan draft distribusi'
 
-        self.is_draft = False  # Mark as not draft anymore
-        self.draft_rejected = True
-        self.draft_rejected_by = user_id
-        self.draft_rejected_at = datetime.utcnow()
-        self.draft_rejection_reason = reason
-        self.status = 'rejected'
-        self.save()
+        from app.models import RejectedDistribution
 
-        # Return item detail status to available
+        # Create a record in rejected_distributions table for history
+        RejectedDistribution.create_from_distribution(self, user_id, reason)
+
+        # Return item detail status to available so it can be distributed again
         if self.item_detail:
             self.item_detail.status = 'available'
             self.item_detail.save()
 
-        return True, 'Draft distribusi berhasil ditolak'
+        # Store info for message before deleting
+        item_name = self.item_detail.item.name if self.item_detail and self.item_detail.item else 'Item'
+
+        # Delete the original distribution record
+        self.delete()
+
+        return True, f'Draft distribusi untuk {item_name} berhasil ditolak'
 
     def mark_in_transit(self):
         """Mark distribution as in transit (for delivery tasks)"""

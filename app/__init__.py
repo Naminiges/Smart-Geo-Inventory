@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect
 from config.config import config
+from app.utils.datetime_helper import format_wib_datetime
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -32,18 +33,19 @@ def create_app(config_name='default'):
     login_manager.login_message = 'Silakan login untuk mengakses halaman ini.'
     login_manager.login_message_category = 'warning'
 
+    # Register custom Jinja2 filters
+    app.jinja_env.filters['format_wib_datetime'] = format_wib_datetime
+
     # Register context processors
     from app.utils.helpers import notification_counts
-    from app.utils.datetime_helper import format_wib_datetime
-    app.context_processor(notification_counts)
 
-    # Make datetime helpers available in all templates
+    # Make helpers available in all templates
     @app.context_processor
-    def datetime_helpers():
-        return dict(format_wib_datetime=format_wib_datetime)
+    def utility_helpers():
+        return notification_counts()
 
     # Register blueprints
-    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans
+    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions
     from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement, api_units, api_unit_procurement
 
     app.register_blueprint(auth.bp)
@@ -61,6 +63,7 @@ def create_app(config_name='default'):
     app.register_blueprint(field_tasks.bp)
     app.register_blueprint(unit_procurement.bp)
     app.register_blueprint(asset_loans.bp)
+    app.register_blueprint(distributions.bp)
 
     # Register API blueprints
     app.register_blueprint(api_auth.bp, url_prefix='/api/auth')

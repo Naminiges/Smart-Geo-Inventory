@@ -128,20 +128,37 @@ def get_dashboard_stats(warehouse_id=None):
 def notification_counts():
     """Context processor to provide notification counts to templates"""
     if not current_user.is_authenticated:
-        return {'pending_request_count': 0, 'verified_request_count': 0}
+        return {
+            'pending_request_count': 0,
+            'verified_request_count': 0,
+            'draft_distribution_count': 0,
+            'pending_distribution_count': 0
+        }
 
-    from app.models import AssetRequest, UserUnit
+    from app.models import AssetRequest, UserUnit, Distribution, DistributionGroup
 
-    counts = {'pending_request_count': 0, 'verified_request_count': 0}
+    counts = {
+        'pending_request_count': 0,
+        'verified_request_count': 0,
+        'draft_distribution_count': 0,
+        'pending_distribution_count': 0
+    }
 
     try:
         if current_user.is_admin():
             # Admin sees all pending requests and verified requests
             counts['pending_request_count'] = AssetRequest.query.filter_by(status='pending').count()
             counts['verified_request_count'] = AssetRequest.query.filter_by(status='verified').count()
+            # Admin sees draft distributions that need verification
+            counts['draft_distribution_count'] = Distribution.query.filter_by(is_draft=True).count()
         elif current_user.is_warehouse_staff():
             # Warehouse staff sees verified requests
             counts['verified_request_count'] = AssetRequest.query.filter_by(status='verified').count()
+            # Warehouse staff sees draft distributions from their warehouse
+            counts['draft_distribution_count'] = Distribution.query.filter_by(
+                warehouse_id=current_user.warehouse_id,
+                is_draft=True
+            ).count()
         elif current_user.is_unit_staff():
             # Unit staff sees pending requests for their assigned units
             user_unit_ids = [uu.unit_id for uu in UserUnit.query.filter_by(user_id=current_user.id).all()]
@@ -150,8 +167,26 @@ def notification_counts():
                     AssetRequest.unit_id.in_(user_unit_ids),
                     AssetRequest.status == 'pending'
                 ).count()
+
+                # Unit staff sees ONLY distribution batches that need to be received
+                # Must be: part of a batch, batch is approved, distribution is in transit/installing, not verified yet
+                from sqlalchemy import and_
+
+                # Get distribution groups (batches) that have pending distributions for user's units
+                pending_batch_groups = DistributionGroup.query.filter(
+                    DistributionGroup.is_draft == False,
+                    DistributionGroup.status == 'approved'
+                ).join(Distribution).filter(
+                    Distribution.unit_id.in_(user_unit_ids),
+                    Distribution.verification_status == 'pending',
+                    Distribution.status.in_(['installing', 'in_transit'])
+                ).distinct().count()
+
+                counts['pending_distribution_count'] = pending_batch_groups
     except Exception:
         counts['pending_request_count'] = 0
         counts['verified_request_count'] = 0
+        counts['draft_distribution_count'] = 0
+        counts['pending_distribution_count'] = 0
 
     return counts

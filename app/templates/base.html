@@ -189,6 +189,22 @@
             <span class="font-medium">Aset di Unit</span>
           </a>
 
+          <!-- Terima Distribusi -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'distributions' in request.endpoint and 'receive' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('distributions.receive_index') }}"
+          >
+            <i
+              class="fas fa-truck-loading w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'distributions' in request.endpoint and 'receive' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Terima Distribusi</span>
+            {% if pending_distribution_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ pending_distribution_count }}
+            </span>
+            {% endif %}
+          </a>
+
           <!-- Peminjaman Aset -->
           <a
             class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_loans' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
@@ -283,15 +299,15 @@
               <!-- Permohonan Aset (Warehouse Staff & Admin) -->
               {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
               <a
-                class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+                class="flex items-center px-3 py-2 rounded-lg justify-between {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
                 href="{{ url_for('asset_requests.index') }}"
               >
                 <i
-                  class="fas fa-clipboard-list w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
+                  class="fas fa-clipboard-list w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
                 ></i>
-                <span class="font-medium">Permohonan Unit</span>
+                <span class="text-sm">Permohonan Unit</span>
                 {% if verified_request_count > 0 %}
-                <span class="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs font-semibold rounded-full">
+                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
                     {{ verified_request_count }}
                 </span>
                 {% endif %}
@@ -299,13 +315,18 @@
               {% endif %}
 
               <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
+                class="flex items-center px-3 py-2 rounded-lg justify-between {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
                 href="{{ url_for('installations.index') }}"
               >
                 <i
                   class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
                 ></i>
                 <span class="text-sm">Distribusi Langsung</span>
+                {% if draft_distribution_count > 0 %}
+                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                  {{ draft_distribution_count }}
+                </span>
+                {% endif %}
               </a>
             </div>
           </div>
@@ -545,6 +566,7 @@
         const isDistribusiPage =
           currentEndpoint &&
           (currentEndpoint.includes("installations") ||
+            currentEndpoint.includes("asset_requests") ||  // Tambahkan asset_requests
             currentEndpoint.includes("assets") ||
             currentEndpoint.includes("distribution"));
 

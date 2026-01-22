@@ -75,7 +75,7 @@
         </div>
         <div class="flex justify-between">
             <span class="text-sm text-gray-500">Tanggal Dibuat</span>
-            <span class="text-sm font-semibold text-gray-900">{{ ref_distribution.created_at.strftime('%d/%m/%Y %H:%M') if ref_distribution.created_at else '-' }}</span>
+            <span class="text-sm font-semibold text-gray-900">{{ ref_distribution.created_at|format_wib_datetime }}</span>
         </div>
         <div class="flex justify-between">
             <span class="text-sm text-gray-500">Dibuat oleh</span>
@@ -163,7 +163,7 @@
             </div>
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Batch Dibuat</p>
-                <p class="text-sm text-gray-600">{{ ref_distribution.created_at.strftime('%d/%m/%Y %H:%M') if ref_distribution.created_at else '-' }}</p>
+                <p class="text-sm text-gray-600">{{ ref_distribution.created_at|format_wib_datetime }}</p>
                 <p class="text-xs text-gray-500">oleh {{ creator.name if creator else '-' }}</p>
             </div>
         </div>
@@ -178,7 +178,7 @@
             </div>
             <div class="flex-1">
                 <p class="font-semibold text-gray-900">Ditolak</p>
-                <p class="text-sm text-gray-600">{{ ref_distribution.draft_rejected_at.strftime('%d/%m/%Y %H:%M') if ref_distribution.draft_rejected_at else '-' }}</p>
+                <p class="text-sm text-gray-600">{{ ref_distribution.draft_rejected_at|format_wib_datetime }}</p>
                 <p class="text-xs text-gray-500">oleh {{ ref_distribution.draft_rejector.name if ref_distribution.draft_rejector else '-' }}</p>
             </div>
         </div>
@@ -196,7 +196,7 @@
                 </div>
                 <div class="flex-1">
                     <p class="font-semibold text-gray-900">Diverifikasi Admin</p>
-                    <p class="text-sm text-gray-600">{{ ref_distribution.draft_verified_at.strftime('%d/%m/%Y %H:%M') if ref_distribution.draft_verified_at else '-' }}</p>
+                    <p class="text-sm text-gray-600">{{ ref_distribution.draft_verified_at|format_wib_datetime }}</p>
                     <p class="text-xs text-gray-500">oleh {{ ref_distribution.draft_verifier.name if ref_distribution.draft_verifier else '-' }}</p>
                 </div>
             </div>
@@ -338,4 +338,77 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Proof Photos Section -->
+{% if verified_distributions and verified_distributions|length > 0 %}
+<div class="bg-white rounded-xl shadow-md mt-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-camera text-green-600 mr-2"></i>
+            Foto Bukti Penerimaan
+        </h3>
+        <p class="text-sm text-gray-600 mt-1">
+            {{ verified_distributions|length }} dari {{ total_items }} barang sudah memiliki bukti penerimaan
+        </p>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for dist in verified_distributions %}
+            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                <!-- Item Info -->
+                <div class="p-4 bg-gray-50 border-b border-gray-200">
+                    <p class="font-semibold text-gray-900 text-sm">
+                        {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else 'Item Tidak Diketahui' }}
+                    </p>
+                    <p class="text-xs text-gray-600 mt-1">
+                        <i class="fas fa-barcode mr-1"></i>
+                        {{ dist.item_detail.serial_number if dist.item_detail else '-' }}
+                    </p>
+                    <p class="text-xs text-gray-600">
+                        <i class="fas fa-user-check mr-1"></i>
+                        Oleh: {{ dist.verifier.name if dist.verifier else '-' }}
+                    </p>
+                    <p class="text-xs text-gray-600">
+                        <i class="fas fa-clock mr-1"></i>
+                        {{ dist.verified_at|format_wib_datetime }}
+                    </p>
+                </div>
+
+                <!-- Photo -->
+                <div class="p-4">
+                    {% if dist.verification_photo %}
+                    <a href="{{ url_for('distributions.proof_photo', id=dist.id) }}" target="_blank" class="block">
+                        <img src="{{ url_for('distributions.proof_photo', id=dist.id) }}"
+                             alt="Bukti Penerimaan"
+                             class="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                    </a>
+                    <p class="text-xs text-gray-500 mt-2 text-center">
+                        <i class="fas fa-search-plus mr-1"></i>
+                        Klik untuk memperbesar
+                    </p>
+                    {% else %}
+                    <div class="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <div class="text-center text-gray-400">
+                            <i class="fas fa-image text-4xl mb-2"></i>
+                            <p class="text-sm">Foto tidak tersedia</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Notes -->
+                {% if dist.verification_notes %}
+                <div class="p-4 bg-blue-50 border-t border-gray-200">
+                    <p class="text-xs text-blue-800">
+                        <i class="fas fa-sticky-note mr-1"></i>
+                        {{ dist.verification_notes }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
