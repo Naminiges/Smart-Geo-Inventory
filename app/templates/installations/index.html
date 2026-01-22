@@ -8,12 +8,18 @@
 <!-- Action Buttons -->
 <div class="mb-6 flex gap-3">
     {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
-    <a href="{{ url_for('installations.create_general_distribution') }}" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
+    <a href="{{ url_for('installations.create_general_distribution') }}" class="px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
         <i class="fas fa-plus-circle mr-2"></i>
         Buat Distribusi Baru
     </a>
     {% endif %}
-    <a href="{{ url_for('map.index', show='distributions') }}" class="px-6 py-3 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-colors font-semibold inline-flex items-center">
+    {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
+    <a href="{{ url_for('installations.rejected_list') }}" class="px-6 py-4 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors font-semibold inline-flex items-center">
+        <i class="fas fa-times-circle mr-2"></i>
+        Distribusi Ditolak
+    </a>
+    {% endif %}
+    <a href="{{ url_for('map.index', show='distributions') }}" class="px-6 py-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-colors font-semibold inline-flex items-center">
         <i class="fas fa-map mr-2"></i>
         Lihat di Peta
     </a>
@@ -21,17 +27,17 @@
 
 <!-- Draft Section (Warehouse Staff & Admin) -->
 {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
-{% if drafts and drafts|length > 0 %}
+{% if draft_batches and draft_batches|length > 0 %}
 <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
     <div class="flex items-center justify-between">
         <div class="flex items-center">
             <i class="fas fa-file-alt text-yellow-600 text-xl mr-3"></i>
             <div>
                 <h4 class="font-semibold text-yellow-900">Draft Distribusi</h4>
-                <p class="text-sm text-yellow-700">{{ drafts|length }} draft menunggu verifikasi</p>
+                <p class="text-sm text-yellow-700">{{ draft_batches|length }} batch draft menunggu verifikasi</p>
             </div>
         </div>
-        <a href="{{ url_for('installations.index') }}#drafts" class="text-sm text-yellow-800 hover:text-yellow-900 font-semibold">
+        <a href="{{ url_for('installations.draft_list') }}" class="text-sm text-yellow-800 hover:text-yellow-900 font-semibold">
             Lihat Semua →
         </a>
     </div>
@@ -39,149 +45,52 @@
 {% endif %}
 {% endif %}
 
-<!-- Status Tabs -->
-<div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="border-b border-gray-200">
-        <nav class="flex -mb-px">
-            <a href="{{ url_for('installations.index') }}?status={{ current_status }}"
-               class="px-6 py-4 border-b-2 border-blue-600 text-blue-600 font-semibold">
-                Semua Distribusi
-            </a>
-        </nav>
-    </div>
-</div>
-
-<!-- Distribution Table -->
+<!-- Active Distribution Batches -->
 <div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Distribusi Aktif</h3>
+    </div>
     <div class="p-6">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit Tujuan</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% set all_items = (distributions or []) %}
-                {% for dist in all_items %}
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="py-3 px-4">
-                        <div class="font-bold text-gray-800">{{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else '-' }}</div>
-                        <small class="text-gray-500">{{ dist.item_detail.item.item_code if dist.item_detail and dist.item_detail.item else '' }}</small>
-                    </td>
-                    <td class="py-3 px-4">
-                        <span class="font-medium text-blue-600">{{ dist.item_detail.serial_number if dist.item_detail else '-' }}</span>
-                        <small class="block text-gray-500">{{ dist.item_detail.serial_unit or '-' }}</small>
-                    </td>
-                    <td class="py-3 px-4">
-                        <div class="font-bold text-gray-800">{{ dist.unit.name if dist.unit else '-' }}</div>
-                        <small class="text-gray-500">{{ dist.unit_detail.room_name if dist.unit_detail else '-' }}</small>
-                    </td>
-                    <td class="py-3 px-4">
-                        {% if dist.is_draft %}
-                        <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold">
-                            Draft
-                        </span>
-                        {% elif dist.status == 'installing' %}
-                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                            Sedang Distribusi
-                        </span>
-                        {% elif dist.status == 'in_transit' %}
-                        <span class="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
-                            Dalam Perjalanan
-                        </span>
-                        {% elif dist.status == 'installed' %}
-                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                            Selesai
-                        </span>
-                        {% elif dist.status == 'rejected' %}
-                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
-                            Ditolak
-                        </span>
-                        {% else %}
-                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
-                            {{ dist.status }}
-                        </span>
-                        {% endif %}
-                    </td>
-                    <td class="py-3 px-4 text-gray-600">
-                        {{ dist.created_at.strftime('%d/%m/%Y') }}
-                    </td>
-                    <td class="py-3 px-4">
-                        {% if dist.is_draft and current_user.is_admin() %}
-                        <a href="{{ url_for('installations.verify_general_distribution', id=dist.id) }}" class="text-blue-600 hover:text-blue-800 mr-2">
-                            <i class="fas fa-check-circle"></i> Verifikasi
-                        </a>
-                        {% elif not dist.is_draft %}
-                        <a href="{{ url_for('installations.detail', id=dist.id) }}" class="text-blue-600 hover:text-blue-800">
-                            <i class="fas fa-eye"></i> Detail
-                        </a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center text-gray-500 py-8">
-                        <i class="fas fa-archive text-4xl block mb-2 opacity-50"></i>
-                        <strong class="text-lg">Belum ada distribusi</strong>
-                        <p class="mb-0">Mulai dengan membuat distribusi baru</p>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Draft Section Detail (for admin to verify) -->
-{% if current_user.is_admin() and drafts and drafts|length > 0 %}
-<div id="drafts" class="mt-8">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-file-alt text-yellow-600 mr-2"></i>
-        Draft Distribusi (Menunggu Verifikasi)
-    </h3>
-    <div class="bg-white rounded-xl shadow-md">
-        <div class="p-6 overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b border-gray-200">
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit Tujuan</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Dibuat Oleh</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Catatan</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for draft in drafts %}
-                    <tr class="border-b border-gray-100 hover:bg-yellow-50">
-                        <td class="py-3 px-4">
-                            <div class="font-bold text-gray-800">{{ draft.item_detail.item.name if draft.item_detail and draft.item_detail.item else '-' }}</div>
-                        </td>
-                        <td class="py-3 px-4">
-                            <span class="font-medium text-blue-600">{{ draft.item_detail.serial_number if draft.item_detail else '-' }}</span>
-                        </td>
-                        <td class="py-3 px-4">
-                            <div class="font-bold text-gray-800">{{ draft.unit.name if draft.unit else '-' }}</div>
-                        </td>
-                        <td class="py-3 px-4 text-gray-600">{{ draft.draft_creator.name if draft.draft_creator else '-' }}</td>
-                        <td class="py-3 px-4 text-gray-600 text-sm">{{ draft.draft_notes or '-' }}</td>
-                        <td class="py-3 px-4">
-                            <a href="{{ url_for('installations.verify_general_distribution', id=draft.id) }}" class="text-blue-600 hover:text-blue-800 font-semibold">
-                                <i class="fas fa-check-circle mr-1"></i> Verifikasi
-                            </a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        {% if active_batches and active_batches|length > 0 %}
+        <div class="space-y-4">
+            {% for batch in active_batches %}
+            <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-blue-100 rounded-lg p-3">
+                            <i class="fas fa-layer-group text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-gray-800">
+                                    {{ batch.unit.name if batch.unit else 'Unit Tidak Diketahui' }}
+                                </span>
+                                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                                    {{ batch.total_items }} Barang
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">
+                                <i class="fas fa-user mr-1"></i> {{ batch.creator.name if batch.creator else '-' }}
+                                <span class="mx-2">•</span>
+                                <i class="fas fa-clock mr-1"></i> {{ batch.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('installations.batch_detail', id=batch.ref_id) }}" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
+                        <i class="fas fa-eye mr-2"></i>
+                        Lihat Detail
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="text-center text-gray-500 py-12">
+            <i class="fas fa-archive text-4xl block mb-4 opacity-50"></i>
+            <strong class="text-lg">Belum ada distribusi aktif</strong>
+            <p class="mb-0">Draft distribusi ditampilkan di halaman terpisah</p>
+        </div>
+        {% endif %}
     </div>
 </div>
-{% endif %}
 {% endblock %}

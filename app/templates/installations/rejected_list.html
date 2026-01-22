@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Distribusi Ditolak - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Distribusi Ditolak{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('installations.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Distribusi
+    </a>
+</div>
+
+<!-- Page Header -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Distribusi Ditolak</h1>
+    {% if current_user.is_admin() %}
+    <p class="text-gray-600 mt-1">Daftar draft distribusi yang Anda tolak</p>
+    {% else %}
+    <p class="text-gray-600 mt-1">Daftar draft distribusi dari warehouse Anda yang ditolak admin</p>
+    {% endif %}
+</div>
+
+<!-- Rejected Batches -->
+{% if rejected_batches and rejected_batches|length > 0 %}
+<div class="space-y-6">
+    {% for batch in rejected_batches %}
+    <div class="bg-white rounded-xl shadow-md border border-red-200">
+        <div class="p-6">
+            <!-- Batch Header -->
+            <div class="flex items-center justify-between mb-4 py-2 border-b border-gray-200">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-red-100 rounded-lg p-3">
+                        <i class="fas fa-times-circle text-red-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-bold text-gray-800">
+                                {{ batch.unit.name if batch.unit else 'Unit Tidak Diketahui' }}
+                            </span>
+                            <span class="px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                                {{ batch.total_items }} Barang
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-2">
+                            <i class="fas fa-user mr-1"></i> Dibuat oleh: {{ batch.creator.name if batch.creator else '-' }}
+                            <span class="mx-2">•</span>
+                            <i class="fas fa-clock mr-1"></i> Ditolak: {{ batch.rejected_at.strftime('%d/%m/%Y %H:%M') if batch.rejected_at else '-' }}
+                        </p>
+                        {% if current_user.is_warehouse_staff() and batch.rejector %}
+                        <p class="text-sm text-gray-600">
+                            <i class="fas fa-user-shield mr-1"></i> Ditolak oleh: {{ batch.rejector.name }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                <a href="{{ url_for('installations.batch_detail', id=batch.ref_id) }}"
+                   class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold inline-flex items-center">
+                    <i class="fas fa-eye mr-2"></i>
+                    Lihat Detail ({{ batch.total_items }} Barang)
+                </a>
+            </div>
+
+            <!-- Rejection Reason -->
+            {% if batch.rejection_reason %}
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div class="flex items-start">
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-2 mt-1"></i>
+                    <div>
+                        <span class="text-sm font-semibold text-red-800">Alasan Penolakan:</span>
+                        <p class="text-sm text-red-900 mt-1">{{ batch.rejection_reason }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Batch Items Preview -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {% for draft in batch.drafts[:6] %}
+                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <div class="font-semibold text-gray-800 text-sm">{{ draft.item_detail.item.name if draft.item_detail and draft.item_detail.item else '-' }}</div>
+                    <div class="text-sm text-blue-600 font-medium">{{ draft.item_detail.serial_number if draft.item_detail else '-' }}</div>
+                    {% if draft.unit_detail %}
+                    <div class="text-xs text-gray-500 mt-2">
+                        <i class="fas fa-map-marker-alt mr-1"></i>{{ draft.unit_detail.room_name }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                {% if batch.total_items > 6 %}
+                <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 flex items-center justify-center">
+                    <span class="text-sm text-gray-600 font-medium">+{{ batch.total_items - 6 }} lainnya</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white rounded-xl shadow-md p-12 text-center">
+    <i class="fas fa-check-circle text-green-500 text-5xl mb-4"></i>
+    <h3 class="text-lg font-semibold text-gray-800 mb-2">Tidak Ada Distribusi Ditolak</h3>
+    <p class="text-gray-600">Belum ada draft distribusi yang ditolak.</p>
+</div>
+{% endif %}
+{% endblock %}

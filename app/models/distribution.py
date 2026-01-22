@@ -29,6 +29,9 @@ class Distribution(BaseModel):
     draft_notes = db.Column(db.Text)  # Notes from warehouse staff when creating draft
     draft_verified_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Admin who verified the draft
     draft_verified_at = db.Column(db.DateTime)  # When draft was verified
+    draft_rejected = db.Column(db.Boolean, default=False)  # True if draft was rejected
+    draft_rejected_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Admin who rejected the draft
+    draft_rejected_at = db.Column(db.DateTime)  # When draft was rejected
     draft_rejection_reason = db.Column(db.Text)  # Reason if draft was rejected
 
     # Task type and verification fields
@@ -47,6 +50,7 @@ class Distribution(BaseModel):
     verifier = db.relationship('User', foreign_keys=[verified_by], backref='verified_distributions')
     draft_creator = db.relationship('User', foreign_keys=[draft_created_by], backref='draft_distributions_created')
     draft_verifier = db.relationship('User', foreign_keys=[draft_verified_by], backref='draft_distributions_verified')
+    draft_rejector = db.relationship('User', foreign_keys=[draft_rejected_by], backref='draft_distributions_rejected')
     unit = db.relationship('Unit', back_populates='distributions')
     unit_detail = db.relationship('UnitDetail', back_populates='distributions')
     asset_request = db.relationship('AssetRequest', foreign_keys=[asset_request_id], backref='distributions')
@@ -154,8 +158,9 @@ class Distribution(BaseModel):
             return False, 'Ini bukan draft distribusi'
 
         self.is_draft = False  # Mark as not draft anymore
-        self.draft_verified_by = user_id
-        self.draft_verified_at = datetime.utcnow()
+        self.draft_rejected = True
+        self.draft_rejected_by = user_id
+        self.draft_rejected_at = datetime.utcnow()
         self.draft_rejection_reason = reason
         self.status = 'rejected'
         self.save()

@@ -219,7 +219,9 @@
                 <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
                     <i class="fas fa-file-alt text-green-600"></i>
                 </div>
-                {% if asset_request.verified_at or asset_request.distributed_at or asset_request.received_at %}
+                {% if asset_request.status == 'rejected' %}
+                <div class="w-0.5 h-16 bg-red-200 mt-2"></div>
+                {% elif asset_request.verified_at or asset_request.distributed_at or asset_request.received_at %}
                 <div class="w-0.5 h-16 bg-green-200 mt-2"></div>
                 {% endif %}
             </div>
@@ -230,7 +232,26 @@
             </div>
         </div>
 
-        <!-- Step 2: Verified -->
+        <!-- Step 2: Rejected (ONLY if rejected) -->
+        {% if asset_request.status == 'rejected' %}
+        <div class="flex items-start">
+            <div class="flex flex-col items-center mr-4">
+                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                    <i class="fas fa-times-circle text-red-600"></i>
+                </div>
+            </div>
+            <div class="flex-1">
+                <p class="font-semibold text-gray-900">Ditolak</p>
+                <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.updated_at) }}</p>
+                {% if asset_request.rejection_reason %}
+                <p class="text-sm text-red-600 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i>{{ asset_request.rejection_reason }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Step 2: Verified (ONLY if NOT rejected) -->
+        {% if asset_request.status != 'rejected' %}
         <div class="flex items-start {% if not asset_request.verified_at %}opacity-50{% endif %}">
             <div class="flex flex-col items-center mr-4">
                 <div class="w-10 h-10 rounded-full {% if asset_request.verified_at %}bg-green-100{% else %}bg-gray-100{% endif %} flex items-center justify-center">
@@ -250,8 +271,10 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
 
-        <!-- Step 3: Distributed -->
+        <!-- Step 3: Distributed (ONLY if NOT rejected) -->
+        {% if asset_request.status != 'rejected' %}
         <div class="flex items-start {% if not asset_request.distributed_at %}opacity-50{% endif %}">
             <div class="flex flex-col items-center mr-4">
                 <div class="w-10 h-10 rounded-full {% if asset_request.distributed_at %}bg-green-100{% else %}bg-gray-100{% endif %} flex items-center justify-center">
@@ -266,16 +289,15 @@
                 {% if asset_request.distributed_at %}
                 <p class="text-sm text-gray-600">{{ format_wib_datetime(asset_request.distributed_at) }}</p>
                 <p class="text-xs text-gray-500">oleh {{ asset_request.distributor.name if asset_request.distributor else '-' }}</p>
-                {% if asset_request.distribution_id %}
-                <a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="text-xs text-blue-600 hover:underline">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
-                {% endif %}
                 {% else %}
                 <p class="text-sm text-gray-400">Menunggu distribusi</p>
                 {% endif %}
             </div>
         </div>
+        {% endif %}
 
-        <!-- Step 4: Received/Completed -->
+        <!-- Step 4: Received/Completed (ONLY if NOT rejected) -->
+        {% if asset_request.status != 'rejected' %}
         <div class="flex items-start {% if not asset_request.received_at %}opacity-50{% endif %}">
             <div class="flex flex-col items-center mr-4">
                 <div class="w-10 h-10 rounded-full {% if asset_request.received_at %}bg-green-100{% else %}bg-gray-100{% endif %} flex items-center justify-center">
@@ -306,6 +328,7 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- Current Status Banner -->
@@ -336,14 +359,8 @@
                 <p class="text-sm text-blue-800 mt-1">
                     {% if current_user.is_unit_staff() %}
                     Permohonan sedang dalam proses distribusi oleh warehouse staff. Barang sedang dikirim ke lokasi Anda.
-                    {% if asset_request.distribution_id %}
-                    <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
-                    {% endif %}
                     {% elif current_user.is_warehouse_staff() or current_user.is_admin() %}
                     Permohonan sedang didistribusikan ke unit.
-                    {% if asset_request.distribution_id %}
-                    <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
-                    {% endif %}
                     {% endif %}
                 </p>
 
@@ -365,9 +382,6 @@
                 <p class="text-sm text-indigo-800 mt-1">
                     {% if current_user.is_unit_staff() %}
                     Permohonan sudah diverifikasi. Menunggu proses distribusi dari warehouse staff.
-                    {% if asset_request.distribution_id %}
-                    <br><a href="{{ url_for('installations.detail', id=asset_request.distribution_id) }}" target="_blank" class="underline font-semibold">Lihat Distribusi #{{ asset_request.distribution_id }}</a>
-                    {% endif %}
                     {% elif current_user.is_warehouse_staff() or current_user.is_admin() %}
                     Permohonan sudah diverifikasi dan siap untuk didistribusikan. Silakan klik tombol "Proses Distribusi" untuk membuat distribusi.
                     {% else %}
@@ -394,6 +408,11 @@
             <div>
                 <h4 class="font-semibold text-red-900">Ditolak</h4>
                 <p class="text-sm text-red-800 mt-1">Permohonan ini ditolak oleh admin.</p>
+                {% if asset_request.rejection_reason %}
+                <p class="text-sm text-red-700 mt-2">
+                    <i class="fas fa-exclamation-triangle mr-1"></i><strong>Alasan:</strong> {{ asset_request.rejection_reason }}
+                </p>
+                {% endif %}
             </div>
         </div>
     </div>

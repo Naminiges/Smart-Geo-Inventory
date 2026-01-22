@@ -10,24 +10,126 @@ from app.utils.datetime_helper import get_wib_now
 bp = Blueprint('installations', __name__, url_prefix='/installations')
 
 
+@bp.route('/drafts')
+@login_required
+@role_required('admin', 'warehouse_staff')
+def draft_list():
+    """List all draft distributions waiting for verification"""
+    from datetime import timedelta
+
+    # Get all draft distributions, newest first
+    if current_user.is_admin():
+        drafts = Distribution.query.filter_by(is_draft=True).order_by(Distribution.created_at.desc()).all()
+    else:  # warehouse staff
+        drafts = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id, is_draft=True).order_by(Distribution.created_at.desc()).all()
+
+    # Group drafts by batch for admin verification
+    draft_batches = []
+    if drafts:
+        batch_dict = {}
+        for draft in drafts:
+            time_window = draft.created_at.replace(second=0, microsecond=0)
+            batch_key = (draft.draft_created_by, draft.unit_id, draft.draft_notes, time_window)
+
+            if batch_key not in batch_dict:
+                batch_dict[batch_key] = []
+            batch_dict[batch_key].append(draft)
+
+        for batch_key, batch_drafts in batch_dict.items():
+            creator_id, unit_id, notes, time_window = batch_key
+            draft_batches.append({
+                'drafts': batch_drafts,
+                'creator': batch_drafts[0].draft_creator if batch_drafts[0].draft_creator else None,
+                'unit': batch_drafts[0].unit if batch_drafts[0].unit else None,
+                'notes': notes,
+                'created_at': batch_drafts[0].created_at,
+                'total_items': len(batch_drafts),
+                'ref_id': batch_drafts[0].id
+            })
+
+        draft_batches.sort(key=lambda x: x['created_at'], reverse=True)
+
+    return render_template('installations/draft_list.html', draft_batches=draft_batches)
+
+
+@bp.route('/rejected')
+@login_required
+@role_required('admin', 'warehouse_staff')
+def rejected_list():
+    """List all rejected draft distributions"""
+    # Get all rejected draft distributions, newest first
+    # Note: rejected drafts have is_draft=False but draft_rejected=True and draft_created_by is not None
+    if current_user.is_admin():
+        # Admin sees all rejected drafts they rejected
+        rejected = Distribution.query.filter(
+            Distribution.draft_created_by.isnot(None),
+            Distribution.draft_rejected == True,
+            Distribution.draft_rejected_by == current_user.id
+        ).order_by(Distribution.draft_rejected_at.desc()).all()
+    else:  # warehouse staff
+        # Warehouse staff sees rejected drafts from their warehouse
+        rejected = Distribution.query.filter(
+            Distribution.warehouse_id == current_user.warehouse_id,
+            Distribution.draft_created_by.isnot(None),
+            Distribution.draft_rejected == True
+        ).order_by(Distribution.draft_rejected_at.desc()).all()
+
+    # Group rejected drafts by batch
+    rejected_batches = []
+    if rejected:
+        batch_dict = {}
+        for draft in rejected:
+            time_window = draft.draft_rejected_at.replace(second=0, microsecond=0) if draft.draft_rejected_at else draft.created_at.replace(second=0, microsecond=0)
+            batch_key = (draft.draft_created_by, draft.unit_id, draft.draft_notes, time_window)
+
+            if batch_key not in batch_dict:
+                batch_dict[batch_key] = []
+            batch_dict[batch_key].append(draft)
+
+        for batch_key, batch_drafts in batch_dict.items():
+            creator_id, unit_id, notes, time_window = batch_key
+            rejected_batches.append({
+                'drafts': batch_drafts,
+                'creator': batch_drafts[0].draft_creator if batch_drafts[0].draft_creator else None,
+                'unit': batch_drafts[0].unit if batch_drafts[0].unit else None,
+                'notes': notes,
+                'rejected_at': batch_drafts[0].draft_rejected_at,
+                'rejector': batch_drafts[0].draft_rejector if batch_drafts[0].draft_rejector else None,
+                'rejection_reason': batch_drafts[0].draft_rejection_reason,
+                'total_items': len(batch_drafts),
+                'ref_id': batch_drafts[0].id
+            })
+
+        rejected_batches.sort(key=lambda x: x['rejected_at'], reverse=True)
+
+    return render_template('installations/rejected_list.html', rejected_batches=rejected_batches)
+
+
 @bp.route('/')
 @login_required
 @warehouse_access_required
 def index():
     """List all installations"""
     from sqlalchemy import or_
+    from collections import defaultdict
+    from datetime import timedelta
 
     # Get task type filter from URL parameter
     task_type_filter = request.args.get('task_type', '')  # 'installation' or 'delivery' or empty for all
 
     if current_user.is_warehouse_staff():
-        # Filter installations: only direct distributions (not from asset requests), newest first
-        installations_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).filter(Distribution.asset_request_id == None)
+        # Filter installations: only direct distributions (not from asset requests) from this warehouse
+        # Exclude rejected drafts and draft distributions
+        installations_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).filter(
+            Distribution.asset_request_id == None,
+            Distribution.is_draft == False,
+            Distribution.draft_rejected == False
+        )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.order_by(Distribution.created_at.desc()).all()
 
-        # Get draft distributions, newest first
+        # Get draft distributions from this warehouse only, newest first
         draft_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id, is_draft=True)
         drafts = draft_query.order_by(Distribution.created_at.desc()).all()
 
@@ -36,7 +138,11 @@ def index():
         field_staffs = User.query.join(Distribution, User.id == Distribution.field_staff_id).filter(Distribution.warehouse_id == current_user.warehouse_id, User.role == 'field_staff').distinct().all()
     elif current_user.is_field_staff():
         # Filter installations by task type if specified
-        installations_query = Distribution.query.filter_by(field_staff_id=current_user.id)
+        # Exclude rejected drafts
+        installations_query = Distribution.query.filter_by(field_staff_id=current_user.id).filter(
+            Distribution.is_draft == False,
+            Distribution.draft_rejected == False
+        )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.all()
@@ -46,7 +152,12 @@ def index():
         field_staffs = []
     else:  # admin
         # Filter installations: only direct distributions (not from asset requests), newest first
-        installations_query = Distribution.query.filter(Distribution.asset_request_id == None)
+        # Exclude rejected drafts and draft distributions
+        installations_query = Distribution.query.filter(
+            Distribution.asset_request_id == None,
+            Distribution.is_draft == False,
+            Distribution.draft_rejected == False
+        )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.order_by(Distribution.created_at.desc()).all()
@@ -57,9 +168,95 @@ def index():
         units = Unit.query.join(Distribution).distinct().all()
         field_staffs = User.query.filter_by(role='field_staff').all()
 
+    # Group active distributions by batch
+    # A batch is defined by: created_by (draft_created_by for converted drafts, or field_staff_id),
+    # unit_id, and created_at (within 1 minute)
+    active_batches = []
+    if installations:
+        # Use a dict to track processed batches
+        batch_dict = {}  # key: (creator_id, unit_id, time_window), value: list of distributions
+
+        for dist in installations:
+            # For warehouse staff, only show distributions from their warehouse
+            if current_user.is_warehouse_staff() and dist.warehouse_id != current_user.warehouse_id:
+                continue
+
+            # Determine who created this distribution (draft creator or field staff)
+            creator_id = dist.draft_created_by if dist.draft_created_by else dist.field_staff_id
+
+            # Calculate time window (floor to nearest minute)
+            time_window = dist.created_at.replace(second=0, microsecond=0)
+            batch_key = (creator_id, dist.unit_id, time_window)
+
+            if batch_key not in batch_dict:
+                batch_dict[batch_key] = []
+            batch_dict[batch_key].append(dist)
+
+        # Convert to list format for template
+        for batch_key, batch_distributions in batch_dict.items():
+            creator_id, unit_id, time_window = batch_key
+            # Get creator (could be draft_creator or field_staff)
+            creator = None
+            if batch_distributions[0].draft_created_by:
+                creator = batch_distributions[0].draft_creator
+            elif batch_distributions[0].field_staff_id:
+                creator = User.query.get(batch_distributions[0].field_staff_id)
+
+            active_batches.append({
+                'distributions': batch_distributions,
+                'creator': creator,
+                'unit': batch_distributions[0].unit if batch_distributions[0].unit else None,
+                'created_at': batch_distributions[0].created_at,
+                'total_items': len(batch_distributions),
+                'ref_id': batch_distributions[0].id,  # Use first distribution ID for detail link
+                'statuses': list(set([d.status for d in batch_distributions]))  # Unique statuses in batch
+            })
+
+        # Sort by created_at descending
+        active_batches.sort(key=lambda x: x['created_at'], reverse=True)
+
+    # Group drafts by batch for admin/warehouse staff verification
+    # A batch is defined by: draft_created_by, unit_id, draft_notes, and created_at (within 1 minute)
+    draft_batches = []
+    if drafts:
+        # For warehouse staff, only show drafts from their warehouse
+        filtered_drafts = drafts
+        if current_user.is_warehouse_staff():
+            filtered_drafts = [d for d in drafts if d.warehouse_id == current_user.warehouse_id]
+
+        # Use a dict to track processed batches
+        batch_dict = {}  # key: (creator_id, unit_id, notes, time_window), value: list of drafts
+
+        for draft in filtered_drafts:
+            # Calculate time window (floor to nearest minute)
+            time_window = draft.created_at.replace(second=0, microsecond=0)
+            batch_key = (draft.draft_created_by, draft.unit_id, draft.draft_notes, time_window)
+
+            if batch_key not in batch_dict:
+                batch_dict[batch_key] = []
+            batch_dict[batch_key].append(draft)
+
+        # Convert to list format for template
+        for batch_key, batch_drafts in batch_dict.items():
+            creator_id, unit_id, notes, time_window = batch_key
+            draft_batches.append({
+                'drafts': batch_drafts,
+                'creator': batch_drafts[0].draft_creator if batch_drafts[0].draft_creator else None,
+                'unit': batch_drafts[0].unit if batch_drafts[0].unit else None,
+                'notes': notes,
+                'created_at': batch_drafts[0].created_at,
+                'total_items': len(batch_drafts),
+                'ref_id': batch_drafts[0].id  # Use first draft ID for verification link
+            })
+
+        # Sort by created_at descending
+        draft_batches.sort(key=lambda x: x['created_at'], reverse=True)
+
     return render_template('installations/index.html',
                          distributions=installations,
                          drafts=drafts,
+                         draft_batches=draft_batches,
+                         active_batches=active_batches,
                          units=units,
                          field_staffs=field_staffs,
                          task_type_filter=task_type_filter)
@@ -229,12 +426,81 @@ def verify_task(id):
     return render_template('installations/verify_task.html', distribution=distribution)
 
 
-@bp.route('/<int:id>/detail')
+@bp.route('/batch/<int:id>/detail')
 @login_required
-def detail(id):
-    """View distribution detail"""
-    distribution = Distribution.query.get_or_404(id)
-    return render_template('installations/detail.html', distribution=distribution)
+def batch_detail(id):
+    """View batch distribution detail (all items in the same batch)"""
+    from datetime import timedelta
+    from sqlalchemy import and_
+
+    # Get the reference distribution
+    ref_distribution = Distribution.query.get_or_404(id)
+
+    # Get all distributions from the same batch
+    # For active distributions, group by: creator_id (draft_created_by or field_staff_id), unit_id, created_at (within 1 minute)
+    creator_id = ref_distribution.draft_created_by if ref_distribution.draft_created_by else ref_distribution.field_staff_id
+    time_window = ref_distribution.created_at.replace(second=0, microsecond=0)
+    time_threshold = time_window - timedelta(seconds=59)
+    time_upper = time_window + timedelta(seconds=59)
+
+    if ref_distribution.is_draft:
+        # For drafts, include draft_notes in batch key
+        batch_distributions = Distribution.query.filter(
+            and_(
+                Distribution.is_draft == True,
+                Distribution.draft_created_by == ref_distribution.draft_created_by,
+                Distribution.unit_id == ref_distribution.unit_id,
+                Distribution.created_at >= time_threshold,
+                Distribution.created_at <= time_upper,
+                Distribution.draft_notes == ref_distribution.draft_notes
+            )
+        ).all()
+    else:
+        # For active distributions
+        batch_distributions = Distribution.query.filter(
+            and_(
+                Distribution.is_draft == False,
+                Distribution.unit_id == ref_distribution.unit_id,
+                Distribution.created_at >= time_threshold,
+                Distribution.created_at <= time_upper,
+                db.or_(
+                    Distribution.draft_created_by == creator_id,
+                    Distribution.field_staff_id == creator_id
+                )
+            )
+        ).all()
+
+    # Group items by unit_detail for better display
+    items_by_location = {}
+    for dist in batch_distributions:
+        location_key = dist.unit_detail_id if dist.unit_detail_id else 'main'
+        if location_key not in items_by_location:
+            items_by_location[location_key] = {
+                'unit_detail': dist.unit_detail,
+                'item_list': []
+            }
+        if dist.item_detail:
+            items_by_location[location_key]['item_list'].append(dist.item_detail)
+
+    # Get creator info
+    creator = None
+    if ref_distribution.draft_created_by:
+        creator = ref_distribution.draft_creator
+    elif ref_distribution.field_staff_id:
+        creator = User.query.get(ref_distribution.field_staff_id)
+
+    # Determine if this batch requires admin verification
+    # If created by warehouse staff (has draft_created_by), show verification step
+    # If created by admin (no draft_created_by), it doesn't require verification
+    requires_verification = ref_distribution.draft_created_by is not None
+
+    return render_template('installations/batch_detail.html',
+                         ref_distribution=ref_distribution,
+                         batch_distributions=batch_distributions,
+                         items_by_location=items_by_location,
+                         total_items=len(batch_distributions),
+                         creator=creator,
+                         requires_verification=requires_verification)
 
 
 @bp.route('/<int:id>/update/<string:status>', methods=['POST'])
@@ -566,10 +832,10 @@ def verify_general_distribution(id):
         if location_key not in items_by_location:
             items_by_location[location_key] = {
                 'unit_detail': dist.unit_detail,
-                'items': []
+                'item_list': []
             }
         if dist.item_detail:
-            items_by_location[location_key]['items'].append(dist.item_detail)
+            items_by_location[location_key]['item_list'].append(dist.item_detail)
 
     return render_template('installations/verify_general_distribution.html',
                          ref_distribution=ref_distribution,

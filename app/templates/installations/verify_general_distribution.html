@@ -52,27 +52,27 @@
                 <i class="fas fa-box text-emerald-600 mr-2"></i>Barang yang Akan Didistribusikan ({{ total_items }} item)
             </h4>
 
-            {% for location_key, location_data in items_by_location.items() %}
+            {% for loc_key, loc_data in items_by_location.items() %}
             <div class="mb-4 bg-gray-50 rounded-lg p-4">
                 <div class="flex items-center justify-between mb-3">
                     <h5 class="font-medium text-gray-700">
-                        {% if location_data.unit_detail %}
-                        {{ location_data.unit_detail.room_name }} (Lantai {{ location_data.unit_detail.floor }})
+                        {% if loc_data.unit_detail %}
+                        {{ loc_data.unit_detail.room_name }} (Lantai {{ loc_data.unit_detail.floor }})
                         {% else %}
                         Lokasi Utama Unit
                         {% endif %}
                     </h5>
                     <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                        {{ location_data.items|length }} barang
+                        {{ loc_data.item_list|length }} barang
                     </span>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {% for item in location_data.items %}
+                    {% for item_detail in loc_data.item_list %}
                     <div class="bg-white rounded-lg p-3 border border-gray-200">
-                        <div class="font-semibold text-gray-800">{{ item.item.name if item.item else '-' }}</div>
-                        <div class="text-sm text-gray-600">{{ item.item.category.name if item.item and item.item.category else '-' }}</div>
-                        <div class="text-sm font-medium text-blue-600 mt-1">{{ item.serial_number }}</div>
+                        <div class="font-semibold text-gray-800">{{ item_detail.item.name if item_detail and item_detail.item else '-' }}</div>
+                        <div class="text-sm text-gray-600">{{ item_detail.item.category.name if item_detail and item_detail.item and item_detail.item.category else '-' }}</div>
+                        <div class="text-sm font-medium text-blue-600 mt-1">{{ item_detail.serial_number if item_detail else '-' }}</div>
                     </div>
                     {% endfor %}
                 </div>
