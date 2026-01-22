@@ -236,6 +236,58 @@ def receive_detail(id):
                          warehouse=distribution.warehouse)
 
 
+@bp.route('/receive/history', methods=['GET'])
+@login_required
+@role_required('unit_staff')
+def receive_history():
+    """Show history of completed direct distributions for unit staff"""
+    from app.models import UserUnit, DistributionGroup
+
+    # Get user's units
+    user_units = UserUnit.query.filter_by(user_id=current_user.id).all()
+    if not user_units:
+        flash('Anda belum terassign ke unit manapun.', 'danger')
+        return redirect(url_for('dashboard.index'))
+
+    # Get all unit IDs
+    unit_ids = [uu.unit_id for uu in user_units]
+
+    # Get completed distribution groups (batches) for user's units
+    # We look for batches where:
+    # 1. The batch is not a draft
+    # 2. The batch has been verified (status approved)
+    # 3. The distributions have been received (verification_status submitted)
+    completed_groups = DistributionGroup.query.filter(
+        DistributionGroup.is_draft == False,
+        DistributionGroup.status == 'approved',
+        DistributionGroup.verification_received_at.isnot(None)
+    ).join(Distribution).filter(
+        Distribution.unit_id.in_(unit_ids),
+        Distribution.verification_status == 'submitted'
+    ).distinct().order_by(DistributionGroup.verification_received_at.desc()).all()
+
+    # Build history data
+    history_list = []
+    for group in completed_groups:
+        # Get all completed distributions for this batch and user's units
+        batch_distributions = Distribution.query.filter(
+            Distribution.distribution_group_id == group.id,
+            Distribution.unit_id.in_(unit_ids),
+            Distribution.verification_status == 'submitted'
+        ).all()
+
+        if batch_distributions:
+            history_list.append({
+                'group': group,
+                'distributions': batch_distributions,
+                'warehouse': batch_distributions[0].warehouse if batch_distributions else None,
+                'total_items': len(batch_distributions)
+            })
+
+    return render_template('distributions/receive_history.html',
+                         history_list=history_list)
+
+
 @bp.route('/proof-photo/<int:id>')
 @login_required
 @role_required('unit_staff', 'warehouse_staff', 'admin')
