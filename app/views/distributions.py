@@ -197,7 +197,6 @@ def receive_detail(id):
 
             # Update all distributions in this batch
             for dist in batch_distributions:
-                dist.verification_photo = compressed_photo
                 dist.verification_status = 'submitted'
                 dist.verification_notes = f'Bukti penerimaan batch {distribution_group.batch_code} dari {current_user.name}'
                 dist.verified_by = current_user.id
@@ -212,6 +211,13 @@ def receive_detail(id):
                 # Update distribution status
                 dist.status = 'installed'
                 dist.save()
+
+            # Save photo to DistributionGroup (one photo for the entire batch)
+            distribution_group.verification_photo = compressed_photo
+            distribution_group.verification_received_by = current_user.id
+            distribution_group.verification_received_at = datetime.utcnow()
+            distribution_group.verification_notes = f'Bukti penerimaan batch {distribution_group.batch_code} dari {current_user.name}'
+            distribution_group.save()
 
             item_count = len(batch_distributions)
             flash(f'Berhasil mengonfirmasi penerimaan batch {distribution_group.batch_code} dengan {item_count} barang. (Foto: {compressed_size_kb:.1f}KB)', 'success')
@@ -234,26 +240,11 @@ def receive_detail(id):
 @login_required
 @role_required('unit_staff', 'warehouse_staff', 'admin')
 def proof_photo(id):
-    """Display proof photo for distribution"""
+    """Display proof photo for distribution batch"""
     from flask import send_file
+    from io import BytesIO
 
     distribution = Distribution.query.get_or_404(id)
-
-    if not distribution or not distribution.verification_photo:
-        # Return placeholder image
-        placeholder_svg = '''<?xml version="1.0" encoding="UTF-8"?>
-<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
-    <rect width="400" height="300" fill="#f3f4f6"/>
-    <text x="200" y="140" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af" text-anchor="middle">
-        <tspan x="200" dy="0">Foto tidak tersedia</tspan>
-        <tspan x="200" dy="25" font-size="14">No proof photo uploaded</tspan>
-    </text>
-    <rect x="150" y="160" width="100" height="100" fill="none" stroke="#d1d5db" stroke-width="2" rx="8"/>
-    <text x="200" y="220" font-family="Arial, sans-serif" font-size="40" fill="#d1d5db" text-anchor="middle">📷</text>
-</svg>'''
-        return send_file(BytesIO(placeholder_svg.encode('utf-8')),
-                         mimetype='image/svg+xml',
-                         as_attachment=False)
 
     # Check permission
     if current_user.is_unit_staff():
@@ -264,7 +255,30 @@ def proof_photo(id):
             flash('Anda tidak memiliki izin untuk melihat foto ini.', 'danger')
             return redirect(url_for('distributions.receive_index'))
 
-    # Return the photo from database
-    return send_file(BytesIO(distribution.verification_photo),
-                     mimetype='image/jpeg',
+    # Try to get photo from DistributionGroup first (for direct distributions)
+    if distribution.distribution_group and distribution.distribution_group.verification_photo:
+        # Return the photo from distribution group
+        return send_file(BytesIO(distribution.distribution_group.verification_photo),
+                         mimetype='image/jpeg',
+                         as_attachment=False)
+
+    # Fallback to distribution's own photo (old data or individual distributions)
+    if distribution.verification_photo:
+        return send_file(BytesIO(distribution.verification_photo),
+                         mimetype='image/jpeg',
+                         as_attachment=False)
+
+    # Return placeholder image
+    placeholder_svg = '''<?xml version="1.0" encoding="UTF-8"?>
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+    <rect width="400" height="300" fill="#f3f4f6"/>
+    <text x="200" y="140" font-family="Arial, sans-serif" font-size="16" fill="#9ca3af" text-anchor="middle">
+        <tspan x="200" dy="0">Foto tidak tersedia</tspan>
+        <tspan x="200" dy="25" font-size="14">No proof photo uploaded</tspan>
+    </text>
+    <rect x="150" y="160" width="100" height="100" fill="none" stroke="#d1d5db" stroke-width="2" rx="8"/>
+    <text x="200" y="220" font-family="Arial, sans-serif" font-size="40" fill="#d1d5db" text-anchor="middle">📷</text>
+</svg>'''
+    return send_file(BytesIO(placeholder_svg.encode('utf-8')),
+                     mimetype='image/svg+xml',
                      as_attachment=False)

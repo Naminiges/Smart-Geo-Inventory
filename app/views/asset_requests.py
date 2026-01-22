@@ -600,9 +600,12 @@ def confirm_receipt(id):
             if not distribution_id:
                 distribution_id = asset_request.distribution_id
 
-            # Update all distributions with the photo
+            # Save photo to AssetRequest (one photo for the entire request)
+            asset_request.verification_photo = compressed_photo
+            asset_request.save()
+
+            # Update all distributions with verification status (but NOT the photo)
             for dist in distributions:
-                dist.verification_photo = compressed_photo
                 dist.verification_status = 'submitted'
                 dist.verification_notes = f'Bukti penerimaan dari {current_user.name}'
                 dist.save()
@@ -635,18 +638,13 @@ def confirm_receipt(id):
 @login_required
 def proof_photo(id):
     """Display proof photo for asset request"""
-    from app.models import Distribution
     from flask import send_file
     from io import BytesIO
 
     asset_request = AssetRequest.query.get_or_404(id)
 
-    # Get the first distribution with verification photo
-    distribution = Distribution.query.filter_by(
-        asset_request_id=id
-    ).filter(Distribution.verification_photo != None).first()
-
-    if not distribution or not distribution.verification_photo:
+    # Check if asset request has verification photo
+    if not asset_request or not asset_request.verification_photo:
         # Return placeholder image
         # Create a simple placeholder SVG
         placeholder_svg = '''<?xml version="1.0" encoding="UTF-8"?>
@@ -663,8 +661,8 @@ def proof_photo(id):
                          mimetype='image/svg+xml',
                          as_attachment=False)
 
-    # Return the photo from database
-    return send_file(BytesIO(distribution.verification_photo),
+    # Return the photo from asset_request
+    return send_file(BytesIO(asset_request.verification_photo),
                      mimetype='image/jpeg',
                      as_attachment=False)
 

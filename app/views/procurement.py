@@ -49,9 +49,22 @@ def index():
 
 @bp.route('/request', methods=['GET', 'POST'])
 @login_required
-@role_required('warehouse_staff')
+@role_required('admin', 'warehouse_staff')
 def create_request():
-    """Step 1-2: Warehouse staff creates procurement request with multiple items"""
+    """Create procurement request - different behavior based on role:
+    - Admin: Creates directly approved procurement
+    - Warehouse Staff: Creates pending request that needs admin approval
+    """
+    is_admin = current_user.is_admin()
+    return _create_procurement_request(is_admin=is_admin)
+
+
+def _create_procurement_request(is_admin=False):
+    """
+    Shared function for creating procurement requests.
+    - Warehouse staff: Creates with 'pending' status, needs admin approval
+    - Admin: Creates directly with 'approved' status, no approval needed
+    """
     form = ProcurementRequestForm()
 
     if request.method == 'POST':
@@ -110,16 +123,40 @@ def create_request():
 
             if not valid_items:
                 flash('Tidak ada barang valid yang diminta!', 'danger')
-                return render_template('procurement/request.html', form=form)
+                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), is_admin=is_admin)
 
             # Create procurement
-            procurement = Procurement(
-                request_notes=request_notes,
-                status='pending',
-                requested_by=current_user.id,
-                request_date=datetime.now()
-            )
-            procurement.save()
+            if is_admin:
+                # Admin creates procurement - directly approved
+                procurement = Procurement(
+                    request_notes=request_notes,
+                    status='approved',  # Directly approved
+                    requested_by=current_user.id,
+                    request_date=datetime.now()
+                )
+                procurement.save()
+
+                # For admin, set default supplier or ask for it
+                # For now, use first supplier as default
+                first_supplier = Supplier.query.first()
+                if first_supplier:
+                    procurement.supplier_id = first_supplier.id
+                    procurement.approved_by = current_user.id
+                    procurement.approval_date = datetime.now()
+                    procurement.save()
+
+                success_message = f'Pengadaan berhasil dibuat dan disetujui dengan {len(valid_items)} barang!'
+            else:
+                # Warehouse staff creates procurement - needs approval
+                procurement = Procurement(
+                    request_notes=request_notes,
+                    status='pending',  # Needs admin approval
+                    requested_by=current_user.id,
+                    request_date=datetime.now()
+                )
+                procurement.save()
+
+                success_message = f'Permohonan pengadaan berhasil dibuat dengan {len(valid_items)} barang! Menunggu persetujuan admin.'
 
             # Create procurement items
             for item_data in valid_items:
@@ -130,9 +167,7 @@ def create_request():
                 )
                 procurement_item.save()
 
-            item_count = len(valid_items)
-            flash(f'Permohonan pengadaan berhasil dibuat dengan {item_count} barang! Menunggu persetujuan admin.', 'success')
-
+            flash(success_message, 'success')
             return redirect(url_for('procurement.index'))
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
@@ -141,10 +176,12 @@ def create_request():
     items = Item.query.all()
     categories = Category.query.all()
 
+    # Use same template for both admin and warehouse staff
     return render_template('procurement/request.html',
                          form=form,
                          items=items,
-                         categories=categories)
+                         categories=categories,
+                         is_admin=is_admin)
 
 
 @bp.route('/<int:id>')

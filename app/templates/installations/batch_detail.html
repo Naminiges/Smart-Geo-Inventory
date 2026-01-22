@@ -352,62 +352,150 @@
         </p>
     </div>
     <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for dist in verified_distributions %}
-            <div class="border border-gray-200 rounded-lg overflow-hidden">
-                <!-- Item Info -->
-                <div class="p-4 bg-gray-50 border-b border-gray-200">
-                    <p class="font-semibold text-gray-900 text-sm">
-                        {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else 'Item Tidak Diketahui' }}
-                    </p>
-                    <p class="text-xs text-gray-600 mt-1">
-                        <i class="fas fa-barcode mr-1"></i>
-                        {{ dist.item_detail.serial_number if dist.item_detail else '-' }}
-                    </p>
-                    <p class="text-xs text-gray-600">
-                        <i class="fas fa-user-check mr-1"></i>
-                        Oleh: {{ dist.verifier.name if dist.verifier else '-' }}
-                    </p>
-                    <p class="text-xs text-gray-600">
-                        <i class="fas fa-clock mr-1"></i>
-                        {{ dist.verified_at|format_wib_datetime }}
-                    </p>
-                </div>
+        <!-- Group by Asset Request -->
+        {% set grouped_by_request = {} %}
+        {% for dist in verified_distributions %}
+            {% if dist.asset_request_id %}
+                {% set _dummy = grouped_by_request.update({dist.asset_request_id: {'request': dist.asset_request_link, 'distributions': []}}) %}
+                {% set _dummy = grouped_by_request[dist.asset_request_id]['distributions'].append(dist) %}
+            {% endif %}
+        {% endfor %}
 
-                <!-- Photo -->
-                <div class="p-4">
-                    {% if dist.verification_photo %}
-                    <a href="{{ url_for('distributions.proof_photo', id=dist.id) }}" target="_blank" class="block">
-                        <img src="{{ url_for('distributions.proof_photo', id=dist.id) }}"
-                             alt="Bukti Penerimaan"
-                             class="w-full h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
-                    </a>
-                    <p class="text-xs text-gray-500 mt-2 text-center">
-                        <i class="fas fa-search-plus mr-1"></i>
-                        Klik untuk memperbesar
+        {% if grouped_by_request|length > 0 %}
+        <div class="space-y-6">
+            {% for request_id, data in grouped_by_request.items() %}
+            <div class="border border-gray-200 rounded-lg p-4">
+                <!-- Asset Request Header -->
+                <div class="mb-4 pb-4 border-b border-gray-200">
+                    <h4 class="font-semibold text-gray-900">
+                        <i class="fas fa-clipboard-list text-blue-600 mr-2"></i>
+                        Permohonan #{{ request_id }}
+                    </h4>
+                    <p class="text-sm text-gray-600 mt-1">
+                        {{ data.distributions|length }} barang dari permohonan ini
                     </p>
-                    {% else %}
-                    <div class="w-full h-48 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <div class="text-center text-gray-400">
-                            <i class="fas fa-image text-4xl mb-2"></i>
-                            <p class="text-sm">Foto tidak tersedia</p>
-                        </div>
+                    {% if data.request.verification_photo %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('asset_requests.proof_photo', id=request_id) }}" target="_blank" class="block">
+                            <img src="{{ url_for('asset_requests.proof_photo', id=request_id) }}"
+                                 alt="Bukti Penerimaan Permohonan #{{ request_id }}"
+                                 class="w-full max-w-md h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                        </a>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-search-plus mr-1"></i>
+                            Klik untuk memperbesar - Foto bukti untuk seluruh permohonan
+                        </p>
                     </div>
                     {% endif %}
                 </div>
 
-                <!-- Notes -->
-                {% if dist.verification_notes %}
-                <div class="p-4 bg-blue-50 border-t border-gray-200">
-                    <p class="text-xs text-blue-800">
-                        <i class="fas fa-sticky-note mr-1"></i>
-                        {{ dist.verification_notes }}
-                    </p>
+                <!-- Distributions in this request -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for dist in data.distributions %}
+                    <div class="bg-gray-50 rounded-lg p-3">
+                        <p class="font-semibold text-gray-900 text-sm">
+                            {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else 'Item Tidak Diketahui' }}
+                        </p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            <i class="fas fa-barcode mr-1"></i>
+                            {{ dist.item_detail.serial_number if dist.item_detail else '-' }}
+                        </p>
+                        <p class="text-xs text-gray-600">
+                            <i class="fas fa-user-check mr-1"></i>
+                            {{ dist.verifier.name if dist.verifier else '-' }}
+                        </p>
+                        <p class="text-xs text-gray-600">
+                            <i class="fas fa-clock mr-1"></i>
+                            {{ dist.verified_at|format_wib_datetime }}
+                        </p>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
+        {% endif %}
+
+        <!-- Individual distributions without asset request (e.g., direct distribution) -->
+        {% set individual_verified = [] %}
+        {% for dist in verified_distributions %}
+            {% if not dist.asset_request_id and dist.distribution_group_id and dist.distribution_group.verification_photo %}
+                {% set _dummy = individual_verified.append(dist) %}
+            {% endif %}
+        {% endfor %}
+
+        {% if individual_verified|length > 0 %}
+        <div class="mt-6 pt-6 border-t border-gray-200">
+            <h4 class="text-sm font-semibold text-gray-700 mb-4">
+                <i class="fas fa-boxes mr-1"></i>
+                Distribusi Langsung
+            </h4>
+            <!-- Group by DistributionGroup -->
+            {% set grouped_by_batch = {} %}
+            {% for dist in individual_verified %}
+                {% if dist.distribution_group_id %}
+                    {% set group_id = dist.distribution_group_id %}
+                    {% if group_id not in grouped_by_batch %}
+                        {% set _dummy = grouped_by_batch.update({group_id: {'group': dist.distribution_group, 'distributions': []}}) %}
+                    {% endif %}
+                    {% set _dummy = grouped_by_batch[group_id]['distributions'].append(dist) %}
+                {% endif %}
+            {% endfor %}
+
+            <div class="space-y-6">
+                {% for group_id, data in grouped_by_batch.items() %}
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <!-- Distribution Group Header -->
+                    <div class="mb-4 pb-4 border-b border-gray-200">
+                        <h4 class="font-semibold text-gray-900">
+                            <i class="fas fa-layer-group text-green-600 mr-2"></i>
+                            Batch {{ data.group.batch_code }}
+                        </h4>
+                        <p class="text-sm text-gray-600 mt-1">
+                            {{ data.distributions|length }} barang dalam batch ini
+                        </p>
+                        {% if data.group.verification_photo %}
+                        <div class="mt-3">
+                            <a href="{{ url_for('distributions.proof_photo', id=data.distributions[0].id) }}" target="_blank" class="block">
+                                <img src="{{ url_for('distributions.proof_photo', id=data.distributions[0].id) }}"
+                                     alt="Bukti Penerimaan Batch {{ data.group.batch_code }}"
+                                     class="w-full max-w-md h-48 object-cover rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+                            </a>
+                            <p class="text-xs text-gray-500 mt-2">
+                                <i class="fas fa-search-plus mr-1"></i>
+                                Klik untuk memperbesar - Foto bukti untuk seluruh batch
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Distributions in this batch -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {% for dist in data.distributions %}
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="font-semibold text-gray-900 text-sm">
+                                {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else 'Item Tidak Diketahui' }}
+                            </p>
+                            <p class="text-xs text-gray-600 mt-1">
+                                <i class="fas fa-barcode mr-1"></i>
+                                {{ dist.item_detail.serial_number if dist.item_detail else '-' }}
+                            </p>
+                            <p class="text-xs text-gray-600">
+                                <i class="fas fa-user-check mr-1"></i>
+                                {{ dist.verifier.name if dist.verifier else '-' }}
+                            </p>
+                            <p class="text-xs text-gray-600">
+                                <i class="fas fa-clock mr-1"></i>
+                                {{ dist.verified_at|format_wib_datetime }}
+                            </p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}

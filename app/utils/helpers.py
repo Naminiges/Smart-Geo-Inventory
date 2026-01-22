@@ -146,34 +146,49 @@ def notification_counts():
 
     try:
         if current_user.is_admin():
-            # Admin sees all pending requests and verified requests
+            # ADMIN NOTIFICATIONS
+
+            # 1. Permohonan Unit: Status 'pending' (menunggu verifikasi admin)
             counts['pending_request_count'] = AssetRequest.query.filter_by(status='pending').count()
-            counts['verified_request_count'] = AssetRequest.query.filter_by(status='verified').count()
-            # Admin sees draft distributions that need verification
-            counts['draft_distribution_count'] = Distribution.query.filter_by(is_draft=True).count()
+
+            # 2. Distribusi Langsung: Draft batch yang is_draft=True (menunggu verifikasi admin)
+            counts['draft_distribution_count'] = DistributionGroup.query.filter_by(is_draft=True).count()
+
+            # Admin tidak butuh notifikasi 'verified_request_count' dan 'pending_distribution_count'
+            counts['verified_request_count'] = 0
+            counts['pending_distribution_count'] = 0
+
         elif current_user.is_warehouse_staff():
-            # Warehouse staff sees verified requests
-            counts['verified_request_count'] = AssetRequest.query.filter_by(status='verified').count()
-            # Warehouse staff sees draft distributions from their warehouse
-            counts['draft_distribution_count'] = Distribution.query.filter_by(
+            # WAREHOUSE STAFF NOTIFICATIONS
+
+            # Warehouse staff hanya melihat:
+            # 1. Distribusi Langsung: Draft batch dari warehouse mereka (is_draft=True)
+            counts['draft_distribution_count'] = DistributionGroup.query.filter_by(
                 warehouse_id=current_user.warehouse_id,
                 is_draft=True
             ).count()
+
+            # Warehouse staff tidak butuh notifikasi lain
+            counts['pending_request_count'] = 0
+            counts['verified_request_count'] = 0
+            counts['pending_distribution_count'] = 0
+
         elif current_user.is_unit_staff():
-            # Unit staff sees pending requests for their assigned units
+            # UNIT STAFF NOTIFICATIONS
+
+            # Get user's assigned units
             user_unit_ids = [uu.unit_id for uu in UserUnit.query.filter_by(user_id=current_user.id).all()]
+
             if user_unit_ids:
-                counts['pending_request_count'] = AssetRequest.query.filter(
+                # 1. Permohonan Unit: Status 'verified' (siap didistribusikan warehouse)
+                counts['verified_request_count'] = AssetRequest.query.filter(
                     AssetRequest.unit_id.in_(user_unit_ids),
-                    AssetRequest.status == 'pending'
+                    AssetRequest.status == 'verified'
                 ).count()
 
-                # Unit staff sees ONLY distribution batches that need to be received
-                # Must be: part of a batch, batch is approved, distribution is in transit/installing, not verified yet
-                from sqlalchemy import and_
-
-                # Get distribution groups (batches) that have pending distributions for user's units
-                pending_batch_groups = DistributionGroup.query.filter(
+                # 2. Terima Distribusi: Batch approved yang siap diterima
+                # (verification_status='pending', status in 'installing'/'in_transit')
+                counts['pending_distribution_count'] = DistributionGroup.query.filter(
                     DistributionGroup.is_draft == False,
                     DistributionGroup.status == 'approved'
                 ).join(Distribution).filter(
@@ -182,8 +197,13 @@ def notification_counts():
                     Distribution.status.in_(['installing', 'in_transit'])
                 ).distinct().count()
 
-                counts['pending_distribution_count'] = pending_batch_groups
-    except Exception:
+            # Unit staff tidak butuh notifikasi pending_request_count dan draft_distribution_count
+            counts['pending_request_count'] = 0
+            counts['draft_distribution_count'] = 0
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         counts['pending_request_count'] = 0
         counts['verified_request_count'] = 0
         counts['draft_distribution_count'] = 0

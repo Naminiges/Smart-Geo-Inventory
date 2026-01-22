@@ -18,7 +18,12 @@ class Unit(BaseModel):
 
     @property
     def items_count(self):
-        """Get count of unit details (items) in this unit"""
+        """Get count of rooms/unit details in this unit"""
+        return self.unit_details.count()
+
+    @property
+    def rooms_count(self):
+        """Alias for items_count - more descriptive name"""
         return self.unit_details.count()
 
     def set_coordinates(self, latitude, longitude):

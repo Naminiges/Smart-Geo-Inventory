@@ -25,6 +25,12 @@ class DistributionGroup(BaseModel):
     rejection_reason = db.Column(db.Text)  # Reason for rejection
     notes = db.Column(db.Text)  # Notes from creator
 
+    # Proof of receipt (uploaded by unit staff) - one photo for the entire batch
+    verification_photo = db.Column(db.LargeBinary)  # BLOB to store proof photo as bytes
+    verification_received_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Unit staff who uploaded photo
+    verification_received_at = db.Column(db.DateTime)  # When photo was uploaded
+    verification_notes = db.Column(db.Text)  # Notes from unit staff when uploading photo
+
     # Status tracking
     status = db.Column(db.String(50), default='pending', index=True)  # pending, approved, rejected, distributed
 

@@ -62,6 +62,9 @@ class AssetRequest(BaseModel):
     received_by = db.Column(db.Integer, db.ForeignKey('users.id'))
     received_at = db.Column(db.DateTime)
 
+    # Proof of receipt (uploaded by unit staff)
+    verification_photo = db.Column(db.LargeBinary)  # BLOB to store proof photo as bytes
+
     # Notes
     request_notes = db.Column(db.Text)
     notes = db.Column(db.Text)
