@@ -352,6 +352,7 @@ class Procurement(BaseModel):
     __tablename__ = 'procurements'
 
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
+    warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)  # Warehouse tujuan
     # item_id and quantity removed - now using ProcurementItem for multiple items
     # item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=True)
     # quantity = db.Column(db.Integer, nullable=False)
@@ -397,6 +398,7 @@ class Procurement(BaseModel):
 
     # Relationships
     supplier = db.relationship('Supplier', backref='procurements')
+    warehouse = db.relationship('Warehouse', backref='procurements')
     # item = db.relationship('Item', backref='procurements') - removed, now using ProcurementItem
     requester = db.relationship('User', foreign_keys=[requested_by], backref='requested_procurements')
     approver = db.relationship('User', foreign_keys=[approved_by], backref='approved_procurements')

@@ -155,19 +155,20 @@ def index():
     # Get task type filter from URL parameter
     task_type_filter = request.args.get('task_type', '')  # 'installation' or 'delivery' or empty for all
 
+    # Initialize accessible_warehouse_ids for warehouse staff
+    accessible_warehouse_ids = []
+
     if current_user.is_warehouse_staff():
         # Get all warehouse IDs this user has access to
-        accessible_warehouse_ids = []
-        
         # Add direct warehouse_id if exists
         if current_user.warehouse_id:
             accessible_warehouse_ids.append(current_user.warehouse_id)
-        
+
         # Add warehouses from user_warehouses assignments
         for uw in current_user.user_warehouses.all():
             if uw.warehouse_id not in accessible_warehouse_ids:
                 accessible_warehouse_ids.append(uw.warehouse_id)
-        
+
         # Filter installations: only direct distributions (not from asset requests) from accessible warehouses
         # Exclude rejected drafts and draft distributions
         installations_query = Distribution.query.filter(
@@ -231,8 +232,8 @@ def index():
         batch_dict = {}  # key: (creator_id, unit_id, time_window), value: list of distributions
 
         for dist in installations:
-            # For warehouse staff, only show distributions from their warehouse
-            if current_user.is_warehouse_staff() and dist.warehouse_id != current_user.warehouse_id:
+            # For warehouse staff, only show distributions from their accessible warehouses
+            if current_user.is_warehouse_staff() and dist.warehouse_id not in accessible_warehouse_ids:
                 continue
 
             # Determine who created this distribution (draft creator or field staff)
@@ -274,10 +275,10 @@ def index():
     # A batch is defined by: draft_created_by, unit_id, draft_notes, and created_at (within 1 minute)
     draft_batches = []
     if drafts:
-        # For warehouse staff, only show drafts from their warehouse
+        # For warehouse staff, only show drafts from their accessible warehouses
         filtered_drafts = drafts
         if current_user.is_warehouse_staff():
-            filtered_drafts = [d for d in drafts if d.warehouse_id == current_user.warehouse_id]
+            filtered_drafts = [d for d in drafts if d.warehouse_id in accessible_warehouse_ids]
 
         # Use a dict to track processed batches
         batch_dict = {}  # key: (creator_id, unit_id, notes, time_window), value: list of drafts

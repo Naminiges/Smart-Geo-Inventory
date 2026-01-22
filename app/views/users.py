@@ -192,6 +192,14 @@ def assign_warehouses(id):
                 )
                 db.session.add(user_warehouse)
 
+                # Also update the user's warehouse_id for warehouse_staff
+                if user.role == 'warehouse_staff':
+                    user.warehouse_id = selected_warehouse_id
+            else:
+                # If no warehouse selected, clear the warehouse_id
+                if user.role == 'warehouse_staff':
+                    user.warehouse_id = None
+
             db.session.commit()
             flash(f'Warehouse assignment untuk {user.name} berhasil diupdate!', 'success')
             return redirect(url_for('users.detail', id=id))

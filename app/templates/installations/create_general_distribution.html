@@ -182,12 +182,21 @@
     {% if current_user.is_admin() %}
     let warehouseId = null;
     {% else %}
-    // For warehouse staff, get warehouse_id from the hidden input or current_user
-    let warehouseId = document.getElementById('warehouseId') ? document.getElementById('warehouseId').value : {{ current_user.warehouse_id|default ('null', true) }};
+    // For warehouse staff, get warehouse_id from user_warehouses or direct warehouse_id
+    let warehouseId = {{ current_user.warehouse_id or 'null' }};
+    {% if not current_user.warehouse_id %}
+    // If direct warehouse_id is null, try to get from user_warehouses
+    {% if current_user.user_warehouses.count() > 0 %}
+    warehouseId = {{ current_user.user_warehouses.first().warehouse_id }};
+    {% endif %}
+    {% endif %}
     {% endif %}
     let selectedUnitId = null;
 
     console.log('Initial warehouseId:', warehouseId);
+    console.log('User role:', '{{ current_user.role }}');
+    console.log('User warehouse_id:', '{{ current_user.warehouse_id }}');
+    console.log('User warehouses count:', {{ current_user.user_warehouses.count() if current_user.is_warehouse_staff() else 0 }});
 
     // Warehouse change (admin only)
     {% if current_user.is_admin() %}
@@ -364,6 +373,12 @@
 
     function loadAvailableSerials(containerId, itemId) {
         if (!warehouseId || !itemId) {
+            console.error('Missing parameters:', { warehouseId, itemId, containerId });
+            const container = document.getElementById(containerId);
+            const loadingState = container.querySelector('.loading-state');
+            if (loadingState) {
+                loadingState.innerHTML = '<div class="text-red-500 text-center">Error: Warehouse ID tidak ditemukan. Silakan refresh halaman atau login ulang.</div>';
+            }
             return;
         }
 
@@ -376,9 +391,15 @@
 
         loadingState.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memuat serial numbers...';
 
+        console.log(`Fetching: /installations/api/available-items/${warehouseId}/${itemId}`);
+
         fetch(`/installations/api/available-items/${warehouseId}/${itemId}`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('Response data:', data);
                 loadingState.classList.add('hidden');
                 serialSelection.classList.remove('hidden');
                 availableCountSpan.textContent = data.total;
@@ -418,7 +439,7 @@
             })
             .catch(error => {
                 console.error('Error loading serials:', error);
-                loadingState.innerHTML = '<div class="text-red-500 text-center">Gagal memuat serial numbers</div>';
+                loadingState.innerHTML = '<div class="text-red-500 text-center">Gagal memuat serial numbers. Error: ' + error.message + '</div>';
             });
     }
 

@@ -73,9 +73,22 @@ def _create_procurement_request(is_admin=False):
             items_data = request.form.getlist('items')
             request_notes = form.request_notes.data
 
+            # For admin: Get supplier and warehouse
+            if is_admin:
+                supplier_id = request.form.get('supplier_id', type=int)
+                warehouse_id = request.form.get('warehouse_id', type=int)
+
+                if not supplier_id:
+                    flash('Silakan pilih supplier!', 'danger')
+                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all(), warehouses=Warehouse.query.all(), is_admin=is_admin)
+
+                if not warehouse_id:
+                    flash('Silakan pilih warehouse tujuan!', 'danger')
+                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all(), warehouses=Warehouse.query.all(), is_admin=is_admin)
+
             if not items_data or len(items_data) == 0:
                 flash('Minimal harus ada satu barang yang diminta!', 'danger')
-                return render_template('procurement/request.html', form=form)
+                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
             # Validate and process items
             valid_items = []
@@ -88,11 +101,11 @@ def _create_procurement_request(is_admin=False):
                     # Barang baru - langsung buat item baru di tabel items
                     if not item_data.get('item_name'):
                         flash('Nama barang baru harus diisi!', 'danger')
-                        return render_template('procurement/request.html', form=form)
+                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                     if not item_data.get('item_category_id') or item_data.get('item_category_id') == 0:
                         flash('Kategori barang harus dipilih!', 'danger')
-                        return render_template('procurement/request.html', form=form)
+                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                     # Buat item baru langsung di tabel items
                     new_item = Item(
@@ -113,7 +126,7 @@ def _create_procurement_request(is_admin=False):
                     # Barang existing
                     if not item_data.get('item_id') or item_data.get('item_id') == 0:
                         flash('Harap pilih barang dari daftar atau pilih "Lainnya"', 'danger')
-                        return render_template('procurement/request.html', form=form)
+                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                     valid_items.append({
                         'item_id': item_data.get('item_id'),
@@ -123,7 +136,7 @@ def _create_procurement_request(is_admin=False):
 
             if not valid_items:
                 flash('Tidak ada barang valid yang diminta!', 'danger')
-                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), is_admin=is_admin)
+                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
             # Create procurement
             if is_admin:
@@ -132,20 +145,15 @@ def _create_procurement_request(is_admin=False):
                     request_notes=request_notes,
                     status='approved',  # Directly approved
                     requested_by=current_user.id,
-                    request_date=datetime.now()
+                    request_date=datetime.now(),
+                    supplier_id=supplier_id,
+                    approved_by=current_user.id,
+                    approval_date=datetime.now(),
+                    warehouse_id=warehouse_id  # Set warehouse tujuan
                 )
                 procurement.save()
 
-                # For admin, set default supplier or ask for it
-                # For now, use first supplier as default
-                first_supplier = Supplier.query.first()
-                if first_supplier:
-                    procurement.supplier_id = first_supplier.id
-                    procurement.approved_by = current_user.id
-                    procurement.approval_date = datetime.now()
-                    procurement.save()
-
-                success_message = f'Pengadaan berhasil dibuat dan disetujui dengan {len(valid_items)} barang!'
+                success_message = f'Pengadaan berhasil dibuat dan disetujui dengan {len(valid_items)} barang! Supplier: {procurement.supplier.name if procurement.supplier else "N/A"}'
             else:
                 # Warehouse staff creates procurement - needs approval
                 procurement = Procurement(
@@ -175,12 +183,16 @@ def _create_procurement_request(is_admin=False):
     # GET request - prepare data for template
     items = Item.query.all()
     categories = Category.query.all()
+    suppliers = Supplier.query.all() if is_admin else []
+    warehouses = Warehouse.query.all() if is_admin else []
 
     # Use same template for both admin and warehouse staff
     return render_template('procurement/request.html',
                          form=form,
                          items=items,
                          categories=categories,
+                         suppliers=suppliers,
+                         warehouses=warehouses,
                          is_admin=is_admin)
 
 
