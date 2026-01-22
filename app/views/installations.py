@@ -156,9 +156,22 @@ def index():
     task_type_filter = request.args.get('task_type', '')  # 'installation' or 'delivery' or empty for all
 
     if current_user.is_warehouse_staff():
-        # Filter installations: only direct distributions (not from asset requests) from this warehouse
+        # Get all warehouse IDs this user has access to
+        accessible_warehouse_ids = []
+        
+        # Add direct warehouse_id if exists
+        if current_user.warehouse_id:
+            accessible_warehouse_ids.append(current_user.warehouse_id)
+        
+        # Add warehouses from user_warehouses assignments
+        for uw in current_user.user_warehouses.all():
+            if uw.warehouse_id not in accessible_warehouse_ids:
+                accessible_warehouse_ids.append(uw.warehouse_id)
+        
+        # Filter installations: only direct distributions (not from asset requests) from accessible warehouses
         # Exclude rejected drafts and draft distributions
-        installations_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).filter(
+        installations_query = Distribution.query.filter(
+            Distribution.warehouse_id.in_(accessible_warehouse_ids),
             Distribution.asset_request_id == None,
             Distribution.is_draft == False,
             Distribution.draft_rejected == False
@@ -167,13 +180,16 @@ def index():
             installations_query = installations_query.filter_by(task_type=task_type_filter)
         installations = installations_query.order_by(Distribution.draft_verified_at.desc()).all()
 
-        # Get draft distributions from this warehouse only, newest first
-        draft_query = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id, is_draft=True)
+        # Get draft distributions from accessible warehouses only, newest first
+        draft_query = Distribution.query.filter(
+            Distribution.warehouse_id.in_(accessible_warehouse_ids),
+            Distribution.is_draft == True
+        )
         drafts = draft_query.order_by(Distribution.created_at.desc()).all()
 
         # Get unique units and field staffs for filters
-        units = Unit.query.join(Distribution).filter(Distribution.warehouse_id == current_user.warehouse_id).distinct().all()
-        field_staffs = User.query.join(Distribution, User.id == Distribution.field_staff_id).filter(Distribution.warehouse_id == current_user.warehouse_id, User.role == 'field_staff').distinct().all()
+        units = Unit.query.join(Distribution).filter(Distribution.warehouse_id.in_(accessible_warehouse_ids)).distinct().all()
+        field_staffs = User.query.join(Distribution, User.id == Distribution.field_staff_id).filter(Distribution.warehouse_id.in_(accessible_warehouse_ids), User.role == 'field_staff').distinct().all()
     elif current_user.is_field_staff():
         # Filter installations by task type if specified
         # Exclude rejected drafts
