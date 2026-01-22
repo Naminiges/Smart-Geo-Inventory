@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Smart Geo Inventory{% endblock %}</title>
+    <title>{% block title %}LOKASET Inventory{% endblock %}</title>
 
     <!-- Font Awesome Icons -->
     <link
@@ -58,7 +58,7 @@
                         <i class="fas fa-box text-xl text-white"></i>
                     </div> -->
             <div>
-              <h1 class="text-lg font-bold text-gray-800">Smart Geo</h1>
+              <h1 class="text-lg font-bold text-gray-800">LOKASET</h1>
               <p class="text-xs text-gray-500">Inventory System</p>
             </div>
           </div>
@@ -295,39 +295,55 @@
             </button>
 
             <!-- Submenu Distribusi -->
-            <div class="ml-8 mt-1 space-y-1 hidden" id="distribusi-submenu">
+            <div class="ml-4 mt-1 space-y-1 hidden" id="distribusi-submenu">
               <!-- Permohonan Aset (Warehouse Staff & Admin) -->
               {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
               <a
-                class="flex items-center px-3 py-2 rounded-lg justify-between {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
-                href="{{ url_for('asset_requests.index') }}"
-              >
-                <i
-                  class="fas fa-clipboard-list w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
-                ></i>
-                <span class="text-sm">Permohonan Unit</span>
-                {% if verified_request_count > 0 %}
-                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
-                    {{ verified_request_count }}
+              class="flex items-center px-3 py-2 rounded-lg
+              {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }}
+              transition-all duration-200 mb-1"
+              href="{{ url_for('asset_requests.index') }}"
+            >
+              <i
+                class="fas fa-clipboard-list w-4 h-4 mr-2 text-center
+                {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
+              ></i>
+            
+              <span class="text-sm">Permohonan Unit</span>
+            
+              {% if current_user.is_admin() and pending_request_count > 0 %}
+                <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                  {{ pending_request_count }}
                 </span>
-                {% endif %}
-              </a>
+              {% elif current_user.is_warehouse_staff() and verified_request_count > 0 %}
+                <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+                  {{ verified_request_count }}
+                </span>
+              {% endif %}
+            </a>
+            
               {% endif %}
 
               <a
-                class="flex items-center px-3 py-2 rounded-lg justify-between {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('installations.index') }}"
-              >
-                <i
-                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
-                ></i>
-                <span class="text-sm">Distribusi Langsung</span>
-                {% if draft_distribution_count > 0 %}
-                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              class="flex items-center px-3 py-2 rounded-lg
+              {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }}
+              transition-all duration-200"
+              href="{{ url_for('installations.index') }}"
+            >
+              <i
+                class="fas fa-archive w-4 h-4 mr-2 text-center
+                {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
+              ></i>
+            
+              <span class="text-sm">Distribusi Langsung</span>
+            
+              {% if draft_distribution_count > 0 %}
+                <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
                   {{ draft_distribution_count }}
                 </span>
-                {% endif %}
-              </a>
+              {% endif %}
+            </a>
+            
             </div>
           </div>
 
@@ -494,16 +510,11 @@
               class="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0"
             >
               <div class="flex items-center space-x-2 text-sm text-gray-600">
-                <i class="fas fa-graduation-cap text-emerald-600"></i>
+                <i class="fas fa-boxes text-emerald-600"></i>
                 <span
-                  >&copy; 2024 Smart Geo Inventory - Universitas Sumatera
+                  >&copy; 2026 LOKASET - Universitas Sumatera
                   Utara</span
                 >
-              </div>
-              <div class="flex items-center space-x-2 text-sm text-gray-500">
-                <span>Dibuat dengan</span>
-                <i class="fas fa-heart text-red-400"></i>
-                <span>untuk KP USU</span>
               </div>
             </div>
           </div>

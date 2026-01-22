@@ -3,6 +3,7 @@ from flask_login import login_user, logout_user, current_user
 from app import db
 from app.models import User, ActivityLog
 from app.forms import LoginForm
+from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('api_auth', __name__)
 
@@ -65,6 +66,6 @@ def api_me():
             'name': current_user.name,
             'email': current_user.email,
             'role': current_user.role,
-            'warehouse_id': current_user.warehouse_id
+            'warehouse_id': get_user_warehouse_id(current_user)
         }
     })

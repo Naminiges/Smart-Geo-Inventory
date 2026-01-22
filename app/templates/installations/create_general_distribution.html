@@ -56,7 +56,7 @@
                 </select>
             </div>
             {% else %}
-            <input type="hidden" name="warehouse_id" id="warehouseId" value="{{ current_user.warehouse_id }}" />
+            <input type="hidden" name="warehouse_id" id="warehouseId" value="{{ user_warehouse_id }}" />
             {% endif %}
 
             <!-- Unit Selection (First Step) -->
@@ -182,21 +182,14 @@
     {% if current_user.is_admin() %}
     let warehouseId = null;
     {% else %}
-    // For warehouse staff, get warehouse_id from user_warehouses or direct warehouse_id
-    let warehouseId = {{ current_user.warehouse_id or 'null' }};
-    {% if not current_user.warehouse_id %}
-    // If direct warehouse_id is null, try to get from user_warehouses
-    {% if current_user.user_warehouses.count() > 0 %}
-    warehouseId = {{ current_user.user_warehouses.first().warehouse_id }};
-    {% endif %}
-    {% endif %}
+    // For warehouse staff, get warehouse_id from helper
+    let warehouseId = {{ user_warehouse_id or 'null' }};
     {% endif %}
     let selectedUnitId = null;
 
     console.log('Initial warehouseId:', warehouseId);
     console.log('User role:', '{{ current_user.role }}');
-    console.log('User warehouse_id:', '{{ current_user.warehouse_id }}');
-    console.log('User warehouses count:', {{ current_user.user_warehouses.count() if current_user.is_warehouse_staff() else 0 }});
+    console.log('User warehouse_id:', '{{ user_warehouse_id }}');
 
     // Warehouse change (admin only)
     {% if current_user.is_admin() %}

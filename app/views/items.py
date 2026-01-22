@@ -4,7 +4,7 @@ from app import db
 from app.models import Item, ItemDetail, Category
 from app.forms import CategoryForm, ItemForm, ItemDetailForm
 from app.utils.decorators import role_required
-from app.utils.helpers import generate_barcode
+from app.utils.helpers import generate_barcode, get_user_warehouse_id
 import os
 
 bp = Blueprint('items', __name__, url_prefix='/items')
@@ -96,7 +96,7 @@ def details(id):
     search_filter = request.args.get('search', '').strip()
     status_filter = request.args.get('status', '')
 
-    # Build query for item details
+    # Build query for item details - NO warehouse filter, show all item_details
     query = ItemDetail.query.filter_by(item_id=id)
     item_details = query.all()
 
@@ -127,7 +127,7 @@ def details(id):
     if search_filter:
         item_details = [d for d in item_details if search_filter.lower() in d.serial_number.lower()]
 
-    # Build combined location list for dropdown
+    # Build combined location list for dropdown - show all warehouses and units
     locations = []
     for warehouse in Warehouse.query.all():
         locations.append({
@@ -156,9 +156,14 @@ def create_detail():
 
     form.item_id.choices = [(i.id, f"{i.item_code} - {i.name}") for i in Item.query.all()]
 
-    if current_user.is_warehouse_staff():
-        form.warehouse_id.choices = [(current_user.warehouse.id, current_user.warehouse.name)]
+    warehouse_id = get_user_warehouse_id(current_user)
+    if warehouse_id:
+        # Warehouse staff only sees their warehouse
+        from app.models import Warehouse
+        warehouse = Warehouse.query.get(warehouse_id)
+        form.warehouse_id.choices = [(warehouse.id, warehouse.name)] if warehouse else []
     else:
+        # Admin sees all warehouses
         from app.models import Warehouse
         form.warehouse_id.choices = [(w.id, w.name) for w in Warehouse.query.all()]
 

@@ -17,6 +17,7 @@ from app.forms import (
     AssetLoanItemUploadProofForm
 )
 from app.utils.decorators import role_required
+from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('asset_loans', __name__, url_prefix='/asset-loans')
 
@@ -315,7 +316,7 @@ def warehouse_index():
     """List all asset loans for warehouse staff"""
     # Filter by warehouse if warehouse staff
     if current_user.is_warehouse_staff():
-        loans = AssetLoan.query.filter_by(warehouse_id=current_user.warehouse_id).order_by(AssetLoan.created_at.desc()).all()
+        loans = AssetLoan.query.filter_by(warehouse_id=get_user_warehouse_id(current_user)).order_by(AssetLoan.created_at.desc()).all()
     else:  # admin
         loans = AssetLoan.query.order_by(AssetLoan.created_at.desc()).all()
 
@@ -347,7 +348,7 @@ def warehouse_detail(id):
     loan = AssetLoan.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke peminjaman ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 
@@ -362,7 +363,7 @@ def warehouse_approve(id):
     loan = AssetLoan.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke peminjaman ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 
@@ -394,7 +395,7 @@ def warehouse_reject(id):
     loan = AssetLoan.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke peminjaman ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 
@@ -420,7 +421,7 @@ def warehouse_ship(id):
     loan = AssetLoan.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke peminjaman ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 
@@ -452,7 +453,7 @@ def warehouse_approve_return(id):
     loan = AssetLoan.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke peminjaman ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 
@@ -485,7 +486,7 @@ def warehouse_verify_return(item_id):
     loan = loan_item.asset_loan
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke item ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 
@@ -522,7 +523,7 @@ def warehouse_view_proof(item_id):
     loan = loan_item.asset_loan
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and loan.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and loan.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke item ini.', 'danger')
         return redirect(url_for('asset_loans.warehouse_index'))
 

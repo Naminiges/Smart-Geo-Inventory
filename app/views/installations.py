@@ -6,6 +6,7 @@ from app.models import Distribution, ItemDetail, Item, User, Unit, UnitDetail, A
 from app.forms import DistributionForm, InstallationForm
 from app.utils.decorators import role_required, warehouse_access_required
 from app.utils.datetime_helper import get_wib_now
+from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('installations', __name__, url_prefix='/installations')
 
@@ -21,7 +22,7 @@ def draft_list():
     if current_user.is_admin():
         drafts = Distribution.query.filter_by(is_draft=True).order_by(Distribution.created_at.desc()).all()
     else:  # warehouse staff
-        drafts = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id, is_draft=True).order_by(Distribution.created_at.desc()).all()
+        drafts = Distribution.query.filter_by(warehouse_id=get_user_warehouse_id(current_user), is_draft=True).order_by(Distribution.created_at.desc()).all()
 
     # Group drafts by batch for admin verification
     draft_batches = []
@@ -68,7 +69,7 @@ def rejected_list():
     else:  # warehouse staff
         # Warehouse staff sees rejected groups from their warehouse
         rejected_groups = DistributionGroup.query.filter(
-            DistributionGroup.warehouse_id == current_user.warehouse_id,
+            DistributionGroup.warehouse_id == get_user_warehouse_id(current_user),
             DistributionGroup.status == 'rejected'
         ).order_by(DistributionGroup.rejected_at.desc()).all()
 
@@ -79,7 +80,7 @@ def rejected_list():
         ).order_by(RejectedDistribution.rejected_at.desc()).all()
     else:
         orphan_rejected = RejectedDistribution.query.filter(
-            RejectedDistribution.warehouse_id == current_user.warehouse_id,
+            RejectedDistribution.warehouse_id == get_user_warehouse_id(current_user),
             RejectedDistribution.distribution_group_id == None
         ).order_by(RejectedDistribution.rejected_at.desc()).all()
 
@@ -161,8 +162,8 @@ def index():
     if current_user.is_warehouse_staff():
         # Get all warehouse IDs this user has access to
         # Add direct warehouse_id if exists
-        if current_user.warehouse_id:
-            accessible_warehouse_ids.append(current_user.warehouse_id)
+        if get_user_warehouse_id(current_user):
+            accessible_warehouse_ids.append(get_user_warehouse_id(current_user))
 
         # Add warehouses from user_warehouses assignments
         for uw in current_user.user_warehouses.all():
@@ -329,7 +330,7 @@ def create():
     if current_user.is_warehouse_staff():
         # Only show available items in this warehouse
         available_items = ItemDetail.query.filter_by(
-            warehouse_id=current_user.warehouse_id,
+            warehouse_id=get_user_warehouse_id(current_user),
             status='available'
         ).all()
         form.item_detail_id.choices = [(i.id, f"{i.item.name} - {i.serial_number}") for i in available_items]
@@ -451,7 +452,7 @@ def verify_task(id):
     distribution = Distribution.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and distribution.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and distribution.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke tugas ini.', 'danger')
         return redirect(url_for('installations.index'))
 
@@ -571,7 +572,7 @@ def update_status(id, status):
     distribution = Distribution.query.get_or_404(id)
 
     # Check access for warehouse staff
-    if current_user.is_warehouse_staff() and distribution.warehouse_id != current_user.warehouse_id:
+    if current_user.is_warehouse_staff() and distribution.warehouse_id != get_user_warehouse_id(current_user):
         flash('Anda tidak memiliki akses ke tugas ini.', 'danger')
         return redirect(url_for('installations.index'))
 
@@ -716,7 +717,7 @@ def distribute_asset_request(request_id):
             print(f"Created {len(distributions_created)} distributions")
             for dist in distributions_created:
                 print(f"  - Distribution ID: {dist.id}, Item: {dist.item_detail.item.name if dist.item_detail else 'N/A'}, Field Staff ID: {dist.field_staff_id}, Warehouse ID: {dist.warehouse_id}")
-            print(f"Current warehouse staff warehouse_id: {current_user.warehouse_id}")
+            print(f"Current warehouse staff warehouse_id: {get_user_warehouse_id(current_user)}")
             print(f"=================================")
 
             flash(f'Berhasil membuat {len(distributions_created)} distribusi untuk permohonan aset #{asset_request.id}! Field staff akan menerima task.', 'success')
@@ -748,7 +749,7 @@ def create_general_distribution():
             notes = request.form.get('notes', '')
 
             # Get warehouse
-            warehouse_id = current_user.warehouse_id if current_user.is_warehouse_staff() else request.form.get('warehouse_id', type=int)
+            warehouse_id = get_user_warehouse_id(current_user) if current_user.is_warehouse_staff() else request.form.get('warehouse_id', type=int)
 
             if not unit_id:
                 flash('Silakan pilih unit tujuan.', 'warning')
@@ -860,10 +861,14 @@ def create_general_distribution():
     units = Unit.query.all()
     items = Item.query.all()
 
+    # Get warehouse_id for current user
+    user_warehouse_id = get_user_warehouse_id(current_user)
+
     return render_template('installations/create_general_distribution.html',
                          warehouses=warehouses,
                          units=units,
-                         items=items)
+                         items=items,
+                         user_warehouse_id=user_warehouse_id)
 
 
 @bp.route('/general-distribution/<int:id>/verify')

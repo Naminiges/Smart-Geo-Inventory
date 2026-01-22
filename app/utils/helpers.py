@@ -81,6 +81,21 @@ def get_low_stock_items(threshold=10):
     return Stock.query.filter(Stock.quantity < threshold).all()
 
 
+def get_user_warehouse_id(user):
+    """Helper function to get warehouse_id from UserWarehouse relationship"""
+    from app.models.user import UserWarehouse
+
+    if not user or not user.is_authenticated:
+        return None
+
+    if user.is_admin():
+        return None  # Admin can access all warehouses
+
+    # For warehouse_staff, get their assigned warehouse
+    user_warehouse = UserWarehouse.query.filter_by(user_id=user.id).first()
+    return user_warehouse.warehouse_id if user_warehouse else None
+
+
 def get_dashboard_stats(warehouse_id=None):
     """Get dashboard statistics"""
     from app.models import Item, ItemDetail, Stock, Warehouse, Unit, Distribution
@@ -160,13 +175,21 @@ def notification_counts():
 
         elif current_user.is_warehouse_staff():
             # WAREHOUSE STAFF NOTIFICATIONS
+            from app.models.user import UserWarehouse
 
-            # Warehouse staff hanya melihat:
-            # 1. Distribusi Langsung: Draft batch dari warehouse mereka (is_draft=True)
-            counts['draft_distribution_count'] = DistributionGroup.query.filter_by(
-                warehouse_id=current_user.warehouse_id,
-                is_draft=True
-            ).count()
+            # Get warehouse from UserWarehouse relationship
+            user_warehouse = UserWarehouse.query.filter_by(user_id=current_user.id).first()
+
+            if user_warehouse:
+                # Warehouse staff hanya melihat:
+                # 1. Distribusi Langsung: Draft batch dari warehouse mereka (is_draft=True)
+                counts['draft_distribution_count'] = DistributionGroup.query.filter_by(
+                    warehouse_id=user_warehouse.warehouse_id,
+                    is_draft=True
+                ).count()
+            else:
+                # If no warehouse assigned, no notifications
+                counts['draft_distribution_count'] = 0
 
             # Warehouse staff tidak butuh notifikasi lain
             counts['pending_request_count'] = 0
@@ -180,13 +203,23 @@ def notification_counts():
             user_unit_ids = [uu.unit_id for uu in UserUnit.query.filter_by(user_id=current_user.id).all()]
 
             if user_unit_ids:
-                # 1. Permohonan Unit: Status 'verified' (siap didistribusikan warehouse)
+                # 1. Permohonan Unit: Status 'pending' (menunggu verifikasi admin) - untuk sidebar "Daftar Permohonan"
+                pending_reqs = AssetRequest.query.filter(
+                    AssetRequest.unit_id.in_(user_unit_ids),
+                    AssetRequest.status == 'pending'
+                ).all()
+                counts['pending_request_count'] = len(pending_reqs)
+
+                # Debug: print hasil
+                print(f"DEBUG Unit Staff {current_user.name}: unit_ids={user_unit_ids}, pending_count={counts['pending_request_count']}")
+
+                # 2. Permohonan Unit: Status 'verified' (siap didistribusikan warehouse)
                 counts['verified_request_count'] = AssetRequest.query.filter(
                     AssetRequest.unit_id.in_(user_unit_ids),
                     AssetRequest.status == 'verified'
                 ).count()
 
-                # 2. Terima Distribusi: Batch approved yang siap diterima
+                # 3. Terima Distribusi: Batch approved yang siap diterima
                 # (verification_status='pending', status in 'installing'/'in_transit')
                 counts['pending_distribution_count'] = DistributionGroup.query.filter(
                     DistributionGroup.is_draft == False,
@@ -197,8 +230,7 @@ def notification_counts():
                     Distribution.status.in_(['installing', 'in_transit'])
                 ).distinct().count()
 
-            # Unit staff tidak butuh notifikasi pending_request_count dan draft_distribution_count
-            counts['pending_request_count'] = 0
+            # Unit staff tidak butuh notifikasi draft_distribution_count
             counts['draft_distribution_count'] = 0
 
     except Exception as e:

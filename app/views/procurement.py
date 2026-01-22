@@ -19,21 +19,49 @@ bp = Blueprint('procurement', __name__, url_prefix='/procurement')
 @login_required
 @role_required('admin', 'warehouse_staff')
 def index():
-    """List all procurements"""
+    """List all procurements - filtered by warehouse for warehouse staff"""
     status_filter = request.args.get('status', '')
     query = Procurement.query
+
+    # Filter by warehouse for warehouse staff
+    if not current_user.is_admin():
+        from app.models.user import UserWarehouse
+        user_warehouse = UserWarehouse.query.filter_by(user_id=current_user.id).first()
+
+        if user_warehouse:
+            query = query.filter_by(warehouse_id=user_warehouse.warehouse_id)
+        else:
+            # If warehouse staff has no warehouse assigned, show empty list
+            query = query.filter(Procurement.id == -1)
 
     if status_filter:
         query = query.filter_by(status=status_filter)
 
     procurements = query.order_by(Procurement.created_at.desc()).all()
 
-    # Get statistics
-    total_procurements = Procurement.query.count()
-    pending_count = Procurement.query.filter_by(status='pending').count()
-    approved_count = Procurement.query.filter_by(status='approved').count()
-    received_count = Procurement.query.filter_by(status='received').count()
-    completed_count = Procurement.query.filter_by(status='completed').count()
+    # Get statistics - also filtered for warehouse staff
+    if not current_user.is_admin():
+        from app.models.user import UserWarehouse
+        user_warehouse = UserWarehouse.query.filter_by(user_id=current_user.id).first()
+
+        if user_warehouse:
+            total_procurements = Procurement.query.filter_by(warehouse_id=user_warehouse.warehouse_id).count()
+            pending_count = Procurement.query.filter_by(warehouse_id=user_warehouse.warehouse_id, status='pending').count()
+            approved_count = Procurement.query.filter_by(warehouse_id=user_warehouse.warehouse_id, status='approved').count()
+            received_count = Procurement.query.filter_by(warehouse_id=user_warehouse.warehouse_id, status='received').count()
+            completed_count = Procurement.query.filter_by(warehouse_id=user_warehouse.warehouse_id, status='completed').count()
+        else:
+            total_procurements = 0
+            pending_count = 0
+            approved_count = 0
+            received_count = 0
+            completed_count = 0
+    else:
+        total_procurements = Procurement.query.count()
+        pending_count = Procurement.query.filter_by(status='pending').count()
+        approved_count = Procurement.query.filter_by(status='approved').count()
+        received_count = Procurement.query.filter_by(status='received').count()
+        completed_count = Procurement.query.filter_by(status='completed').count()
 
     return render_template('procurement/index.html',
                          procurements=procurements,
@@ -156,11 +184,20 @@ def _create_procurement_request(is_admin=False):
                 success_message = f'Pengadaan berhasil dibuat dan disetujui dengan {len(valid_items)} barang! Supplier: {procurement.supplier.name if procurement.supplier else "N/A"}'
             else:
                 # Warehouse staff creates procurement - needs approval
+                # Get warehouse dari user yang login
+                from app.models.user import UserWarehouse
+                user_warehouse = UserWarehouse.query.filter_by(user_id=current_user.id).first()
+
+                if not user_warehouse:
+                    flash('Anda belum terassign ke warehouse manapun. Hubungi admin.', 'danger')
+                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+
                 procurement = Procurement(
                     request_notes=request_notes,
                     status='pending',  # Needs admin approval
                     requested_by=current_user.id,
-                    request_date=datetime.now()
+                    request_date=datetime.now(),
+                    warehouse_id=user_warehouse.warehouse_id  # Otomatis set warehouse dari user
                 )
                 procurement.save()
 

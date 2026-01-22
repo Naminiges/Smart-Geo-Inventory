@@ -4,6 +4,7 @@ from sqlalchemy import func
 from geoalchemy2.functions import ST_AsGeoJSON
 from app import db
 from app.models import Warehouse, Unit, Distribution, ItemDetail
+from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('api_map', __name__)
 
@@ -89,7 +90,7 @@ def api_distributions():
     # Filter by user role
     if current_user.is_warehouse_staff():
         distributions = Distribution.query.filter(
-            Distribution.warehouse_id == current_user.warehouse_id
+            Distribution.warehouse_id == get_user_warehouse_id(current_user)
         ).all()
     elif current_user.is_field_staff():
         distributions = Distribution.query.filter(
@@ -192,7 +193,7 @@ def api_all():
         distributions = Distribution.query.all()
     elif current_user.is_warehouse_staff():
         distributions = Distribution.query.filter(
-            Distribution.warehouse_id == current_user.warehouse_id
+            Distribution.warehouse_id == get_user_warehouse_id(current_user)
         ).all()
     else:
         distributions = Distribution.query.filter(

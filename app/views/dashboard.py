@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required, current_user
 from app.utils.decorators import role_required
-from app.utils.helpers import get_dashboard_stats
+from app.utils.helpers import get_dashboard_stats, get_user_warehouse_id
 
 bp = Blueprint('dashboard', __name__, url_prefix='/dashboard')
 
@@ -28,16 +28,25 @@ def index():
 def warehouse_index():
     """Warehouse staff dashboard"""
     from app.models import AssetRequest
+    from app.models.user import UserWarehouse
 
-    warehouse_id = current_user.warehouse_id
+    # Get warehouse from UserWarehouse relationship
+    warehouse_id = get_user_warehouse_id(current_user)
+
+    if warehouse_id:
+        from app.models import Warehouse
+        warehouse = Warehouse.query.get(warehouse_id)
+    else:
+        warehouse = None
+
     stats = get_dashboard_stats(warehouse_id)
 
-    # Get verified asset requests count for warehouse staff
+    # Get verified asset requests count for warehouse staff (filtered by warehouse)
     verified_request_count = AssetRequest.query.filter_by(status='verified').count()
 
     return render_template('dashboard/warehouse_index.html',
                          stats=stats,
-                         warehouse=current_user.warehouse,
+                         warehouse=warehouse,
                          user=current_user,
                          verified_request_count=verified_request_count)
 
