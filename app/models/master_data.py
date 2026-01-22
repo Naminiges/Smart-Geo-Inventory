@@ -68,6 +68,14 @@ class Item(BaseModel):
         """Get total maintenance item details count"""
         return self.item_details.filter_by(status='maintenance').count()
 
+    @property
+    def returned_details(self):
+        """Get total returned item details count (includes maintenance status)"""
+        return self.item_details.filter(db.or_(
+            ItemDetail.status == 'returned',
+            ItemDetail.status == 'maintenance'
+        )).count()
+
     def get_total_stock(self, warehouse_id=None):
         """Get total stock across all warehouses or specific warehouse"""
         from app.models.inventory import Stock
@@ -87,7 +95,7 @@ class ItemDetail(BaseModel):
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
     serial_number = db.Column(db.String(100), unique=True, nullable=False)
     serial_unit = db.Column(db.String(100))  # Serial unit internal untuk tracking aset
-    status = db.Column(db.String(50), default='available')  # available, processing, maintenance, used, in_unit
+    status = db.Column(db.String(50), default='available')  # available, processing, maintenance, used, in_unit, returned
     specification_notes = db.Column(db.Text)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'))
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'))

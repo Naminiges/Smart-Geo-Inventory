@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Batch Retur - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Buat Batch Retur{% endblock %}
+
+{% block content %}
+<!-- Header with Back Button -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Buat Batch Retur</h2>
+        <p class="text-sm text-gray-600 mt-1">Pilih barang yang akan diretur dari unit ke warehouse</p>
+    </div>
+    <a href="{{ url_for('returns.index') }}"
+       class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold inline-flex items-center shadow-sm">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali
+    </a>
+</div>
+
+<!-- Info Banner -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-900 mb-2">Panduan Pembuatan Batch Retur</h4>
+            <ul class="text-sm text-blue-800 space-y-1">
+                <li><i class="fas fa-check mr-1"></i>Pilih barang yang sudah terpasang/terkirim di unit</li>
+                <li><i class="fas fa-check mr-1"></i>Tentukan kondisi barang saat diretur (baik/rusak)</li>
+                <li><i class="fas fa-check mr-1"></i>Isi alasan retur untuk setiap barang</li>
+                <li><i class="fas fa-check mr-1"></i>Konfirmasi batch retur setelah selesai memilih</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<form method="POST" id="returnForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <!-- Warehouse Selection (Admin Only) -->
+    {% if current_user.is_admin() %}
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-warehouse mr-2 text-emerald-600"></i>
+            Pilih Warehouse
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Warehouse Tujuan *</label>
+                <select name="warehouse_id" required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                    <option value="">Pilih Warehouse</option>
+                    {% for wh in warehouses %}
+                    <option value="{{ wh.id }}">{{ wh.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Retur *</label>
+                <input type="date" name="return_date" id="returnDate" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <input type="hidden" name="warehouse_id" value="{{ warehouse_id }}">
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-calendar mr-2 text-emerald-600"></i>
+            Tanggal Retur
+        </h3>
+        <div class="grid">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Retur *</label>
+                <input type="date" name="return_date" id="returnDate" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Notes -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-sticky-note mr-2 text-emerald-600"></i>
+            Catatan Batch (Opsional)
+        </h3>
+        <textarea name="notes" rows="3"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  placeholder="Tambahkan catatan untuk batch retur ini..."></textarea>
+    </div>
+
+    <!-- Available Items -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-boxes mr-2 text-emerald-600"></i>
+                Barang yang Tersedia untuk Diretur
+            </h3>
+            <div class="flex items-center space-x-2">
+                <input type="text" id="searchInput" placeholder="Cari barang..."
+                       class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                <button type="button" onclick="loadDistributions()"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Selected Items Summary -->
+        <div id="selectedSummary" class="hidden bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-sm font-medium text-emerald-800">
+                        <i class="fas fa-check-circle mr-1"></i>
+                        <span id="selectedCount">0</span> item dipilih
+                    </span>
+                </div>
+                <button type="button" onclick="clearSelection()"
+                        class="text-sm text-red-600 hover:text-red-800 font-medium">
+                    <i class="fas fa-times mr-1"></i>
+                    Hapus Semua
+                </button>
+            </div>
+        </div>
+
+        <!-- Available Items List -->
+        <div id="itemsList" class="space-y-3 max-h-96 overflow-y-auto">
+            {% if distributions %}
+                {% for dist in distributions %}
+                <div class="item-card border border-gray-200 rounded-lg p-4 hover:border-emerald-300 transition-colors"
+                     data-item-id="{{ dist.id }}"
+                     data-item-name="{{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else '' }}"
+                     data-serial-number="{{ dist.item_detail.serial_number if dist.item_detail else '' }}"
+                     data-unit-name="{{ dist.unit.name if dist.unit else '' }}"
+                     data-unit-id="{{ dist.unit_id }}"
+                     data-item-detail-id="{{ dist.item_detail_id }}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-3">
+                                <input type="checkbox" class="item-checkbox w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
+                                       onchange="toggleItemSelection(this)">
+                                <div>
+                                    <p class="font-medium text-gray-900">
+                                        {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else 'Unknown' }}
+                                    </p>
+                                    <p class="text-sm text-gray-500">
+                                        <i class="fas fa-barcode mr-1"></i>
+                                        {{ dist.item_detail.serial_number if dist.item_detail else '-' }}
+                                        <span class="mx-2">|</span>
+                                        <i class="fas fa-building mr-1"></i>
+                                        {{ dist.unit.name if dist.unit else 'Unknown' }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                                Terpasang
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-8">
+                    <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
+                    <p class="text-gray-600">Tidak ada barang yang tersedia untuk diretur.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Selected Items Details Form -->
+    <div id="selectedItemsForm" class="hidden bg-white rounded-xl shadow-md p-6 mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+            <i class="fas fa-edit mr-2 text-emerald-600"></i>
+            Detail Barang yang Diretur
+        </h3>
+        <div id="selectedItemsDetails" class="space-y-4">
+            <!-- Selected items will be rendered here -->
+        </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="flex justify-end space-x-3">
+        <a href="{{ url_for('returns.index') }}"
+           class="px-6 py-2.5 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold inline-flex items-center">
+            <i class="fas fa-times mr-2"></i>
+            Batal
+        </a>
+        <button type="submit"
+                class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold inline-flex items-center">
+            <i class="fas fa-save mr-2"></i>
+            Simpan Batch Retur
+        </button>
+    </div>
+</form>
+
+<!-- Item Detail Template -->
+<template id="itemDetailTemplate">
+    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50" data-item-id="">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <span class="font-medium text-gray-900 item-name"></span>
+                <span class="text-sm text-gray-500 ml-2">(SN: <span class="item-serial"></span>)</span>
+            </div>
+            <button type="button" onclick="removeSelectedItem(this)" class="text-red-600 hover:text-red-800">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kondisi Barang *</label>
+                <select class="item-condition w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required>
+                    <option value="good">Baik</option>
+                    <option value="damaged">Rusak Ringan</option>
+                    <option value="broken">Rusak Berat</option>
+                    <option value="missing_parts">Hilang Komponen</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Alasan Retur *</label>
+                <input type="text" class="item-reason w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" required placeholder="Contoh: Barang rusak, penggantian, dll">
+            </div>
+        </div>
+        <div class="mt-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Catatan Kondisi (Opsional)</label>
+            <textarea class="item-condition-notes w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" rows="2" placeholder="Detail kondisi barang..."></textarea>
+        </div>
+        <input type="hidden" class="item-detail-id">
+        <input type="hidden" class="unit-id">
+        <input type="hidden" class="distribution-id">
+    </div>
+</template>
+
+<script>
+let selectedItems = [];
+
+function toggleItemSelection(checkbox) {
+    const card = checkbox.closest('.item-card');
+    const itemId = card.dataset.itemId;
+    const itemData = {
+        id: itemId,
+        name: card.dataset.itemName,
+        serialNumber: card.dataset.serialNumber,
+        unitName: card.dataset.unitName,
+        unitId: card.dataset.unitId,
+        itemDetailId: card.dataset.itemDetailId
+    };
+
+    console.log('toggleItemSelection called:', {
+        checked: checkbox.checked,
+        itemId: itemId,
+        itemData: itemData
+    });
+
+    if (checkbox.checked) {
+        if (!selectedItems.find(i => i.id === itemId)) {
+            selectedItems.push(itemData);
+            console.log('Item added to selectedItems. Total:', selectedItems.length);
+        }
+        card.classList.add('border-emerald-500', 'bg-emerald-50');
+    } else {
+        selectedItems = selectedItems.filter(i => i.id !== itemId);
+        console.log('Item removed from selectedItems. Total:', selectedItems.length);
+        card.classList.remove('border-emerald-500', 'bg-emerald-50');
+    }
+
+    console.log('Current selectedItems:', selectedItems);
+    updateSelectedSummary();
+    renderSelectedItemsDetails();
+}
+
+function updateSelectedSummary() {
+    const summary = document.getElementById('selectedSummary');
+    const count = document.getElementById('selectedCount');
+
+    if (selectedItems.length > 0) {
+        summary.classList.remove('hidden');
+        count.textContent = selectedItems.length;
+    } else {
+        summary.classList.add('hidden');
+    }
+}
+
+function renderSelectedItemsDetails() {
+    const container = document.getElementById('selectedItemsDetails');
+    const form = document.getElementById('selectedItemsForm');
+    const template = document.getElementById('itemDetailTemplate');
+
+    container.innerHTML = '';
+
+    if (selectedItems.length > 0) {
+        form.classList.remove('hidden');
+        selectedItems.forEach(item => {
+            const clone = template.content.cloneNode(true);
+            clone.querySelector('.item-name').textContent = item.name;
+            clone.querySelector('.item-serial').textContent = item.serialNumber;
+            clone.querySelector('.item-detail-id').value = item.itemDetailId;
+            clone.querySelector('.unit-id').value = item.unitId;
+            clone.querySelector('.distribution-id').value = item.id;
+            // Set data-item-id on the root div
+            const rootDiv = clone.querySelector('div[data-item-id]');
+            if (rootDiv) {
+                rootDiv.setAttribute('data-item-id', item.id);
+            }
+            container.appendChild(clone);
+        });
+    } else {
+        form.classList.add('hidden');
+    }
+}
+
+function removeSelectedItem(button) {
+    const div = button.closest('[data-item-id]');
+    const itemId = div.dataset.itemId;
+
+    selectedItems = selectedItems.filter(i => i.id !== itemId);
+
+    // Uncheck the corresponding checkbox (on the item card)
+    const cards = document.querySelectorAll('.item-card');
+    cards.forEach(card => {
+        if (card.dataset.itemId === itemId) {
+            const checkbox = card.querySelector('.item-checkbox');
+            if (checkbox) {
+                checkbox.checked = false;
+                card.classList.remove('border-emerald-500', 'bg-emerald-50');
+            }
+        }
+    });
+
+    updateSelectedSummary();
+    renderSelectedItemsDetails();
+}
+
+function clearSelection() {
+    selectedItems = [];
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.checked = false;
+        cb.closest('.item-card').classList.remove('border-emerald-500', 'bg-emerald-50');
+    });
+    updateSelectedSummary();
+    renderSelectedItemsDetails();
+}
+
+function submitReturnFormAJAX() {
+    console.log('submitReturnFormAJAX called, selectedItems:', selectedItems.length);
+
+    // Check if items are selected
+    if (!selectedItems || selectedItems.length === 0) {
+        alert('Pilih minimal satu item untuk diretur.');
+        return;
+    }
+
+    // Get the detail divs
+    const detailsContainer = document.getElementById('selectedItemsDetails');
+    if (!detailsContainer) {
+        alert('Container tidak ditemukan!');
+        return;
+    }
+
+    const detailDivs = detailsContainer.querySelectorAll('div[data-item-id]');
+    if (!detailDivs || detailDivs.length === 0) {
+        alert('Tidak ada detail item yang ditemukan. Silakan pilih item kembali.');
+        return;
+    }
+
+    // Collect item data
+    const items = [];
+    for (let i = 0; i < detailDivs.length; i++) {
+        const div = detailDivs[i];
+        const itemDetailId = div.querySelector('.item-detail-id')?.value;
+        const unitId = div.querySelector('.unit-id')?.value;
+        const distributionId = div.querySelector('.distribution-id')?.value;
+        const condition = div.querySelector('.item-condition')?.value;
+        const returnReason = div.querySelector('.item-reason')?.value;
+        const conditionNotes = div.querySelector('.item-condition-notes')?.value;
+
+        if (!itemDetailId || !unitId || !distributionId || !condition || !returnReason) {
+            alert('Harap lengkapi semua field untuk item ' + (i + 1));
+            return;
+        }
+
+        if (!returnReason.trim()) {
+            alert('Harap isi alasan retur untuk semua item.');
+            return;
+        }
+
+        items.push({
+            item_detail_id: parseInt(itemDetailId),
+            unit_id: parseInt(unitId),
+            distribution_id: parseInt(distributionId),
+            condition: condition,
+            return_reason: returnReason,
+            condition_notes: conditionNotes || ''
+        });
+    }
+
+    if (items.length === 0) {
+        alert('Tidak ada items yang valid untuk disubmit.');
+        return;
+    }
+
+    // Get form data
+    const form = document.getElementById('returnForm');
+    const formData = new FormData(form);
+
+    // Add items as JSON string
+    const itemsJson = JSON.stringify(items);
+    formData.append('items', itemsJson);
+
+    // Disable button and show loading
+    const btn = form.querySelector('button[type="button"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Menyimpan...';
+
+    // Submit using fetch
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            // Success - redirect to detail page
+            window.location.href = response.url;
+        } else {
+            return response.text().then(text => {
+                throw new Error('Gagal menyimpan batch retur: ' + response.status);
+            });
+        }
+    })
+    .catch(error => {
+        alert('Terjadi kesalahan: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save mr-2"></i>Simpan Batch Retur';
+    });
+}
+
+function submitReturnForm() {
+    try {
+        // Check if items are selected
+        if (!selectedItems || selectedItems.length === 0) {
+            alert('Pilih minimal satu item untuk diretur.');
+            return false;
+        }
+
+        // Get the detail divs
+        const detailsContainer = document.getElementById('selectedItemsDetails');
+        if (!detailsContainer) {
+            alert('Container tidak ditemukan!');
+            return false;
+        }
+
+        const detailDivs = detailsContainer.querySelectorAll('div[data-item-id]');
+        if (!detailDivs || detailDivs.length === 0) {
+            alert('Tidak ada detail item yang ditemukan. Silakan pilih item kembali.');
+            return false;
+        }
+
+        // Collect item data
+        const items = [];
+        for (let i = 0; i < detailDivs.length; i++) {
+            const div = detailDivs[i];
+            const itemDetailId = div.querySelector('.item-detail-id')?.value;
+            const unitId = div.querySelector('.unit-id')?.value;
+            const distributionId = div.querySelector('.distribution-id')?.value;
+            const condition = div.querySelector('.item-condition')?.value;
+            const returnReason = div.querySelector('.item-reason')?.value;
+            const conditionNotes = div.querySelector('.item-condition-notes')?.value;
+
+            if (!itemDetailId || !unitId || !distributionId || !condition || !returnReason) {
+                alert('Harap lengkapi semua field untuk item ' + (i + 1));
+                return false;
+            }
+
+            if (!returnReason.trim()) {
+                alert('Harap isi alasan retur untuk semua item.');
+                return false;
+            }
+
+            items.push({
+                item_detail_id: parseInt(itemDetailId),
+                unit_id: parseInt(unitId),
+                distribution_id: parseInt(distributionId),
+                condition: condition,
+                return_reason: returnReason,
+                condition_notes: conditionNotes || ''
+            });
+        }
+
+        if (items.length === 0) {
+            alert('Tidak ada items yang valid untuk disubmit.');
+            return false;
+        }
+
+        // Create hidden input for items
+        const itemsInput = document.createElement('input');
+        itemsInput.type = 'hidden';
+        itemsInput.name = 'items';
+        itemsInput.value = JSON.stringify(items);
+
+        const form = document.getElementById('returnForm');
+        form.appendChild(itemsInput);
+
+        // Submit the form
+        form.submit();
+
+        return true;
+    } catch (error) {
+        alert('Terjadi kesalahan: ' + error.message + '\n\n' + error.stack);
+        console.error('Error:', error);
+        return false;
+    }
+}
+
+function validateReturnForm(event) {
+    console.log('=== validateReturnForm START ===');
+    console.log('event:', event);
+    console.log('validateReturnForm called, selectedItems:', selectedItems.length);
+
+    if (selectedItems.length === 0) {
+        alert('Pilih minimal satu item untuk diretur.');
+        console.log('=== validateReturnForm END (no items) ===');
+        event.preventDefault();
+        return false;
+    }
+
+    // Remove any existing items input
+    const existingItemsInput = document.querySelector('input[name="items"]');
+    if (existingItemsInput) {
+        existingItemsInput.remove();
+    }
+
+    // Collect item data
+    const items = [];
+    const detailsContainer = document.getElementById('selectedItemsDetails');
+    console.log('detailsContainer:', detailsContainer);
+    const detailDivs = detailsContainer.querySelectorAll('div[data-item-id]');
+
+    console.log('detailDivs found:', detailDivs.length);
+
+    if (detailDivs.length === 0) {
+        alert('Tidak ada detail item yang ditemukan. Silakan pilih item kembali.');
+        console.log('=== validateReturnForm END (no detail divs) ===');
+        event.preventDefault();
+        return false;
+    }
+
+    detailDivs.forEach((div, index) => {
+        console.log(`Processing div ${index}:`, div);
+        const itemDetailId = div.querySelector('.item-detail-id').value;
+        const unitId = div.querySelector('.unit-id').value;
+        const distributionId = div.querySelector('.distribution-id').value;
+        const condition = div.querySelector('.item-condition').value;
+        const returnReason = div.querySelector('.item-reason').value;
+        const conditionNotes = div.querySelector('.item-condition-notes').value;
+
+        console.log('Processing item:', itemDetailId, 'reason:', returnReason);
+
+        if (!returnReason.trim()) {
+            alert('Harap isi alasan retur untuk semua item.');
+            console.log('=== validateReturnForm END (no reason) ===');
+            event.preventDefault();
+            return false;
+        }
+
+        items.push({
+            item_detail_id: parseInt(itemDetailId),
+            unit_id: parseInt(unitId),
+            distribution_id: parseInt(distributionId),
+            condition: condition,
+            return_reason: returnReason,
+            condition_notes: conditionNotes
+        });
+    });
+
+    console.log('Items to submit:', items);
+
+    if (items.length === 0) {
+        alert('Tidak ada items yang valid untuk disubmit.');
+        console.log('=== validateReturnForm END (no valid items) ===');
+        event.preventDefault();
+        return false;
+    }
+
+    // Create hidden input for items - use single field name 'items'
+    const itemsInput = document.createElement('input');
+    itemsInput.type = 'hidden';
+    itemsInput.name = 'items';
+    itemsInput.value = JSON.stringify(items);
+    document.getElementById('returnForm').appendChild(itemsInput);
+
+    console.log('Form about to submit');
+    console.log('Items JSON added to form:', itemsInput.value);
+    console.log('=== validateReturnForm END (submitting) ===');
+
+    // Let the form submit naturally
+    return true;
+}
+
+// Set default date to today and initialize event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM CONTENT LOADED ===');
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('returnDate').value = today;
+
+    const returnForm = document.getElementById('returnForm');
+    console.log('returnForm element:', returnForm);
+    console.log('returnForm.action:', returnForm ? returnForm.action : 'no form');
+    console.log('returnForm.method:', returnForm ? returnForm.method : 'no form');
+
+    if (!returnForm) {
+        console.error('returnForm not found!');
+        return;
+    }
+
+    // Add form submit listener
+    returnForm.addEventListener('submit', function(event) {
+        console.log('=== FORM SUBMIT EVENT TRIGGERED ===');
+        console.log('Event type:', event.type);
+        console.log('Event target:', event.target);
+        const isValid = validateReturnForm(event);
+        console.log('Validation result:', isValid);
+        if (!isValid) {
+            console.log('Preventing form submission');
+            event.preventDefault();
+            event.stopPropagation();
+        } else {
+            console.log('Form will submit naturally');
+        }
+    });
+
+    console.log('Event listener attached to returnForm');
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', function(e) {
+            const search = e.target.value.toLowerCase();
+            document.querySelectorAll('.item-card').forEach(card => {
+                const name = card.dataset.itemName.toLowerCase();
+                const serial = card.dataset.serialNumber.toLowerCase();
+                const unit = card.dataset.unitName.toLowerCase();
+
+                if (name.includes(search) || serial.includes(search) || unit.includes(search)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
