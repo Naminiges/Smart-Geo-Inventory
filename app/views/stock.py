@@ -1,32 +1,192 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Stock, StockTransaction, Item, Warehouse
+from app.models import Stock, StockTransaction, Item, Warehouse, Distribution, ReturnItem
 from app.forms import StockForm, StockTransactionForm
 from app.utils.decorators import role_required, warehouse_access_required
-from sqlalchemy import func
+from sqlalchemy import func, and_
+from datetime import datetime
 
 bp = Blueprint('stock', __name__, url_prefix='/stock')
 
 
 @bp.route('/')
 @login_required
-@warehouse_access_required
 def index():
-    """List all stock"""
-    from app.models.user import UserWarehouse
-
+    """Stock history page with navigation buttons"""
+    # Get recent stock transactions
     if current_user.is_warehouse_staff():
-        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
         user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
         if user_warehouse_ids:
-            stocks = Stock.query.filter(Stock.warehouse_id.in_(user_warehouse_ids)).all()
+            transactions = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids)
+            ).order_by(StockTransaction.transaction_date.desc()).limit(50).all()
         else:
-            stocks = []
+            transactions = []
     else:
-        stocks = Stock.query.all()
+        transactions = StockTransaction.query.order_by(StockTransaction.transaction_date.desc()).limit(50).all()
 
-    return render_template('stock/index.html', stocks=stocks)
+    # Get recent distributions (items going to units)
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            distributions = Distribution.query.filter(
+                Distribution.warehouse_id.in_(user_warehouse_ids)
+            ).order_by(Distribution.created_at.desc()).limit(50).all()
+        else:
+            distributions = []
+    else:
+        distributions = Distribution.query.order_by(Distribution.created_at.desc()).limit(50).all()
+
+    # Get recent returns (items coming back from units)
+    returns = ReturnItem.query.filter_by(status='returned').order_by(ReturnItem.created_at.desc()).limit(50).all()
+
+    return render_template('stock/index.html',
+                         transactions=transactions,
+                         distributions=distributions,
+                         returns=returns)
+
+
+@bp.route('/recap')
+@login_required
+def recap():
+    """Annual recap/report page"""
+    year = request.args.get('year', datetime.now().year, type=int)
+
+    # Get stock transactions per month
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            stock_in = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids),
+                StockTransaction.transaction_type == 'IN',
+                func.extract('year', StockTransaction.transaction_date) == year
+            ).all()
+            stock_out = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids),
+                StockTransaction.transaction_type == 'OUT',
+                func.extract('year', StockTransaction.transaction_date) == year
+            ).all()
+        else:
+            stock_in = []
+            stock_out = []
+    else:
+        stock_in = StockTransaction.query.filter(
+            StockTransaction.transaction_type == 'IN',
+            func.extract('year', StockTransaction.transaction_date) == year
+        ).all()
+        stock_out = StockTransaction.query.filter(
+            StockTransaction.transaction_type == 'OUT',
+            func.extract('year', StockTransaction.transaction_date) == year
+        ).all()
+
+    # Get distributions to units
+    distributions = Distribution.query.filter(
+        func.extract('year', Distribution.created_at) == year
+    ).all()
+
+    # Get returns from units
+    returns = ReturnItem.query.filter(
+        func.extract('year', ReturnItem.created_at) == year,
+        ReturnItem.status == 'returned'
+    ).all()
+
+    # Calculate totals
+    total_in = sum(t.quantity for t in stock_in)
+    # Total out = stock transactions OUT + distributions to units
+    total_out = sum(t.quantity for t in stock_out) + len(distributions)
+    total_distributed = len(distributions)
+    total_returned = len(returns)
+
+    # Group by source/destination
+    in_by_source = {}
+    for t in stock_in:
+        source = t.warehouse.name if t.warehouse else 'Unknown'
+        in_by_source[source] = in_by_source.get(source, 0) + t.quantity
+
+    # Group stock out by warehouse
+    out_by_source = {}
+    for t in stock_out:
+        source = t.warehouse.name if t.warehouse else 'Unknown'
+        out_by_source[source] = out_by_source.get(source, 0) + t.quantity
+
+    # Add distributions to out_by_source (group by warehouse name)
+    for d in distributions:
+        source = d.warehouse.name if d.warehouse else 'Unknown'
+        out_by_source[source] = out_by_source.get(source, 0) + 1
+
+    # Obname: items still in warehouse (status: available) created in selected year
+    from app.models.master_data import ItemDetail
+    obname_items = ItemDetail.query.filter(
+        ItemDetail.status == 'available',
+        func.extract('year', ItemDetail.created_at) == year
+    ).all()
+    total_obname = len(obname_items)
+
+    return render_template('stock/recap.html',
+                         year=year,
+                         total_in=total_in,
+                         total_out=total_out,
+                         total_distributed=total_distributed,
+                         total_returned=total_returned,
+                         total_obname=total_obname,
+                         in_by_source=in_by_source,
+                         out_by_source=out_by_source,
+                         stock_in=stock_in,
+                         stock_out=stock_out,
+                         distributions=distributions,
+                         returns=returns,
+                         obname_items=obname_items)
+
+
+@bp.route('/per-unit')
+@login_required
+def per_unit():
+    """Stock per unit with room cards"""
+    from app.models import Unit, UnitDetail, ItemDetail
+
+    # Get all units
+    units = Unit.query.filter_by(status='active').all()
+
+    unit_data = []
+    for unit in units:
+        # Get all rooms in this unit
+        rooms = UnitDetail.query.filter_by(unit_id=unit.id).all()
+
+        room_data = []
+        for room in rooms:
+            # Get item details in this room
+            item_details = ItemDetail.query.join(Distribution).filter(
+                Distribution.unit_detail_id == room.id
+            ).all()
+
+            # Group by item
+            items_in_room = {}
+            for detail in item_details:
+                item_name = detail.item.name
+                if item_name not in items_in_room:
+                    items_in_room[item_name] = {
+                        'item': detail.item,
+                        'count': 0,
+                        'statuses': {}
+                    }
+                items_in_room[item_name]['count'] += 1
+                status = detail.status
+                items_in_room[item_name]['statuses'][status] = items_in_room[item_name]['statuses'].get(status, 0) + 1
+
+            room_data.append({
+                'room': room,
+                'items': items_in_room,
+                'total_items': len(item_details)
+            })
+
+        unit_data.append({
+            'unit': unit,
+            'rooms': room_data,
+            'total_items': sum(rd['total_items'] for rd in room_data)
+        })
+
+    return render_template('stock/per_unit.html', unit_data=unit_data)
 
 
 @bp.route('/add', methods=['GET', 'POST'])
