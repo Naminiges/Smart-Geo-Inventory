@@ -87,7 +87,7 @@ def create():
 @login_required
 def details(id):
     """Show item details and list of item details (serial numbers)"""
-    from app.models import Warehouse, Unit, Distribution, ReturnItem
+    from app.models import Warehouse, Unit, Distribution, ReturnItem, VenueLoan
 
     item = Item.query.get_or_404(id)
 
@@ -152,10 +152,24 @@ def details(id):
         ).all()
         return_items_map = {ri.item_detail_id: ri for ri in return_items}
 
+    # Get VenueLoan data for items with 'loaned' status (via specification_notes)
+    venue_loans_map = {}
+    loaned_detail_ids = [d.id for d in item_details if d.status == 'loaned']
+    if loaned_detail_ids:
+        # Get active venue loans
+        active_venue_loans = VenueLoan.query.filter(
+            VenueLoan.status.in_(['approved', 'active'])
+        ).all()
+
+        # Build map of unit_detail_id to venue_loan
+        for vl in active_venue_loans:
+            venue_loans_map[vl.unit_detail_id] = vl
+
     return render_template('items/details.html', item=item, item_details=item_details,
                           locations=locations, location_filter=location_filter,
                           status_filter=status_filter, search_filter=search_filter,
-                          return_items_map=return_items_map)
+                          return_items_map=return_items_map,
+                          venue_loans_map=venue_loans_map)
 
 
 @bp.route('/detail/create', methods=['GET', 'POST'])

@@ -13,43 +13,37 @@ bp = Blueprint('units', __name__, url_prefix='/admin/units')
 @login_required
 @role_required('admin')
 def index():
-    """List all units"""
-    search = request.args.get('search', '')
+    """List venue loans for admin verification"""
+    from app.models import VenueLoan
+
     status_filter = request.args.get('status', '')
 
-    query = Unit.query
-
-    # Search
-    if search:
-        query = query.filter(
-            or_(
-                Unit.name.ilike(f'%{search}%'),
-                Unit.address.ilike(f'%{search}%')
-            )
-        )
+    # Build query for venue loans
+    query = VenueLoan.query
 
     # Status filter
     if status_filter:
         query = query.filter_by(status=status_filter)
 
-    units = query.order_by(Unit.created_at.desc()).all()
+    venue_loans = query.order_by(VenueLoan.created_at.desc()).all()
 
-    # Get asset request counts for each unit
-    unit_request_counts = {}
-    for unit in units:
-        pending_count = AssetRequest.query.filter_by(unit_id=unit.id, status='pending').count()
-        verified_count = AssetRequest.query.filter_by(unit_id=unit.id, status='verified').count()
-        unit_request_counts[unit.id] = {
-            'pending': pending_count,
-            'verified': verified_count,
-            'has_requests': pending_count > 0 or verified_count > 0
-        }
+    # Get statistics
+    total_count = VenueLoan.query.count()
+    pending_count = VenueLoan.query.filter_by(status='pending').count()
+    approved_count = VenueLoan.query.filter_by(status='approved').count()
+    active_count = VenueLoan.query.filter_by(status='active').count()
+    completed_count = VenueLoan.query.filter_by(status='completed').count()
 
     return render_template('admin/units/index.html',
-                         units=units,
-                         search=search,
+                         venue_loans=venue_loans,
                          status_filter=status_filter,
-                         unit_request_counts=unit_request_counts)
+                         stats={
+                             'total': total_count,
+                             'pending': pending_count,
+                             'approved': approved_count,
+                             'active': active_count,
+                             'completed': completed_count
+                         })
 
 
 @bp.route('/create', methods=['GET', 'POST'])

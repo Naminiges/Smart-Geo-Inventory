@@ -11,9 +11,9 @@ WIB = timezone(timedelta(hours=7))
 def get_wib_now():
     """
     Get current time in GMT+7 (WIB)
-    Returns timezone-aware datetime object
+    Returns naive datetime object (without timezone info) for comparison with database
     """
-    return datetime.now(WIB)
+    return datetime.now(WIB).replace(tzinfo=None)
 
 
 def utc_to_wib(utc_datetime):

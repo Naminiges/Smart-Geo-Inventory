@@ -33,7 +33,9 @@ def allowed_file(filename, allowed_extensions={'png', 'jpg', 'jpeg', 'gif'}):
 @login_required
 @role_required('unit_staff')
 def unit_index():
-    """List all asset loans for unit staff"""
+    """List all venue loans for unit staff (Venue/Room borrowing)"""
+    from app.models import VenueLoan
+
     # Get units assigned to this user
     user_units = current_user.get_assigned_units()
 
@@ -44,22 +46,33 @@ def unit_index():
     # Get unit IDs
     unit_ids = [unit.id for unit in user_units]
 
-    # Get loans for these units
-    loans = AssetLoan.query.filter(AssetLoan.unit_id.in_(unit_ids)).order_by(AssetLoan.created_at.desc()).all()
+    # Get venue loans for these units (as borrower)
+    venue_loans = VenueLoan.query.filter(
+        VenueLoan.borrower_unit_id.in_(unit_ids)
+    ).order_by(VenueLoan.created_at.desc()).all()
 
     # Get statistics
-    total_loans = AssetLoan.query.filter(AssetLoan.unit_id.in_(unit_ids)).count()
-    pending_count = AssetLoan.query.filter(AssetLoan.unit_id.in_(unit_ids), AssetLoan.status == 'pending').count()
-    active_count = AssetLoan.query.filter(AssetLoan.unit_id.in_(unit_ids), AssetLoan.status == 'active').count()
-    shipped_count = AssetLoan.query.filter(AssetLoan.unit_id.in_(unit_ids), AssetLoan.status == 'shipped').count()
+    total_count = VenueLoan.query.filter(VenueLoan.borrower_unit_id.in_(unit_ids)).count()
+    pending_count = VenueLoan.query.filter(
+        VenueLoan.borrower_unit_id.in_(unit_ids),
+        VenueLoan.status == 'pending'
+    ).count()
+    active_count = VenueLoan.query.filter(
+        VenueLoan.borrower_unit_id.in_(unit_ids),
+        VenueLoan.status == 'active'
+    ).count()
+    approved_count = VenueLoan.query.filter(
+        VenueLoan.borrower_unit_id.in_(unit_ids),
+        VenueLoan.status == 'approved'
+    ).count()
 
     return render_template('asset_loans/unit/index.html',
-                         loans=loans,
+                         venue_loans=venue_loans,
                          stats={
-                             'total': total_loans,
+                             'total': total_count,
                              'pending': pending_count,
                              'active': active_count,
-                             'shipped': shipped_count
+                             'approved': approved_count
                          })
 
 

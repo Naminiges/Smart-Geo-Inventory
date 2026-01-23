@@ -11,6 +11,7 @@ from app.models.procurement import Procurement, ProcurementItem, UnitProcurement
 from app.models.asset_request import AssetRequest, AssetRequestItem
 from app.models.asset_loan import AssetLoan, AssetLoanItem
 from app.models.return_batch import ReturnBatch, ReturnItem
+from app.models.venue_loan import VenueLoan
 
 __all__ = [
     'BaseModel',
@@ -23,5 +24,6 @@ __all__ = [
     'Procurement', 'ProcurementItem', 'UnitProcurement', 'UnitProcurementItem',
     'AssetRequest', 'AssetRequestItem',
     'AssetLoan', 'AssetLoanItem',
-    'ReturnBatch', 'ReturnItem'
+    'ReturnBatch', 'ReturnItem',
+    'VenueLoan'
 ]

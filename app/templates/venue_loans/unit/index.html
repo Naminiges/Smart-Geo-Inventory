@@ -64,6 +64,16 @@
             Ajukan Peminjaman Tempat
         </a>
     </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ url_for('asset_loans.unit_index') }}" class="inline-flex items-center px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold">
+            <i class="fas fa-box mr-2"></i>
+            Peminjaman Aset
+        </a>
+        <a href="{{ url_for('venue_loans.unit_index') }}" class="inline-flex items-center px-4 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors font-semibold">
+            <i class="fas fa-door-open mr-2"></i>
+            Peminjaman Tempat
+        </a>
+    </div>
 </div>
 
 <!-- Venue Loans Table -->

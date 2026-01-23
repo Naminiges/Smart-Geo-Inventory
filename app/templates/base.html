@@ -205,7 +205,7 @@
             {% endif %}
           </a>
 
-          <!-- Peminjaman Aset -->
+          <!-- Peminjaman Tempat -->
           <a
             class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_loans' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('asset_loans.unit_index') }}"
@@ -213,7 +213,7 @@
             <i
               class="fas fa-hand-holding w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_loans' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Peminjaman Aset</span>
+            <span class="font-medium">Peminjaman Tempat</span>
           </a>
           {% endif %}
 
@@ -267,7 +267,7 @@
             <i
               class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'units' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Unit</span>
+            <span class="font-medium">Peminjaman Tempat</span>
             {% if pending_request_count > 0 %}
             <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
                 {{ pending_request_count }}

@@ -45,7 +45,7 @@ def create_app(config_name='default'):
         return notification_counts()
 
     # Register blueprints
-    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns
+    from app.views import auth, dashboard, installations, stock, items, suppliers, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans
     from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_suppliers, api_map, api_procurement, api_units, api_unit_procurement
 
     app.register_blueprint(auth.bp)
@@ -65,6 +65,7 @@ def create_app(config_name='default'):
     app.register_blueprint(asset_loans.bp)
     app.register_blueprint(distributions.bp)
     app.register_blueprint(returns.bp)
+    app.register_blueprint(venue_loans.bp)
 
     # Register API blueprints
     app.register_blueprint(api_auth.bp, url_prefix='/api/auth')
@@ -86,5 +87,9 @@ def create_app(config_name='default'):
     # Create tables
     with app.app_context():
         db.create_all()
+
+    # Initialize background scheduler for venue loans
+    from app.scheduler import init_scheduler
+    init_scheduler(app)
 
     return app
