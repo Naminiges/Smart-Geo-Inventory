@@ -87,7 +87,7 @@ def create():
 @login_required
 def details(id):
     """Show item details and list of item details (serial numbers)"""
-    from app.models import Warehouse, Unit, Distribution
+    from app.models import Warehouse, Unit, Distribution, ReturnItem
 
     item = Item.query.get_or_404(id)
 
@@ -142,9 +142,20 @@ def details(id):
             'type': 'unit'
         })
 
+    # Get ReturnItem data for items with 'returned' status
+    return_items_map = {}
+    returned_detail_ids = [d.id for d in item_details if d.status == 'returned']
+    if returned_detail_ids:
+        return_items = ReturnItem.query.filter(
+            ReturnItem.item_detail_id.in_(returned_detail_ids),
+            ReturnItem.status == 'returned'
+        ).all()
+        return_items_map = {ri.item_detail_id: ri for ri in return_items}
+
     return render_template('items/details.html', item=item, item_details=item_details,
                           locations=locations, location_filter=location_filter,
-                          status_filter=status_filter, search_filter=search_filter)
+                          status_filter=status_filter, search_filter=search_filter,
+                          return_items_map=return_items_map)
 
 
 @bp.route('/detail/create', methods=['GET', 'POST'])

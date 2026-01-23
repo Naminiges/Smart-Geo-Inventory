@@ -61,9 +61,14 @@ class ReturnBatch(BaseModel):
         return True, f'Batch {self.batch_code} berhasil dikonfirmasi'
 
     def cancel(self, user_id, reason=None):
-        """Cancel the return batch"""
+        """Cancel the return batch and update all items to cancelled"""
         if self.status != 'pending':
             return False, 'Hanya batch dengan status pending yang dapat dibatalkan'
+
+        # Update all return items to cancelled
+        for item in self.return_items:
+            item.status = 'cancelled'
+            item.save()
 
         # Update batch status
         self.status = 'cancelled'
