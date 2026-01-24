@@ -13,38 +13,166 @@ bp = Blueprint('stock', __name__, url_prefix='/stock')
 @bp.route('/')
 @login_required
 def index():
-    """Stock history page with navigation buttons"""
-    # Get recent stock transactions
-    if current_user.is_warehouse_staff():
-        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
-        if user_warehouse_ids:
-            transactions = StockTransaction.query.filter(
-                StockTransaction.warehouse_id.in_(user_warehouse_ids)
-            ).order_by(StockTransaction.transaction_date.desc()).limit(50).all()
-        else:
-            transactions = []
-    else:
-        transactions = StockTransaction.query.order_by(StockTransaction.transaction_date.desc()).limit(50).all()
+    """Stock history page - only warehouse stock transactions"""
+    # Unified list of all transactions (individual items)
+    all_entries = []
 
-    # Get recent distributions (items going to units)
+    # Helper function to get timestamp for sorting
+    def get_timestamp(entry):
+        return entry.get('timestamp')
+
+    # 1. StockTransaction IN (bukan dari procurement)
     if current_user.is_warehouse_staff():
         user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
         if user_warehouse_ids:
-            distributions = Distribution.query.filter(
-                Distribution.warehouse_id.in_(user_warehouse_ids)
+            trans_in = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids),
+                StockTransaction.transaction_type == 'IN',
+                ~StockTransaction.note.like('%Procurement%')
+            ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
+        else:
+            trans_in = []
+    else:
+        trans_in = StockTransaction.query.filter(
+            StockTransaction.transaction_type == 'IN',
+            ~StockTransaction.note.like('%Procurement%')
+        ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
+
+    for trans in trans_in:
+        all_entries.append({
+            'type': 'stock_in',
+            'timestamp': trans.transaction_date,
+            'data': trans
+        })
+
+    # 2. StockTransaction OUT (bukan dari procurement)
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            trans_out = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids),
+                StockTransaction.transaction_type == 'OUT',
+                ~StockTransaction.note.like('%Procurement%')
+            ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
+        else:
+            trans_out = []
+    else:
+        trans_out = StockTransaction.query.filter(
+            StockTransaction.transaction_type == 'OUT',
+            ~StockTransaction.note.like('%Procurement%')
+        ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
+
+    for trans in trans_out:
+        all_entries.append({
+            'type': 'stock_out',
+            'timestamp': trans.transaction_date,
+            'data': trans
+        })
+
+    # 3. ReturnBatch - per item
+    from app.models.return_batch import ReturnBatch
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            return_batches = ReturnBatch.query.filter(
+                ReturnBatch.warehouse_id.in_(user_warehouse_ids),
+                ReturnBatch.status == 'confirmed'
+            ).order_by(ReturnBatch.confirmed_at.desc()).limit(50).all()
+        else:
+            return_batches = []
+    else:
+        return_batches = ReturnBatch.query.filter(
+            ReturnBatch.status == 'confirmed'
+        ).order_by(ReturnBatch.confirmed_at.desc()).limit(50).all()
+
+    for batch in return_batches:
+        timestamp = batch.confirmed_at if batch.confirmed_at else batch.created_at
+        for item in batch.return_items:
+            all_entries.append({
+                'type': 'return_batch',
+                'timestamp': timestamp,
+                'data': (batch, item)
+            })
+
+    # 4. Procurement - per item
+    from app.models.procurement import Procurement
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            procurements = Procurement.query.filter(
+                Procurement.warehouse_id.in_(user_warehouse_ids),
+                Procurement.status == 'completed'
+            ).order_by(Procurement.completion_date.desc()).limit(50).all()
+        else:
+            procurements = []
+    else:
+        procurements = Procurement.query.filter(
+            Procurement.status == 'completed'
+        ).order_by(Procurement.completion_date.desc()).limit(50).all()
+
+    for proc in procurements:
+        timestamp = proc.completion_date if proc.completion_date else proc.created_at
+        for item in proc.items:
+            all_entries.append({
+                'type': 'procurement',
+                'timestamp': timestamp,
+                'data': (proc, item)
+            })
+
+    # 5. DistributionGroup - per item
+    from app.models.distribution_group import DistributionGroup
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            distribution_groups = DistributionGroup.query.filter(
+                DistributionGroup.warehouse_id.in_(user_warehouse_ids),
+                DistributionGroup.status.in_(['approved', 'distributed'])
+            ).order_by(DistributionGroup.verified_at.desc()).limit(50).all()
+        else:
+            distribution_groups = []
+    else:
+        distribution_groups = DistributionGroup.query.filter(
+            DistributionGroup.status.in_(['approved', 'distributed'])
+        ).order_by(DistributionGroup.verified_at.desc()).limit(50).all()
+
+    for group in distribution_groups:
+        timestamp = group.verified_at if group.verified_at else group.created_at
+        for dist in group.distributions:
+            all_entries.append({
+                'type': 'distribution_group',
+                'timestamp': timestamp,
+                'data': (group, dist)
+            })
+
+    # 6. Direct Distribution - per item
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            direct_distributions = Distribution.query.filter(
+                Distribution.warehouse_id.in_(user_warehouse_ids),
+                Distribution.distribution_group_id == None,
+                Distribution.status == 'installed'
             ).order_by(Distribution.created_at.desc()).limit(50).all()
         else:
-            distributions = []
+            direct_distributions = []
     else:
-        distributions = Distribution.query.order_by(Distribution.created_at.desc()).limit(50).all()
+        direct_distributions = Distribution.query.filter(
+            Distribution.distribution_group_id == None,
+            Distribution.status == 'installed'
+        ).order_by(Distribution.created_at.desc()).limit(50).all()
 
-    # Get recent returns (items coming back from units)
-    returns = ReturnItem.query.filter_by(status='returned').order_by(ReturnItem.created_at.desc()).limit(50).all()
+    for dist in direct_distributions:
+        all_entries.append({
+            'type': 'direct_distribution',
+            'timestamp': dist.created_at,
+            'data': dist
+        })
+
+    # Sort all entries by timestamp (newest first)
+    all_entries.sort(key=get_timestamp, reverse=True)
 
     return render_template('stock/index.html',
-                         transactions=transactions,
-                         distributions=distributions,
-                         returns=returns)
+                         all_entries=all_entries)
 
 
 @bp.route('/recap')
