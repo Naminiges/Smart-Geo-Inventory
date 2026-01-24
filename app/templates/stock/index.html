@@ -44,6 +44,64 @@
             </a>
         </div>
     </div>
+
+    <!-- Filter Section -->
+    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <form method="GET" class="flex flex-wrap items-center gap-4">
+            <div class="flex items-center">
+                <label class="text-sm font-semibold text-gray-700 mr-2">Filter:</label>
+
+                <!-- Year Filter -->
+                <select name="year" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {% for year in available_years %}
+                    <option value="{{ year }}" {% if year == selected_year %}selected{% endif %}>
+                        {{ year }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+                <!-- Month Filter -->
+                <select name="month" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ml-2">
+                    <option value="" {% if not selected_month %}selected{% endif %}>Semua Bulan</option>
+                    <option value="1" {% if selected_month == 1 %}selected{% endif %}>Januari</option>
+                    <option value="2" {% if selected_month == 2 %}selected{% endif %}>Februari</option>
+                    <option value="3" {% if selected_month == 3 %}selected{% endif %}>Maret</option>
+                    <option value="4" {% if selected_month == 4 %}selected{% endif %}>April</option>
+                    <option value="5" {% if selected_month == 5 %}selected{% endif %}>Mei</option>
+                    <option value="6" {% if selected_month == 6 %}selected{% endif %}>Juni</option>
+                    <option value="7" {% if selected_month == 7 %}selected{% endif %}>Juli</option>
+                    <option value="8" {% if selected_month == 8 %}selected{% endif %}>Agustus</option>
+                    <option value="9" {% if selected_month == 9 %}selected{% endif %}>September</option>
+                    <option value="10" {% if selected_month == 10 %}selected{% endif %}>Oktober</option>
+                    <option value="11" {% if selected_month == 11 %}selected{% endif %}>November</option>
+                    <option value="12" {% if selected_month == 12 %}selected{% endif %}>Desember</option>
+                </select>
+
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold ml-2">
+                    <i class="fas fa-filter mr-1"></i> Terapkan
+                </button>
+
+                {% if selected_year or selected_month %}
+                <a href="{{ url_for('stock.index') }}" class="ml-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-semibold">
+                    <i class="fas fa-times mr-1"></i> Reset
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Display Current Filter -->
+            <div class="ml-auto text-sm text-gray-600">
+                {% if selected_month %}
+                <span class="font-semibold">
+                    {{ ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][selected_month - 1] }} {{ selected_year }}
+                </span>
+                {% else %}
+                <span class="font-semibold">Tahun {{ selected_year }}</span>
+                {% endif %}
+                <span class="text-gray-500">({{ all_entries|length }} transaksi)</span>
+            </div>
+        </form>
+    </div>
+
     <div class="p-6 overflow-x-auto">
         {% if all_entries %}
         <table class="w-full">
