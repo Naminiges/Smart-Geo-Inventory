@@ -6,32 +6,32 @@
 
 {% block content %}
 <!-- Year Selector & Print Button -->
-<div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+<div class="mb-6 flex flex-wrap items-center justify-between gap-4 no-print">
     <div class="flex items-center gap-2">
         <a href="{{ url_for('stock.recap', year=year-1) }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <i class="fas fa-chevron-left"></i>
         </a>
-        <span class="text-xl font-bold text-gray-800">{{ year }}</span>
+        <span class="text-xl font-bold text-gray-800">Tahun {{ year }}</span>
         <a href="{{ url_for('stock.recap', year=year+1) }}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
             <i class="fas fa-chevron-right"></i>
         </a>
     </div>
     <div class="flex gap-2">
-        <button onclick="window.print()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            <i class="fas fa-print mr-2"></i>Cetak Laporan
-        </button>
+        <a href="{{ url_for('stock.recap_pdf', year=year) }}" target="_blank" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <i class="fas fa-file-pdf mr-2"></i>Cetak Laporan PDF
+        </a>
         <a href="{{ url_for('stock.index') }}" class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
             <i class="fas fa-arrow-left mr-2"></i>Kembali
         </a>
     </div>
 </div>
 
-<!-- Summary Cards -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-green-600">
+<!-- SUMMARY CARDS (Web only) - Hanya display, tidak bisa diklik -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 no-print">
+    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
         <div class="text-center">
-            <div class="text-3xl font-bold text-green-600">{{ total_in }}</div>
-            <div class="text-sm text-gray-500 mt-1">Barang Masuk</div>
+            <div class="text-3xl font-bold text-blue-600">{{ total_perolehan }}</div>
+            <div class="text-sm text-gray-500 mt-1">Perolehan</div>
         </div>
     </div>
 
@@ -45,111 +45,104 @@
     <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-orange-600">
         <div class="text-center">
             <div class="text-3xl font-bold text-orange-600">{{ total_returned }}</div>
-            <div class="text-sm text-gray-500 mt-1">Retur dari Unit</div>
+            <div class="text-sm text-gray-500 mt-1">Retur</div>
         </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-600">
         <div class="text-center">
             <div class="text-3xl font-bold text-yellow-600">{{ total_obname }}</div>
-            <div class="text-sm text-gray-500 mt-1">Obname (Endap di Gudang)</div>
+            <div class="text-sm text-gray-500 mt-1">Obname</div>
         </div>
     </div>
 </div>
 
-<!-- Barang Masuk Dari -->
-<div class="bg-white rounded-xl shadow-md mb-6">
+<!-- Tab Navigation -->
+<div class="bg-white rounded-xl shadow-md mb-6 no-print">
     <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center">
-            <i class="fas fa-arrow-down text-green-600 text-xl mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Barang Masuk ke Gudang</h5>
+        <div class="flex flex-wrap items-center gap-2">
+            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all active" data-tab="perolehan">
+                <i class="fas fa-shopping-cart mr-2"></i>Perolehan
+            </button>
+            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="keluar">
+                <i class="fas fa-arrow-up mr-2"></i>Barang Keluar
+            </button>
+            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="retur">
+                <i class="fas fa-undo mr-2"></i>Retur
+            </button>
+            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="obname">
+                <i class="fas fa-boxes mr-2"></i>Obname
+            </button>
+            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="semua">
+                <i class="fas fa-list mr-2"></i>Semua Data
+            </button>
         </div>
     </div>
-    <div class="p-6">
-        {% if in_by_source %}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {% for source, count in in_by_source.items() %}
-            <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                <div class="text-2xl font-bold text-green-600">{{ count }}</div>
-                <div class="text-sm text-gray-600">{{ source }}</div>
+</div>
+
+<!-- WEB VERSION: Tables with cards -->
+
+<!-- Perolehan (Pengadaan) -->
+<div class="bg-white rounded-xl shadow-md mb-6 tab-content no-print" data-tab="perolehan">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-shopping-cart text-blue-600 text-xl mr-3"></i>
+                <div>
+                    <h5 class="text-lg font-semibold mb-0">Perolehan (Pengadaan)</h5>
+                    <small class="text-gray-500">Total: {{ total_procurement }} barang</small>
+                </div>
             </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p class="text-gray-500 text-center">Tidak ada data barang masuk</p>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Barang Keluar Ke -->
-<div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center">
-            <i class="fas fa-arrow-up text-red-600 text-xl mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Barang Keluar dari Gudang</h5>
-        </div>
-    </div>
-    <div class="p-6">
-        {% if out_by_source %}
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {% for source, count in out_by_source.items() %}
-            <div class="bg-red-50 rounded-lg p-4 border border-red-200">
-                <div class="text-2xl font-bold text-red-600">{{ count }}</div>
-                <div class="text-sm text-gray-600">{{ source }}</div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p class="text-gray-500 text-center">Tidak ada data barang keluar</p>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Rincian Barang Masuk -->
-<div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center">
-            <i class="fas fa-arrow-down text-green-600 text-xl mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Rincian Barang Masuk</h5>
         </div>
     </div>
     <div class="p-6 overflow-x-auto">
-        {% if stock_in %}
+        {% if procurements %}
         <table class="w-full">
             <thead>
                 <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">No</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang</th>
                 </tr>
             </thead>
             <tbody>
-                {% for trans in stock_in[:20] %}
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="py-3 px-4">
-                        <div class="font-semibold">{{ trans.item.name }}</div>
-                        <small class="text-gray-500">{{ trans.item.item_code }}</small>
-                    </td>
-                    <td class="py-3 px-4 text-gray-600">{{ trans.warehouse.name if trans.warehouse else '-' }}</td>
-                    <td class="py-3 px-4 font-bold text-green-600">+{{ trans.quantity }}</td>
-                    <td class="py-3 px-4 text-gray-600 text-sm">{{ trans.transaction_date.strftime('%d/%m/%Y') }}</td>
-                </tr>
+                {% set item_no = namespace(value=1) %}
+                {% for proc in procurements %}
+                    {% for item in proc.items %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-4 text-gray-600">{{ item_no.value }}</td>
+                        <td class="py-3 px-4 text-gray-600 text-sm">{{ proc.completion_date.strftime('%d/%m/%Y') if proc.completion_date else proc.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td class="py-3 px-4">
+                            <div class="font-semibold text-gray-800">{{ item.item.name if item.item else '-' }}</div>
+                            <small class="text-gray-500">{{ item.item.item_code if item.item else '' }}</small>
+                        </td>
+                        <td class="py-3 px-4 font-bold text-green-600">+{{ item.quantity }}</td>
+                        <td class="py-3 px-4 text-gray-600">{{ proc.warehouse.name if proc.warehouse else '-' }}</td>
+                        {% set item_no.value = item_no.value + 1 %}
+                    </tr>
+                    {% endfor %}
                 {% endfor %}
             </tbody>
         </table>
         {% else %}
-        <p class="text-gray-500 text-center py-8">Tidak ada data barang masuk</p>
+        <p class="text-gray-500 text-center py-8">Tidak ada data pengadaan</p>
         {% endif %}
     </div>
 </div>
 
-<!-- Rincian Barang Keluar -->
-<div class="bg-white rounded-xl shadow-md mb-6">
+<!-- Barang Keluar -->
+<div class="bg-white rounded-xl shadow-md mb-6 tab-content no-print" data-tab="keluar" style="display: none;">
     <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center">
-            <i class="fas fa-arrow-up text-red-600 text-xl mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Rincian Barang Keluar</h5>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-arrow-up text-red-600 text-xl mr-3"></i>
+                <div>
+                    <h5 class="text-lg font-semibold mb-0">Barang Keluar</h5>
+                    <small class="text-gray-500">Total: {{ total_out }} barang</small>
+                </div>
+            </div>
         </div>
     </div>
     <div class="p-6 overflow-x-auto">
@@ -157,32 +150,44 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">No</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Tujuan</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Catatan</th>
                 </tr>
             </thead>
             <tbody>
-                {% for trans in stock_out[:20] %}
+                {% set item_no = namespace(value=1) %}
+
+                {# Stock Transactions OUT #}
+                {% for trans in stock_out %}
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 text-gray-600">{{ item_no.value }}</td>
+                    <td class="py-3 px-4 text-gray-600 text-sm">{{ trans.transaction_date.strftime('%d/%m/%Y') }}</td>
                     <td class="py-3 px-4">
-                        <div class="font-semibold">{{ trans.item.name }}</div>
+                        <div class="font-semibold text-gray-800">{{ trans.item.name }}</div>
                         <small class="text-gray-500">{{ trans.item.item_code }}</small>
                     </td>
                     <td class="py-3 px-4 text-gray-600">{{ trans.warehouse.name if trans.warehouse else '-' }}</td>
                     <td class="py-3 px-4 text-gray-600">-</td>
                     <td class="py-3 px-4 font-bold text-red-600">-{{ trans.quantity }}</td>
-                    <td class="py-3 px-4 text-gray-600 text-sm">{{ trans.transaction_date.strftime('%d/%m/%Y') }}</td>
+                    <td class="py-3 px-4 text-gray-500 text-sm">{{ trans.note or '-' }}</td>
+                    {% set item_no.value = item_no.value + 1 %}
                 </tr>
                 {% endfor %}
-                {% for dist in distributions[:20] %}
+
+                {# Distributions to units #}
+                {% for dist in distributions %}
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 text-gray-600">{{ item_no.value }}</td>
+                    <td class="py-3 px-4 text-gray-600 text-sm">{{ dist.created_at.strftime('%d/%m/%Y') }}</td>
                     <td class="py-3 px-4">
-                        <div class="font-semibold">{{ dist.item_detail.item.name }}</div>
-                        <small class="text-gray-500">{{ dist.item_detail.item.item_code }}</small>
-                        <small class="text-gray-500 block">SN: {{ dist.item_detail.serial_number }}</small>
+                        <div class="font-semibold text-gray-800">{{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else '-' }}</div>
+                        <small class="text-gray-500">{{ dist.item_detail.item.item_code if dist.item_detail and dist.item_detail.item else '' }}</small>
+                        <small class="text-gray-500 block">SN: {{ dist.item_detail.serial_number if dist.item_detail else '' }}</small>
                     </td>
                     <td class="py-3 px-4 text-gray-600">{{ dist.warehouse.name if dist.warehouse else '-' }}</td>
                     <td class="py-3 px-4 text-gray-600">
@@ -191,8 +196,9 @@
                         <small class="text-gray-500">{{ dist.unit_detail.room_code }}</small>
                         {% endif %}
                     </td>
-                    <td class="py-3 px-4 font-bold text-red-600">1</td>
-                    <td class="py-3 px-4 text-gray-600 text-sm">{{ dist.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td class="py-3 px-4 font-bold text-red-600">-1</td>
+                    <td class="py-3 px-4 text-gray-500 text-sm">Distribusi</td>
+                    {% set item_no.value = item_no.value + 1 %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -203,36 +209,53 @@
     </div>
 </div>
 
-<!-- Rincian Retur -->
-<div class="bg-white rounded-xl shadow-md mb-6">
+<!-- Retur dari Unit -->
+<div class="bg-white rounded-xl shadow-md mb-6 tab-content no-print" data-tab="retur" style="display: none;">
     <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center">
-            <i class="fas fa-undo text-orange-600 text-xl mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Rincian Retur dari Unit</h5>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-undo text-orange-600 text-xl mr-3"></i>
+                <div>
+                    <h5 class="text-lg font-semibold mb-0">Retur dari Unit</h5>
+                    <small class="text-gray-500">Total: {{ total_return_batches }} barang</small>
+                </div>
+            </div>
         </div>
     </div>
     <div class="p-6 overflow-x-auto">
-        {% if returns %}
+        {% if return_batches %}
         <table class="w-full">
             <thead>
                 <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">No</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">No. Batch</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit Asal</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal Retur</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang Tujuan</th>
                 </tr>
             </thead>
             <tbody>
-                {% for ret in returns[:20] %}
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="py-3 px-4">
-                        <div class="font-semibold">{{ ret.item_detail.item.name }}</div>
-                        <small class="text-gray-500">{{ ret.item_detail.item.item_code }}</small>
-                    </td>
-                    <td class="py-3 px-4 text-gray-600">{{ ret.item_detail.serial_number }}</td>
-                    <td class="py-3 px-4 text-gray-600">{{ ret.unit.name if ret.unit else '-' }}</td>
-                    <td class="py-3 px-4 text-gray-600 text-sm">{{ ret.created_at.strftime('%d/%m/%Y') }}</td>
-                </tr>
+                {% set item_no = namespace(value=1) %}
+                {% for batch in return_batches %}
+                    {% for item in batch.return_items %}
+                    <tr class="border-b border-gray-100 hover:bg-gray-50">
+                        <td class="py-3 px-4 text-gray-600">{{ item_no.value }}</td>
+                        <td class="py-3 px-4 text-gray-600 text-sm">{{ batch.confirmed_at.strftime('%d/%m/%Y') if batch.confirmed_at else batch.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td class="py-3 px-4">
+                            <span class="font-semibold text-orange-600">{{ batch.batch_code }}</span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-semibold text-gray-800">{{ item.item_detail.item.name if item.item_detail and item.item_detail.item else '-' }}</div>
+                            <small class="text-gray-500">{{ item.item_detail.item.item_code if item.item_detail and item.item_detail.item else '' }}</small>
+                        </td>
+                        <td class="py-3 px-4 text-gray-600">{{ item.item_detail.serial_unit if item.item_detail else '' }}</td>
+                        <td class="py-3 px-4 text-gray-600">{{ batch.unit.name if batch.unit else '-' }}</td>
+                        <td class="py-3 px-4 text-gray-600">{{ batch.warehouse.name if batch.warehouse else '-' }}</td>
+                        {% set item_no.value = item_no.value + 1 %}
+                    </tr>
+                    {% endfor %}
                 {% endfor %}
             </tbody>
         </table>
@@ -242,12 +265,17 @@
     </div>
 </div>
 
-<!-- Rincian Obname (Barang Endap di Gudang) -->
-<div class="bg-white rounded-xl shadow-md mb-6">
+<!-- Obname (Barang Endap di Gudang) -->
+<div class="bg-white rounded-xl shadow-md mb-6 tab-content no-print" data-tab="obname" style="display: none;">
     <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center">
-            <i class="fas fa-boxes text-yellow-600 text-xl mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Rincian Obname (Endap di Gudang)</h5>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-boxes text-yellow-600 text-xl mr-3"></i>
+                <div>
+                    <h5 class="text-lg font-semibold mb-0">Obname (Barang Tersedia di Gudang)</h5>
+                    <small class="text-gray-500">Total: {{ total_obname }} barang</small>
+                </div>
+            </div>
         </div>
     </div>
     <div class="p-6 overflow-x-auto">
@@ -255,21 +283,25 @@
         <table class="w-full">
             <thead>
                 <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">No</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal Masuk</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for item in obname_items[:50] %}
+                {% for item in obname_items %}
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 text-gray-600">{{ loop.index }}</td>
                     <td class="py-3 px-4">
-                        <div class="font-semibold">{{ item.item.name }}</div>
+                        <div class="font-semibold text-gray-800">{{ item.item.name }}</div>
                         <small class="text-gray-500">{{ item.item.item_code }}</small>
                     </td>
                     <td class="py-3 px-4 text-gray-600">{{ item.serial_number }}</td>
                     <td class="py-3 px-4 text-gray-600">{{ item.warehouse.name if item.warehouse else '-' }}</td>
+                    <td class="py-3 px-4 text-gray-600 text-sm">{{ item.created_at.strftime('%d/%m/%Y') }}</td>
                     <td class="py-3 px-4">
                         <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-semibold">Tersedia</span>
                     </td>
@@ -278,22 +310,389 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-gray-500 text-center py-8">Tidak ada barang yang endap di gudang</p>
+        <p class="text-gray-500 text-center py-8">Tidak ada barang yang tersedia di gudang</p>
         {% endif %}
     </div>
 </div>
 
+<!-- PRINT VERSION: Formal Report Style -->
+<div class="print-only">
+    <!-- Report Header -->
+    <div style="text-align: center; margin-bottom: 20px; border-bottom: 3px double #000; padding-bottom: 10px;">
+        <h2 style="font-size: 16pt; font-weight: bold; margin: 0;">LAPORAN REKAPITULASI</h2>
+        <h3 style="font-size: 14pt; font-weight: bold; margin: 5px 0;">BARANG MASUK DAN KELUAR</h3>
+        <p style="font-size: 11pt; margin: 5px 0;">Tahun Anggaran: {{ year }}</p>
+        <p style="font-size: 10pt; margin: 0;">Dicetak: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+    </div>
+
+    <!-- Summary Table -->
+    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">RINGKASAN</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+            <tr>
+                <td style="border: 1px solid #000; padding: 8px; width: 50%;"><strong>Uraian</strong></td>
+                <td style="border: 1px solid #000; padding: 8px; width: 25%; text-align: center;"><strong>Jumlah</strong></td>
+                <td style="border: 1px solid #000; padding: 8px; width: 25%; text-align: center;"><strong>Keterangan</strong></td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 8px;">1. Perolehan Barang (Pengadaan)</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">{{ total_perolehan }}</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">Barang</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 8px;">2. Barang Keluar</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">{{ total_out }}</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">Barang</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 8px;">3. Distribusi ke Unit</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">{{ total_distributed }}</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">Unit</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 8px;">4. Retur dari Unit</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">{{ total_returned }}</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">Barang</td>
+            </tr>
+            <tr>
+                <td style="border: 1px solid #000; padding: 8px; font-weight: bold;">5. Sisa di Gudang (Obname)</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">{{ total_obname }}</td>
+                <td style="border: 1px solid #000; padding: 8px; text-align: center;">Barang</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Perolehan Detail -->
+    {% if procurements %}
+    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">I. RINCIAN PEROLEHAN BARANG (PENGADAAN)</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 5%;">No</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 12%;">Tanggal</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 10%;">No. Pengadaan</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 30%;">Nama Barang</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 8%;">Jumlah</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 20%;">Gudang</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Supplier</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set item_no = namespace(value=1) %}
+                {% for proc in procurements %}
+                    {% for item in proc.items %}
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ item_no.value }}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ proc.completion_date.strftime('%d/%m/%Y') if proc.completion_date else proc.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ proc.id }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">
+                            {{ item.item.name if item.item else '-' }}
+                            <br><small style="font-size: 8pt;">{{ item.item.item_code if item.item else '' }}</small>
+                        </td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ item.quantity }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">{{ proc.warehouse.name if proc.warehouse else '-' }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">{{ proc.supplier.name if proc.supplier else '-' }}</td>
+                        {% set item_no.value = item_no.value + 1 %}
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+                <tr style="font-weight: bold; background-color: #f9f9f9;">
+                    <td colspan="4" style="border: 1px solid #000; padding: 6px; text-align: right;">JUMLAH TOTAL:</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">{{ total_procurement }}</td>
+                    <td colspan="2" style="border: 1px solid #000; padding: 6px;"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Barang Keluar Detail -->
+    {% if stock_out or distributions %}
+    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">III. RINCIAN BARANG KELUAR</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 5%;">No</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 11%;">Tanggal</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 30%;">Nama Barang</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Gudang Asal</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Tujuan</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 8%;">Jumlah</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 16%;">Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set item_no = namespace(value=1) %}
+                {% for trans in stock_out %}
+                <tr>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ item_no.value }}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ trans.transaction_date.strftime('%d/%m/%Y') }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">
+                        {{ trans.item.name }}
+                        <br><small style="font-size: 8pt;">{{ trans.item.item_code }}</small>
+                    </td>
+                    <td style="border: 1px solid #000; padding: 5px;">{{ trans.warehouse.name if trans.warehouse else '-' }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">-</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ trans.quantity }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">{{ trans.note or '-' }}</td>
+                    {% set item_no.value = item_no.value + 1 %}
+                </tr>
+                {% endfor %}
+                {% for dist in distributions %}
+                <tr>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ item_no.value }}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ dist.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">
+                        {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else '-' }}
+                        <br><small style="font-size: 8pt;">{{ dist.item_detail.item.item_code if dist.item_detail and dist.item_detail.item else '' }}</small>
+                        <br><small style="font-size: 8pt;">SN: {{ dist.item_detail.serial_number if dist.item_detail else '' }}</small>
+                    </td>
+                    <td style="border: 1px solid #000; padding: 5px;">{{ dist.warehouse.name if dist.warehouse else '-' }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">{{ dist.unit.name if dist.unit else '-' }}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">1</td>
+                    <td style="border: 1px solid #000; padding: 5px;">Distribusi</td>
+                    {% set item_no.value = item_no.value + 1 %}
+                </tr>
+                {% endfor %}
+                <tr style="font-weight: bold; background-color: #f9f9f9;">
+                    <td colspan="5" style="border: 1px solid #000; padding: 6px; text-align: right;">JUMLAH TOTAL:</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">{{ total_out }}</td>
+                    <td style="border: 1px solid #000; padding: 6px;"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Retur Detail -->
+    {% if return_batches %}
+    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">IV. RINCIAN RETUR DARI UNIT</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 5%;">No</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 11%;">Tanggal</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 12%;">No. Batch</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 25%;">Nama Barang</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Serial Number</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Unit Asal</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 17%;">Gudang Tujuan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set item_no = namespace(value=1) %}
+                {% for batch in return_batches %}
+                    {% for item in batch.return_items %}
+                    <tr>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ item_no.value }}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ batch.confirmed_at.strftime('%d/%m/%Y') if batch.confirmed_at else batch.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ batch.batch_code }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">
+                            {{ item.item_detail.item.name if item.item_detail and item.item_detail.item else '-' }}
+                            <br><small style="font-size: 8pt;">{{ item.item_detail.item.item_code if item.item_detail and item.item_detail.item else '' }}</small>
+                        </td>
+                        <td style="border: 1px solid #000; padding: 5px;">{{ item.item_detail.serial_unit if item.item_detail else '' }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">{{ batch.unit.name if batch.unit else '-' }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">{{ batch.warehouse.name if batch.warehouse else '-' }}</td>
+                        {% set item_no.value = item_no.value + 1 %}
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+                <tr style="font-weight: bold; background-color: #f9f9f9;">
+                    <td colspan="6" style="border: 1px solid #000; padding: 6px; text-align: right;">JUMLAH TOTAL:</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">{{ total_return_batches }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Obname Detail -->
+    {% if obname_items %}
+    <div style="margin-bottom: 20px; page-break-inside: avoid;">
+        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">V. DAFTAR BARANG YANG MASIH TERSEDIA DI GUDANG (OBNAME)</h4>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 5%;">No</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 30%;">Nama Barang</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 20%;">Serial Number</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 20%;">Gudang</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 12%;">Tanggal Masuk</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 13%;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in obname_items %}
+                <tr>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ loop.index }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">
+                        {{ item.item.name }}
+                        <br><small style="font-size: 8pt;">{{ item.item.item_code }}</small>
+                    </td>
+                    <td style="border: 1px solid #000; padding: 5px;">{{ item.serial_number }}</td>
+                    <td style="border: 1px solid #000; padding: 5px;">{{ item.warehouse.name if item.warehouse else '-' }}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">{{ item.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td style="border: 1px solid #000; padding: 5px; text-align: center;">Tersedia</td>
+                </tr>
+                {% endfor %}
+                <tr style="font-weight: bold; background-color: #f9f9f9;">
+                    <td colspan="5" style="border: 1px solid #000; padding: 6px; text-align: right;">JUMLAH TOTAL:</td>
+                    <td style="border: 1px solid #000; padding: 6px; text-align: center;">{{ total_obname }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Signature Section -->
+    <div style="margin-top: 50px; page-break-inside: avoid;">
+        <table style="width: 100%; font-size: 10pt;">
+            <tr>
+                <td style="width: 70%; padding: 10px;"></td>
+                <td style="width: 30%; padding: 10px; text-align: center;">
+                    <p style="margin: 5px 0;">{{ now.strftime('%d/%m/%Y') }}</p>
+                    <p style="margin: 5px 0; font-weight: bold;">Kepala Gudang</p>
+                    <p style="margin: 50px 0 5px 0; border-bottom: 1px solid #000;"></p>
+                    <p style="margin: 5px 0; font-weight: bold;">( .............................. )</p>
+                    <p style="margin: 5px 0; font-size: 9pt;">NIP. ..............................</p>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
 <style>
+/* Hide print version on screen */
+.print-only {
+    display: none;
+}
+
+/* Tab Navigation Styles */
+.tab-button {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.tab-button:hover {
+    background-color: #e5e7eb;
+}
+
+.tab-button.active {
+    background-color: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+/* Print styles */
 @media print {
+    /* Hide screen elements */
     .no-print {
         display: none !important;
     }
+
+    /* Show print version */
+    .print-only {
+        display: block !important;
+    }
+
+    /* Page setup */
+    @page {
+        size: A4 landscape;
+        margin: 1.5cm 1.5cm 2cm 1.5cm;
+    }
+
     body {
         background: white !important;
+        font-size: 10pt;
+        line-height: 1.3;
     }
-    .shadow-md, .shadow-lg {
+
+    /* Hide all shadows */
+    .shadow-md, .shadow-lg, .rounded-xl {
         box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    /* Ensure tables don't break awkwardly */
+    table {
+        page-break-inside: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tfoot {
+        display: table-footer-group;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    /* Avoid breaking inside print sections */
+    .print-only > div {
+        page-break-inside: avoid;
     }
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get all tab buttons and tab contents
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    // Function to switch tabs
+    function switchTab(tabName) {
+        // Remove active class from all buttons
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+
+        // Hide all tab contents
+        tabContents.forEach(content => {
+            if (content.dataset.tab === 'semua') {
+                // Show all if "semua" is selected
+                if (tabName === 'semua') {
+                    content.style.display = 'block';
+                } else {
+                    content.style.display = 'none';
+                }
+            } else {
+                // Individual tabs
+                if (tabName === 'semua') {
+                    content.style.display = 'block';
+                } else if (content.dataset.tab === tabName) {
+                    content.style.display = 'block';
+                } else {
+                    content.style.display = 'none';
+                }
+            }
+        });
+
+        // Add active class to clicked button
+        const activeButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+    }
+
+    // Add click event to tab buttons
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+
+    // Initialize with first tab active
+    switchTab('perolehan');
+});
+</script>
 {% endblock %}

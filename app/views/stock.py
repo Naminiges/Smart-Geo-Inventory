@@ -28,14 +28,16 @@ def index():
             trans_in = StockTransaction.query.filter(
                 StockTransaction.warehouse_id.in_(user_warehouse_ids),
                 StockTransaction.transaction_type == 'IN',
-                ~StockTransaction.note.like('%Procurement%')
+                ~StockTransaction.note.like('%Procurement%'),
+                ~StockTransaction.note.like('%Pengadaan%')
             ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
         else:
             trans_in = []
     else:
         trans_in = StockTransaction.query.filter(
             StockTransaction.transaction_type == 'IN',
-            ~StockTransaction.note.like('%Procurement%')
+            ~StockTransaction.note.like('%Procurement%'),
+            ~StockTransaction.note.like('%Pengadaan%')
         ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
 
     for trans in trans_in:
@@ -52,14 +54,16 @@ def index():
             trans_out = StockTransaction.query.filter(
                 StockTransaction.warehouse_id.in_(user_warehouse_ids),
                 StockTransaction.transaction_type == 'OUT',
-                ~StockTransaction.note.like('%Procurement%')
+                ~StockTransaction.note.like('%Procurement%'),
+                ~StockTransaction.note.like('%Pengadaan%')
             ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
         else:
             trans_out = []
     else:
         trans_out = StockTransaction.query.filter(
             StockTransaction.transaction_type == 'OUT',
-            ~StockTransaction.note.like('%Procurement%')
+            ~StockTransaction.note.like('%Procurement%'),
+            ~StockTransaction.note.like('%Pengadaan%')
         ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
 
     for trans in trans_out:
@@ -181,13 +185,14 @@ def recap():
     """Annual recap/report page"""
     year = request.args.get('year', datetime.now().year, type=int)
 
-    # Get stock transactions per month
+    # Get stock transactions per month (exclude procurement to avoid duplication)
     if current_user.is_warehouse_staff():
         user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
         if user_warehouse_ids:
             stock_in = StockTransaction.query.filter(
                 StockTransaction.warehouse_id.in_(user_warehouse_ids),
                 StockTransaction.transaction_type == 'IN',
+                ~StockTransaction.note.like('%Pengadaan%'),
                 func.extract('year', StockTransaction.transaction_date) == year
             ).all()
             stock_out = StockTransaction.query.filter(
@@ -201,6 +206,7 @@ def recap():
     else:
         stock_in = StockTransaction.query.filter(
             StockTransaction.transaction_type == 'IN',
+            ~StockTransaction.note.like('%Pengadaan%'),
             func.extract('year', StockTransaction.transaction_date) == year
         ).all()
         stock_out = StockTransaction.query.filter(
@@ -251,70 +257,183 @@ def recap():
     ).all()
     total_obname = len(obname_items)
 
+    # Get procurements (completed in selected year)
+    from app.models.procurement import Procurement
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            procurements = Procurement.query.filter(
+                Procurement.warehouse_id.in_(user_warehouse_ids),
+                Procurement.status == 'completed',
+                func.extract('year', Procurement.completion_date) == year
+            ).all()
+        else:
+            procurements = []
+    else:
+        procurements = Procurement.query.filter(
+            Procurement.status == 'completed',
+            func.extract('year', Procurement.completion_date) == year
+        ).all()
+
+    # Calculate procurement total
+    total_procurement = sum(item.quantity for proc in procurements for item in proc.items)
+
+    # Get return batches (confirmed in selected year)
+    from app.models.return_batch import ReturnBatch
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            return_batches = ReturnBatch.query.filter(
+                ReturnBatch.warehouse_id.in_(user_warehouse_ids),
+                ReturnBatch.status == 'confirmed',
+                func.extract('year', ReturnBatch.confirmed_at) == year
+            ).all()
+        else:
+            return_batches = []
+    else:
+        return_batches = ReturnBatch.query.filter(
+            ReturnBatch.status == 'confirmed',
+            func.extract('year', ReturnBatch.confirmed_at) == year
+        ).all()
+
+    # Calculate return batch total
+    total_return_batches = sum(len(batch.return_items) for batch in return_batches)
+
+    # Calculate perolehan (total procured items)
+    total_perolehan = total_procurement
+
     return render_template('stock/recap.html',
                          year=year,
+                         now=datetime.now(),
                          total_in=total_in,
                          total_out=total_out,
                          total_distributed=total_distributed,
                          total_returned=total_returned,
                          total_obname=total_obname,
+                         total_procurement=total_procurement,
+                         total_return_batches=total_return_batches,
+                         total_perolehan=total_perolehan,
                          in_by_source=in_by_source,
                          out_by_source=out_by_source,
                          stock_in=stock_in,
                          stock_out=stock_out,
                          distributions=distributions,
                          returns=returns,
-                         obname_items=obname_items)
+                         obname_items=obname_items,
+                         procurements=procurements,
+                         return_batches=return_batches)
 
 
 @bp.route('/per-unit')
 @login_required
 def per_unit():
-    """Stock per unit with room cards"""
-    from app.models import Unit, UnitDetail, ItemDetail
+    """Show list of all units with their stock summary"""
+    from app.models import Unit
+    from app.models.distribution import Distribution
+    from app.models.master_data import ItemDetail
 
-    # Get all units
+    # Get all active units
     units = Unit.query.filter_by(status='active').all()
 
-    unit_data = []
+    unit_summary = []
     for unit in units:
-        # Get all rooms in this unit
-        rooms = UnitDetail.query.filter_by(unit_id=unit.id).all()
+        # Get all distributions to this unit that are not rejected/returned
+        distributions = Distribution.query.filter(
+            Distribution.unit_id == unit.id,
+            Distribution.status != 'rejected'
+        ).all()
 
-        room_data = []
-        for room in rooms:
-            # Get item details in this room
-            item_details = ItemDetail.query.join(Distribution).filter(
-                Distribution.unit_detail_id == room.id
+        # Get item details for this unit (excluding returned items)
+        item_detail_ids = [d.item_detail_id for d in distributions if d.item_detail_id]
+
+        if item_detail_ids:
+            # Get item details and exclude returned ones
+            item_details = ItemDetail.query.filter(
+                ItemDetail.id.in_(item_detail_ids),
+                ItemDetail.status != 'returned'
             ).all()
 
-            # Group by item
-            items_in_room = {}
-            for detail in item_details:
-                item_name = detail.item.name
-                if item_name not in items_in_room:
-                    items_in_room[item_name] = {
-                        'item': detail.item,
-                        'count': 0,
-                        'statuses': {}
-                    }
-                items_in_room[item_name]['count'] += 1
-                status = detail.status
-                items_in_room[item_name]['statuses'][status] = items_in_room[item_name]['statuses'].get(status, 0) + 1
+            # Count by item_detail status
+            total_items = len(item_details)
+            loaned_count = len([d for d in item_details if d.status == 'loaned'])
+            used_count = len([d for d in item_details if d.status == 'used'])
+        else:
+            total_items = 0
+            loaned_count = 0
+            used_count = 0
 
-            room_data.append({
-                'room': room,
-                'items': items_in_room,
-                'total_items': len(item_details)
-            })
-
-        unit_data.append({
+        unit_summary.append({
             'unit': unit,
-            'rooms': room_data,
-            'total_items': sum(rd['total_items'] for rd in room_data)
+            'total_items': total_items,
+            'loaned_count': loaned_count,
+            'used_count': used_count
         })
 
-    return render_template('stock/per_unit.html', unit_data=unit_data)
+    return render_template('stock/per_unit.html', unit_summary=unit_summary)
+
+
+@bp.route('/per-unit/<int:unit_id>')
+@login_required
+def per_unit_detail(unit_id):
+    """Show detailed stock for a specific unit (similar to unit-assets)"""
+    from app.models import Unit
+    from app.models.distribution import Distribution
+    from app.models.master_data import ItemDetail
+    from collections import defaultdict
+
+    # Get the unit
+    unit = Unit.query.get_or_404(unit_id)
+
+    # Get all distributions to this unit (excluding rejected)
+    distributions = Distribution.query.filter(
+        Distribution.unit_id == unit_id,
+        Distribution.status != 'rejected'
+    ).all()
+
+    # Get all item details for this unit (excluding returned items)
+    item_detail_ids = [d.item_detail_id for d in distributions if d.item_detail_id]
+    item_details = ItemDetail.query.filter(
+        ItemDetail.id.in_(item_detail_ids),
+        ItemDetail.status != 'returned'
+    ).all() if item_detail_ids else []
+
+    # Calculate stats
+    in_unit_count = len([d for d in item_details if d.status == 'in_unit'])
+    loaned_count = len([d for d in item_details if d.status == 'loaned'])
+    used_count = len([d for d in item_details if d.status == 'used'])
+
+    # Group items by item_id (only include items that are not returned)
+    items_dict = defaultdict(lambda: {
+        'item': None,
+        'details': [],
+        'total_quantity': 0
+    })
+
+    # Collect all items from distributions (excluding returned items)
+    for dist in distributions:
+        if dist.item_detail and dist.item_detail.item and dist.item_detail.status != 'returned':
+            item_id = dist.item_detail.item_id
+            items_dict[item_id]['item'] = dist.item_detail.item
+            items_dict[item_id]['details'].append({
+                'item_detail': dist.item_detail,
+                'serial_number': dist.item_detail.serial_number,
+                'distribution_date': dist.installed_at or dist.created_at,
+                'location': f"{dist.unit_detail.room_name if dist.unit_detail else 'N/A'}",
+                'status': dist.item_detail.status,
+                'distribution_id': dist.id
+            })
+            items_dict[item_id]['total_quantity'] += 1
+
+    # Sort items by name
+    sorted_items = sorted(items_dict.values(), key=lambda x: x['item'].name if x['item'] else '')
+
+    return render_template('stock/per_unit_detail.html',
+                         unit=unit,
+                         items=sorted_items,
+                         total_items=len(item_details),
+                         in_unit_count=in_unit_count,
+                         loaned_count=loaned_count,
+                         used_count=used_count)
 
 
 @bp.route('/add', methods=['GET', 'POST'])
@@ -470,3 +589,144 @@ def item_stock(item_id):
     stocks = Stock.query.filter_by(item_id=item_id).all()
 
     return render_template('stock/item_stock.html', item=item, stocks=stocks)
+
+
+@bp.route('/recap/pdf/<int:year>')
+@login_required
+def recap_pdf(year):
+    """Generate PDF version of annual recap report"""
+    # Get stock transactions per month (manual transactions only, exclude procurement)
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            stock_in = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids),
+                StockTransaction.transaction_type == 'IN',
+                func.extract('year', StockTransaction.transaction_date) == year
+            ).all()
+            stock_out = StockTransaction.query.filter(
+                StockTransaction.warehouse_id.in_(user_warehouse_ids),
+                StockTransaction.transaction_type == 'OUT',
+                func.extract('year', StockTransaction.transaction_date) == year
+            ).all()
+        else:
+            stock_in = []
+            stock_out = []
+    else:
+        stock_in = StockTransaction.query.filter(
+            StockTransaction.transaction_type == 'IN',
+            func.extract('year', StockTransaction.transaction_date) == year
+        ).all()
+        stock_out = StockTransaction.query.filter(
+            StockTransaction.transaction_type == 'OUT',
+            func.extract('year', StockTransaction.transaction_date) == year
+        ).all()
+
+    # Get distributions to units
+    distributions = Distribution.query.filter(
+        func.extract('year', Distribution.created_at) == year
+    ).all()
+
+    # Get returns from units
+    returns = ReturnItem.query.filter(
+        func.extract('year', ReturnItem.created_at) == year,
+        ReturnItem.status == 'returned'
+    ).all()
+
+    # Calculate totals
+    total_in = sum(t.quantity for t in stock_in)
+    # Total out = stock transactions OUT + distributions to units
+    total_out = sum(t.quantity for t in stock_out) + len(distributions)
+    total_distributed = len(distributions)
+    total_returned = len(returns)
+
+    # Group by source/destination
+    in_by_source = {}
+    for t in stock_in:
+        source = t.warehouse.name if t.warehouse else 'Unknown'
+        in_by_source[source] = in_by_source.get(source, 0) + t.quantity
+
+    # Group stock out by warehouse
+    out_by_source = {}
+    for t in stock_out:
+        source = t.warehouse.name if t.warehouse else 'Unknown'
+        out_by_source[source] = out_by_source.get(source, 0) + t.quantity
+
+    # Add distributions to out_by_source (group by warehouse name)
+    for d in distributions:
+        source = d.warehouse.name if d.warehouse else 'Unknown'
+        out_by_source[source] = out_by_source.get(source, 0) + 1
+
+    # Obname: items still in warehouse (status: available) created in selected year
+    from app.models.master_data import ItemDetail
+    obname_items = ItemDetail.query.filter(
+        ItemDetail.status == 'available',
+        func.extract('year', ItemDetail.created_at) == year
+    ).all()
+    total_obname = len(obname_items)
+
+    # Get procurements (completed in selected year)
+    from app.models.procurement import Procurement
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            procurements = Procurement.query.filter(
+                Procurement.warehouse_id.in_(user_warehouse_ids),
+                Procurement.status == 'completed',
+                func.extract('year', Procurement.completion_date) == year
+            ).all()
+        else:
+            procurements = []
+    else:
+        procurements = Procurement.query.filter(
+            Procurement.status == 'completed',
+            func.extract('year', Procurement.completion_date) == year
+        ).all()
+
+    # Calculate procurement total
+    total_procurement = sum(item.quantity for proc in procurements for item in proc.items)
+
+    # Get return batches (confirmed in selected year)
+    from app.models.return_batch import ReturnBatch
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
+        if user_warehouse_ids:
+            return_batches = ReturnBatch.query.filter(
+                ReturnBatch.warehouse_id.in_(user_warehouse_ids),
+                ReturnBatch.status == 'confirmed',
+                func.extract('year', ReturnBatch.confirmed_at) == year
+            ).all()
+        else:
+            return_batches = []
+    else:
+        return_batches = ReturnBatch.query.filter(
+            ReturnBatch.status == 'confirmed',
+            func.extract('year', ReturnBatch.confirmed_at) == year
+        ).all()
+
+    # Calculate return batch total
+    total_return_batches = sum(len(batch.return_items) for batch in return_batches)
+
+    # Calculate perolehan (total procured items)
+    total_perolehan = total_procurement
+
+    return render_template('stock/recap_pdf.html',
+                         year=year,
+                         now=datetime.now(),
+                         total_in=total_in,
+                         total_out=total_out,
+                         total_distributed=total_distributed,
+                         total_returned=total_returned,
+                         total_obname=total_obname,
+                         total_procurement=total_procurement,
+                         total_return_batches=total_return_batches,
+                         total_perolehan=total_perolehan,
+                         in_by_source=in_by_source,
+                         out_by_source=out_by_source,
+                         stock_in=stock_in,
+                         stock_out=stock_out,
+                         distributions=distributions,
+                         returns=returns,
+                         obname_items=obname_items,
+                         procurements=procurements,
+                         return_batches=return_batches)

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laporan Rekap Tahunan - {{ year }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+        }
+
+        .page {
+            width: 297mm;  /* A4 Landscape width */
+            min-height: 210mm;  /* A4 Landscape height */
+            padding: 15mm 15mm 15mm 15mm;
+            margin: 0 auto;
+            page-break-after: always;
+        }
+
+        .page:last-child {
+            page-break-after: avoid;
+        }
+
+        /* Header Styles */
+        .report-header {
+            text-align: center;
+            margin-bottom: 15px;
+            border-bottom: 3px double #000;
+            padding-bottom: 10px;
+        }
+
+        .report-header h1 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+
+        .report-header h2 {
+            font-size: 13pt;
+            font-weight: bold;
+            margin: 0 0 5px 0;
+        }
+
+        .report-header p {
+            font-size: 10pt;
+            margin: 3px 0;
+        }
+
+        /* Section Styles */
+        .section {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9pt;
+            page-break-inside: auto;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        thead th {
+            background-color: #e0e0e0 !important;
+            font-weight: bold;
+            text-align: center;
+            border: 1px solid #000;
+            padding: 5px 4px;
+        }
+
+        tbody td {
+            border: 1px solid #000;
+            padding: 4px;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tbody tr.total-row {
+            background-color: #e8e8e8 !important;
+            font-weight: bold;
+        }
+
+        /* Small text in tables */
+        .small-text {
+            font-size: 8pt;
+            color: #333;
+        }
+
+        /* Signature Section */
+        .signature-section {
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+
+        .signature-table {
+            width: 100%;
+            font-size: 10pt;
+        }
+
+        .signature-space {
+            height: 60px;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #000;
+            width: 200px;
+            margin: 0 auto;
+        }
+
+        /* Print settings */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+
+            body {
+                print-color-adjust: exact;
+                -webkit-print-color-adjust: exact;
+            }
+
+            .page {
+                margin: 0;
+                width: 100%;
+                min-height: auto;
+            }
+        }
+
+        /* Page break utilities */
+        .page-break {
+            page-break-before: always;
+        }
+
+        .no-break {
+            page-break-inside: avoid;
+        }
+    </style>
+</head>
+<body>
+    <!-- Page 1: Header & Summary -->
+    <div class="page">
+        <!-- Report Header -->
+        <div class="report-header">
+            <h1>Laporan Rekapitulasi</h1>
+            <h2>Barang Masuk dan Keluar</h2>
+            <p>Tahun Anggaran: {{ year }}</p>
+            <p>Dicetak: {{ now.strftime('%d/%m/%Y %H:%M') }}</p>
+        </div>
+
+        <!-- Summary Table -->
+        <div class="section">
+            <div class="section-title">RINGKASAN</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50%; text-align: left;">Uraian</th>
+                        <th style="width: 20%;">Jumlah</th>
+                        <th style="width: 30%;">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1. Perolehan Barang (Pengadaan)</td>
+                        <td style="text-align: center;">{{ total_perolehan }}</td>
+                        <td style="text-align: center;">Barang</td>
+                    </tr>
+                    <tr>
+                        <td>3. Distribusi ke Unit</td>
+                        <td style="text-align: center;">{{ total_distributed }}</td>
+                        <td style="text-align: center;">Unit</td>
+                    </tr>
+                    <tr>
+                        <td>3. Retur dari Unit</td>
+                        <td style="text-align: center;">{{ total_returned }}</td>
+                        <td style="text-align: center;">Barang</td>
+                    </tr>
+                    <tr style="font-weight: bold; background-color: #e8e8e8;">
+                        <td>4. Sisa di Gudang (Obname)</td>
+                        <td style="text-align: center;">{{ total_obname }}</td>
+                        <td style="text-align: center;">Barang</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        {% if procurements %}
+        <!-- Perolehan Detail -->
+        <div class="section">
+            <div class="section-title">I. RINCIAN PEROLEHAN BARANG (PENGADAAN)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">No</th>
+                        <th style="width: 11%;">Tanggal</th>
+                        <th style="width: 9%;">No. Pengadaan</th>
+                        <th style="width: 28%;">Nama Barang</th>
+                        <th style="width: 9%;">Jumlah</th>
+                        <th style="width: 20%;">Gudang</th>
+                        <th style="width: 18%;">Supplier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set item_no = namespace(value=1) %}
+                    {% for proc in procurements %}
+                        {% for item in proc.items %}
+                        <tr>
+                            <td style="text-align: center;">{{ item_no.value }}</td>
+                            <td style="text-align: center;">{{ proc.completion_date.strftime('%d/%m/%Y') if proc.completion_date else proc.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td style="text-align: center;">{{ proc.id }}</td>
+                            <td>
+                                {{ item.item.name if item.item else '-' }}
+                                <br><span class="small-text">{{ item.item.item_code if item.item else '' }}</span>
+                            </td>
+                            <td style="text-align: center;">{{ item.quantity }}</td>
+                            <td>{{ proc.warehouse.name if proc.warehouse else '-' }}</td>
+                            <td>{{ proc.supplier.name if proc.supplier else '-' }}</td>
+                            {% set item_no.value = item_no.value + 1 %}
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="4" style="text-align: right; padding-right: 10px;">JUMLAH TOTAL:</td>
+                        <td style="text-align: center;">{{ total_procurement }}</td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if stock_out or distributions %}
+    <!-- Page 2: Barang Keluar -->
+    <div class="page">
+        <div class="section">
+            <div class="section-title">II. RINCIAN BARANG KELUAR</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 4%;">No</th>
+                        <th style="width: 10%;">Tanggal</th>
+                        <th style="width: 28%;">Nama Barang</th>
+                        <th style="width: 14%;">Gudang Asal</th>
+                        <th style="width: 14%;">Tujuan</th>
+                        <th style="width: 8%;">Jumlah</th>
+                        <th style="width: 22%;">Keterangan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set item_no = namespace(value=1) %}
+                    {% for trans in stock_out %}
+                    <tr>
+                        <td style="text-align: center;">{{ item_no.value }}</td>
+                        <td style="text-align: center;">{{ trans.transaction_date.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {{ trans.item.name }}
+                            <br><span class="small-text">{{ trans.item.item_code }}</span>
+                        </td>
+                        <td>{{ trans.warehouse.name if trans.warehouse else '-' }}</td>
+                        <td>-</td>
+                        <td style="text-align: center;">{{ trans.quantity }}</td>
+                        <td>{{ trans.note or '-' }}</td>
+                        {% set item_no.value = item_no.value + 1 %}
+                    </tr>
+                    {% endfor %}
+                    {% for dist in distributions %}
+                    <tr>
+                        <td style="text-align: center;">{{ item_no.value }}</td>
+                        <td style="text-align: center;">{{ dist.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td>
+                            {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else '-' }}
+                            <br><span class="small-text">{{ dist.item_detail.item.item_code if dist.item_detail and dist.item_detail.item else '' }}</span>
+                            <br><span class="small-text">SN: {{ dist.item_detail.serial_number if dist.item_detail else '' }}</span>
+                        </td>
+                        <td>{{ dist.warehouse.name if dist.warehouse else '-' }}</td>
+                        <td>{{ dist.unit.name if dist.unit else '-' }}</td>
+                        <td style="text-align: center;">1</td>
+                        <td>Distribusi</td>
+                        {% set item_no.value = item_no.value + 1 %}
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="5" style="text-align: right; padding-right: 10px;">JUMLAH TOTAL:</td>
+                        <td style="text-align: center;">{{ total_out }}</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if return_batches %}
+    <!-- Page 3: Retur -->
+    <div class="page">
+        <div class="section">
+            <div class="section-title">III. RINCIAN RETUR DARI UNIT</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 4%;">No</th>
+                        <th style="width: 10%;">Tanggal</th>
+                        <th style="width: 11%;">No. Batch</th>
+                        <th style="width: 24%;">Nama Barang</th>
+                        <th style="width: 14%;">Serial Number</th>
+                        <th style="width: 14%;">Unit Asal</th>
+                        <th style="width: 23%;">Gudang Tujuan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set item_no = namespace(value=1) %}
+                    {% for batch in return_batches %}
+                        {% for item in batch.return_items %}
+                        <tr>
+                            <td style="text-align: center;">{{ item_no.value }}</td>
+                            <td style="text-align: center;">{{ batch.confirmed_at.strftime('%d/%m/%Y') if batch.confirmed_at else batch.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td style="text-align: center;">{{ batch.batch_code }}</td>
+                            <td>
+                                {{ item.item_detail.item.name if item.item_detail and item.item_detail.item else '-' }}
+                                <br><span class="small-text">{{ item.item_detail.item.item_code if item.item_detail and item.item_detail.item else '' }}</span>
+                            </td>
+                            <td>{{ item.item_detail.serial_unit if item.item_detail else '' }}</td>
+                            <td>{{ batch.unit.name if batch.unit else '-' }}</td>
+                            <td>{{ batch.warehouse.name if batch.warehouse else '-' }}</td>
+                            {% set item_no.value = item_no.value + 1 %}
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="6" style="text-align: right; padding-right: 10px;">JUMLAH TOTAL:</td>
+                        <td style="text-align: center;">{{ total_return_batches }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if obname_items %}
+    <!-- Page 4: Obname -->
+    <div class="page">
+        <div class="section">
+            <div class="section-title">IV. DAFTAR BARANG YANG MASIH TERSEDIA DI GUDANG (OBNAME)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 4%;">No</th>
+                        <th style="width: 30%;">Nama Barang</th>
+                        <th style="width: 20%;">Serial Number</th>
+                        <th style="width: 20%;">Gudang</th>
+                        <th style="width: 13%;">Tanggal Masuk</th>
+                        <th style="width: 13%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in obname_items %}
+                    <tr>
+                        <td style="text-align: center;">{{ loop.index }}</td>
+                        <td>
+                            {{ item.item.name }}
+                            <br><span class="small-text">{{ item.item.item_code }}</span>
+                        </td>
+                        <td>{{ item.serial_number }}</td>
+                        <td>{{ item.warehouse.name if item.warehouse else '-' }}</td>
+                        <td style="text-align: center;">{{ item.created_at.strftime('%d/%m/%Y') }}</td>
+                        <td style="text-align: center;">Tersedia</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="5" style="text-align: right; padding-right: 10px;">JUMLAH TOTAL:</td>
+                        <td style="text-align: center;">{{ total_obname }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Last Page: Signature -->
+    <div class="page">
+        <div class="signature-section">
+            <table class="signature-table">
+                <tr>
+                    <td style="width: 70%;"></td>
+                    <td style="width: 30%; text-align: center;">
+                        <p>{{ now.strftime('%d/%m/%Y') }}</p>
+                        <p style="font-weight: bold; margin-top: 10px;">Kepala Gudang</p>
+                        <div class="signature-space"></div>
+                        <div class="signature-line"></div>
+                        <p style="font-weight: bold; margin-top: 5px;">( .............................. )</p>
+                        <p class="small-text">NIP. ..............................</p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Auto print when page loads
+        window.onload = function() {
+            setTimeout(function() {
+                window.print();
+            }, 500);
+        };
+    </script>
+</body>
+</html>

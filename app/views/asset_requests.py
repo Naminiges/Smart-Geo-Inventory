@@ -732,10 +732,10 @@ def unit_assets():
     # Get all unit IDs
     unit_ids = [uu.unit_id for uu in user_units]
 
-    # Get all distributions to these units that are installed/completed
+    # Get all distributions to these units (excluding rejected)
     distributions = Distribution.query.filter(
         Distribution.unit_id.in_(unit_ids),
-        Distribution.status.in_(['installed', 'completed'])
+        Distribution.status != 'rejected'
     ).all()
 
     # Group items by item_id
@@ -745,9 +745,9 @@ def unit_assets():
         'total_quantity': 0
     })
 
-    # Collect all items from distributions
+    # Collect all items from distributions (excluding returned items)
     for dist in distributions:
-        if dist.item_detail and dist.item_detail.item:
+        if dist.item_detail and dist.item_detail.item and dist.item_detail.status != 'returned':
             item_id = dist.item_detail.item_id
             items_dict[item_id]['item'] = dist.item_detail.item
             items_dict[item_id]['details'].append({
@@ -759,18 +759,19 @@ def unit_assets():
             })
             items_dict[item_id]['total_quantity'] += 1
 
-    # Also get items directly from ItemDetail with status 'in_unit' for this unit's distributions
+    # Also get items directly from ItemDetail with status 'in_unit' for this unit's distributions (excluding returned)
     for unit_id in unit_ids:
         unit_distributions = Distribution.query.filter_by(unit_id=unit_id).all()
 
         if unit_distributions:
             item_details = ItemDetail.query.filter(
                 ItemDetail.id.in_([d.item_detail_id for d in unit_distributions if d.item_detail_id]),
-                ItemDetail.status == 'in_unit'
+                ItemDetail.status.in_(['in_unit', 'used', 'loaned']),  # Include all active statuses
+                ItemDetail.status != 'returned'
             ).all()
 
             for item_detail in item_details:
-                if item_detail.item:
+                if item_detail.item and item_detail.status != 'returned':
                     item_id = item_detail.item_id
                     items_dict[item_id]['item'] = item_detail.item
 
