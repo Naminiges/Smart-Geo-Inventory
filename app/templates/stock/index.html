@@ -54,7 +54,7 @@
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Tipe</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Catatan</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
                 </tr>
             </thead>
             <tbody>
@@ -76,7 +76,9 @@
                                 </span>
                             </td>
                             <td class="py-3 px-4 font-bold text-red-600">-{{ trans.quantity }}</td>
-                            <td class="py-3 px-4 text-gray-500 text-sm">{{ trans.note or '-' }}</td>
+                            <td class="py-3 px-4">
+                                <span class="text-gray-500 text-sm">{{ trans.note or '-' }}</span>
+                            </td>
                         </tr>
                     {% elif entry.type == 'return_batch' %}
                         {% set batch, item = entry.data %}
@@ -95,7 +97,11 @@
                                 </span>
                             </td>
                             <td class="py-3 px-4 font-bold text-green-600">+1</td>
-                            <td class="py-3 px-4 text-gray-500 text-sm">Retur Batch: {{ batch.batch_code }}{% if batch.notes %} - {{ batch.notes }}{% endif %}</td>
+                            <td class="py-3 px-4">
+                                <a href="{{ url_for('returns.detail', id=batch.id) }}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                    <i class="fas fa-eye mr-1"></i>Lihat Detail
+                                </a>
+                            </td>
                         </tr>
                     {% elif entry.type == 'procurement' %}
                         {% set proc, item = entry.data %}
@@ -114,7 +120,11 @@
                                 </span>
                             </td>
                             <td class="py-3 px-4 font-bold text-green-600">+{{ item.quantity }}</td>
-                            <td class="py-3 px-4 text-gray-500 text-sm">Procurement #{{ proc.id }}{% if proc.notes %} - {{ proc.notes }}{% endif %}</td>
+                            <td class="py-3 px-4">
+                                <a href="{{ url_for('procurement.detail', id=proc.id) }}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                    <i class="fas fa-eye mr-1"></i>Lihat Detail
+                                </a>
+                            </td>
                         </tr>
                     {% elif entry.type == 'distribution_group' %}
                         {% set group, dist = entry.data %}
@@ -133,7 +143,11 @@
                                 </span>
                             </td>
                             <td class="py-3 px-4 font-bold text-red-600">-1</td>
-                            <td class="py-3 px-4 text-gray-500 text-sm">Batch: {{ group.batch_code }}{% if group.notes %} - {{ group.notes }}{% endif %}</td>
+                            <td class="py-3 px-4">
+                                <a href="{{ url_for('installations.batch_detail', id=dist.id) }}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                    <i class="fas fa-eye mr-1"></i>Lihat Detail
+                                </a>
+                            </td>
                         </tr>
                     {% elif entry.type == 'direct_distribution' %}
                         {% set dist = entry.data %}
@@ -152,7 +166,15 @@
                                 </span>
                             </td>
                             <td class="py-3 px-4 font-bold text-red-600">-1</td>
-                            <td class="py-3 px-4 text-gray-500 text-sm">Distribusi ke {{ dist.unit.name if dist.unit else '-' }}</td>
+                            <td class="py-3 px-4">
+                                {% if dist.asset_request_id %}
+                                <a href="{{ url_for('asset_requests.detail', id=dist.asset_request_id) }}" class="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                                    <i class="fas fa-eye mr-1"></i>Lihat Detail
+                                </a>
+                                {% else %}
+                                <span class="text-gray-500 text-sm">-</span>
+                                {% endif %}
+                            </td>
                         </tr>
                     {% endif %}
                 {% endfor %}
