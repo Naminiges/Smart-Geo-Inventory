@@ -30,16 +30,40 @@ def unit_index():
         VenueLoan.borrower_unit_id.in_(unit_ids)
     ).order_by(VenueLoan.created_at.desc()).all()
 
+    # Get currently active events (within time range, regardless of status)
+    from app.utils.datetime_helper import get_wib_now
+    now = get_wib_now()
+    print(f"DEBUG: Current time (WIB): {now}")
+    print(f"DEBUG: Total venue_loans: {len(venue_loans)}")
+
+    currently_active_loans = []
+    for loan in venue_loans:
+        print(f"DEBUG: Loan {loan.id} - {loan.event_name} - status: {loan.status}")
+        print(f"DEBUG:   start: {loan.start_datetime}, end: {loan.end_datetime}")
+        print(f"DEBUG:   start <= now: {loan.start_datetime <= now}, now <= end: {now <= loan.end_datetime}")
+        if loan.start_datetime <= now <= loan.end_datetime and loan.status in ['approved', 'active']:
+            currently_active_loans.append(loan)
+            print(f"DEBUG:   -> ACTIVE!")
+
+    print(f"DEBUG: Current active loans count: {len(currently_active_loans)}")
+
     # Get statistics
     total_count = VenueLoan.query.filter(VenueLoan.borrower_unit_id.in_(unit_ids)).count()
     pending_count = VenueLoan.query.filter(
         VenueLoan.borrower_unit_id.in_(unit_ids),
         VenueLoan.status == 'pending'
     ).count()
+
+    # Active count includes both 'active' status and 'approved' within time range
     active_count = VenueLoan.query.filter(
         VenueLoan.borrower_unit_id.in_(unit_ids),
         VenueLoan.status == 'active'
     ).count()
+    # Add approved loans that are within time range
+    for loan in venue_loans:
+        if loan.status == 'approved' and loan.start_datetime <= now <= loan.end_datetime:
+            active_count += 1
+
     approved_count = VenueLoan.query.filter(
         VenueLoan.borrower_unit_id.in_(unit_ids),
         VenueLoan.status == 'approved'
@@ -47,6 +71,7 @@ def unit_index():
 
     return render_template('venue_loans/unit/index.html',
                          venue_loans=venue_loans,
+                         currently_active_loans=currently_active_loans,
                          user_units=user_units,
                          stats={
                              'total': total_count,

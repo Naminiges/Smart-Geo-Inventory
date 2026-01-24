@@ -6,6 +6,7 @@ from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
+from app.utils.status_helper import translate_status, get_status_color, get_status_icon
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -35,6 +36,9 @@ def create_app(config_name='default'):
 
     # Register custom Jinja2 filters
     app.jinja_env.filters['format_wib_datetime'] = format_wib_datetime
+    app.jinja_env.filters['translate_status'] = translate_status
+    app.jinja_env.filters['get_status_color'] = get_status_color
+    app.jinja_env.filters['get_status_icon'] = get_status_icon
 
     # Register context processors
     from app.utils.helpers import notification_counts

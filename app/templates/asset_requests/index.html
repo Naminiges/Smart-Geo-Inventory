@@ -2,19 +2,19 @@
 
 {% block title %}Permohonan Aset - Smart Geo Inventory{% endblock %}
 
-{% block page_title %}Permohonan Aset{% endblock %}
+{% block page_title %}Daftar Permintaan{% endblock %}
 
 {% block content %}
 <!-- Header -->
 <div class="mb-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Daftar Permohonan Aset</h1>
-            <p class="text-gray-600 mt-1">Kelola permohonan aset untuk unit Anda</p>
+            <h1 class="text-2xl font-bold text-gray-800">Daftar Permintaan Barang</h1>
+            <p class="text-gray-600 mt-1">Kelola permintaan barang untuk unit Anda</p>
         </div>
         {% if current_user.is_unit_staff() %}
         <a href="{{ url_for('asset_requests.create') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
-            <i class="fas fa-plus mr-2"></i>Buat Permohonan
+            <i class="fas fa-plus mr-2"></i>Buat Permintaan Baru
         </a>
         {% endif %}
     </div>
@@ -26,11 +26,11 @@
     <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500">Total Permohonan</p>
+                <p class="text-sm text-gray-500">Semua Permintaan</p>
                 <p class="text-3xl font-bold text-gray-800">{{ stats.total }}</p>
             </div>
             <div class="bg-blue-100 rounded-full p-3">
-                <i class="fas fa-clipboard-list text-blue-600 text-xl"></i>
+                <i class="fas fa-file-alt text-blue-600 text-xl"></i>
             </div>
         </div>
     </div>
@@ -39,7 +39,7 @@
     <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-600">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500">Menunggu Verifikasi</p>
+                <p class="text-sm text-gray-500">Menunggu</p>
                 <p class="text-3xl font-bold text-gray-800">{{ stats.pending }}</p>
             </div>
             <div class="bg-amber-100 rounded-full p-3">
@@ -52,7 +52,7 @@
     <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-indigo-600">
         <div class="flex items-center justify-between">
             <div>
-                <p class="text-sm text-gray-500">Sudah Diverifikasi</p>
+                <p class="text-sm text-gray-500">Sudah Dicek</p>
                 <p class="text-3xl font-bold text-gray-800">{{ stats.verified }}</p>
             </div>
             <div class="bg-indigo-100 rounded-full p-3">
@@ -82,16 +82,16 @@
             Semua
         </a>
         <a href="{{ url_for('asset_requests.index', status='pending') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'pending' %}bg-amber-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-            Pending
+            Menunggu
         </a>
         <a href="{{ url_for('asset_requests.index', status='verified') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'verified' %}bg-indigo-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-            Verified
+            Sudah Dicek
         </a>
         <a href="{{ url_for('asset_requests.index', status='distributing') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'distributing' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-            Distributing
+            Sedang Dikirim
         </a>
         <a href="{{ url_for('asset_requests.index', status='completed') }}" class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if current_filter == 'completed' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
-            Completed
+            Selesai
         </a>
     </div>
 </div>
@@ -101,7 +101,7 @@
     <div class="p-6 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-800">
             <i class="fas fa-list mr-2 text-blue-600"></i>
-            Daftar Permohonan ({{ asset_requests|length }})
+            Daftar Permintaan ({{ asset_requests|length }})
         </h3>
     </div>
     <div class="p-6">
@@ -110,21 +110,16 @@
             <table class="w-full">
                 <thead>
                     <tr class="border-b border-gray-200">
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah Item</th>
+                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah Barang</th>
                         <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                        <th class="text-left py-3 px-4 font-semibold text-gray-700">Catatan</th>
                         <th class="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for req in asset_requests %}
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-4 px-4">
-                            <span class="font-mono text-sm font-semibold text-blue-600">#{{ req.id }}</span>
-                        </td>
                         <td class="py-4 px-4 text-gray-600">
                             {{ req.request_date.strftime('%d/%m/%Y') if req.request_date else '-' }}
                         </td>
@@ -138,46 +133,21 @@
                         </td>
                         <td class="py-4 px-4">
                             <span class="text-gray-800 font-semibold">{{ req.items|length }}</span>
-                            <span class="text-gray-500 text-sm"> item</span>
+                            <span class="text-gray-500 text-sm"> barang</span>
                         </td>
                         <td class="py-4 px-4">
-                            {% if req.status == 'pending' %}
-                            <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
-                                <i class="fas fa-clock mr-1"></i>Pending
+                            <span class="px-3 py-1 {{ req.status|get_status_color }} rounded-full text-xs font-semibold">
+                                <i class="{{ req.status|get_status_icon }} mr-1"></i>{{ req.status|translate_status }}
                             </span>
-                            {% elif req.status == 'verified' %}
-                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
-                                <i class="fas fa-check-circle mr-1"></i>Verified
-                            </span>
-                            {% elif req.status == 'distributing' or req.status == 'processing' %}
-                            <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                                <i class="fas fa-truck mr-1"></i>Distributing
-                            </span>
-                            {% elif req.status == 'completed' %}
-                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                                <i class="fas fa-check-double mr-1"></i>Completed
-                            </span>
-                            {% elif req.status == 'rejected' %}
-                            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
-                                <i class="fas fa-times-circle mr-1"></i>Rejected
-                            </span>
-                            {% else %}
-                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
-                                {{ req.status|title }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="py-4 px-4 text-gray-600 text-sm max-w-xs truncate">
-                            {{ req.request_notes[:50] + '...' if req.request_notes and req.request_notes|length > 50 else (req.request_notes or '-') }}
                         </td>
                         <td class="py-4 px-4">
                             <div class="flex items-center justify-center space-x-2">
                                 <a href="{{ url_for('asset_requests.detail', id=req.id) }}" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">
-                                    <i class="fas fa-eye mr-1"></i> Detail
+                                    <i class="fas fa-eye mr-1"></i> Lihat
                                 </a>
                                 {% if current_user.is_admin() and req.status == 'pending' %}
                                 <a href="{{ url_for('asset_requests.verify', id=req.id) }}" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
-                                    <i class="fas fa-check mr-1"></i> Verifikasi
+                                    <i class="fas fa-check mr-1"></i> Cek
                                 </a>
                                 {% endif %}
                                 {% if current_user.is_unit_staff() and req.status == 'distributing' %}
@@ -197,14 +167,14 @@
             <i class="fas fa-inbox text-gray-400 text-5xl mb-4"></i>
             <p class="text-gray-600 font-semibold">
                 {% if current_filter %}
-                Tidak ada permohonan dengan status {{ current_filter }}.
+                Tidak ada permintaan dengan status {{ current_filter|translate_status }}.
                 {% else %}
-                Belum ada permohonan aset.
+                Belum ada permintaan barang.
                 {% endif %}
             </p>
             {% if not current_filter and current_user.is_unit_staff() %}
             <a href="{{ url_for('asset_requests.create') }}" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <i class="fas fa-plus mr-2"></i>Buat Permohonan Pertama Anda
+                <i class="fas fa-plus mr-2"></i>Buat Permintaan Pertama Anda
             </a>
             {% endif %}
         </div>

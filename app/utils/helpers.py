@@ -147,16 +147,18 @@ def notification_counts():
             'pending_request_count': 0,
             'verified_request_count': 0,
             'draft_distribution_count': 0,
-            'pending_distribution_count': 0
+            'pending_distribution_count': 0,
+            'pending_procurement_count': 0
         }
 
-    from app.models import AssetRequest, UserUnit, Distribution, DistributionGroup
+    from app.models import AssetRequest, UserUnit, Distribution, DistributionGroup, Procurement
 
     counts = {
         'pending_request_count': 0,
         'verified_request_count': 0,
         'draft_distribution_count': 0,
-        'pending_distribution_count': 0
+        'pending_distribution_count': 0,
+        'pending_procurement_count': 0
     }
 
     try:
@@ -166,7 +168,12 @@ def notification_counts():
             # 1. Permohonan Unit: Status 'pending' (menunggu verifikasi admin)
             counts['pending_request_count'] = AssetRequest.query.filter_by(status='pending').count()
 
-            # 2. Distribusi Langsung: Draft batch yang is_draft=True (menunggu verifikasi admin)
+            # 2. Procurement: Status 'pending' (menunggu persetujuan admin)
+            pending_proc = Procurement.query.filter_by(status='pending').count()
+            counts['pending_procurement_count'] = pending_proc
+            print(f"DEBUG Admin {current_user.name}: pending_procurement_count={pending_proc}")
+
+            # 3. Distribusi Langsung: Draft batch yang is_draft=True (menunggu verifikasi admin)
             counts['draft_distribution_count'] = DistributionGroup.query.filter_by(is_draft=True).count()
 
             # Admin tidak butuh notifikasi 'verified_request_count' dan 'pending_distribution_count'
@@ -195,6 +202,7 @@ def notification_counts():
             counts['pending_request_count'] = 0
             counts['verified_request_count'] = 0
             counts['pending_distribution_count'] = 0
+            counts['pending_procurement_count'] = 0
 
         elif current_user.is_unit_staff():
             # UNIT STAFF NOTIFICATIONS
@@ -230,8 +238,9 @@ def notification_counts():
                     Distribution.status.in_(['installing', 'in_transit'])
                 ).distinct().count()
 
-            # Unit staff tidak butuh notifikasi draft_distribution_count
+            # Unit staff tidak butuh notifikasi draft_distribution_count dan pending_procurement_count
             counts['draft_distribution_count'] = 0
+            counts['pending_procurement_count'] = 0
 
     except Exception as e:
         import traceback
@@ -240,5 +249,6 @@ def notification_counts():
         counts['verified_request_count'] = 0
         counts['draft_distribution_count'] = 0
         counts['pending_distribution_count'] = 0
+        counts['pending_procurement_count'] = 0
 
     return counts

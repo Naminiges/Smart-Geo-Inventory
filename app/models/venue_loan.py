@@ -46,9 +46,9 @@ class VenueLoan(BaseModel):
     def status_display(self):
         """Get display status"""
         status_map = {
-            'pending': 'Pending',
+            'pending': 'Menunggu',
             'approved': 'Disetujui',
-            'active': 'Dipinjam',
+            'active': 'Sedang Berjalan',
             'completed': 'Selesai',
             'rejected': 'Ditolak'
         }
@@ -65,6 +65,24 @@ class VenueLoan(BaseModel):
             'rejected': 'bg-red-100 text-red-700'
         }
         return class_map.get(self.status, 'bg-gray-100 text-gray-700')
+
+    @property
+    def is_currently_active(self):
+        """Check if loan is currently active based on time (regardless of status)"""
+        now = get_wib_now()
+        return self.start_datetime <= now <= self.end_datetime
+
+    @property
+    def is_approved_but_not_started(self):
+        """Check if loan is approved but hasn't started yet"""
+        now = get_wib_now()
+        return self.status == 'approved' and now < self.start_datetime
+
+    @property
+    def should_be_active(self):
+        """Check if loan should be active based on time"""
+        now = get_wib_now()
+        return (self.status == 'approved' and now >= self.start_datetime and now <= self.end_datetime)
 
     @property
     def is_time_expired(self):

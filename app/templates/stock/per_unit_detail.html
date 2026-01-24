@@ -48,7 +48,7 @@
                 </span>
                 {% else %}
                 <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-semibold">
-                    {{ unit.status|title }}
+                    {{ unit.status|replace('_', ' ')|title }}
                 </span>
                 {% endif %}
             </div>
@@ -221,7 +221,7 @@
                             </span>
                             {% else %}
                             <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
-                                {{ detail.status }}
+                                {{ detail.status|replace('_', ' ')|title }}
                             </span>
                             {% endif %}
                         </td>

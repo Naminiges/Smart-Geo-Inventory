@@ -16,7 +16,7 @@
                     {{ warehouse.name if warehouse else 'Gudang Pusat' }}
                     <span class="mx-2">•</span>
                     <i class="fas fa-id-badge mr-2"></i>
-                    {{ current_user.role|title }}
+                    {{ current_user.role|replace('_', ' ')|title }}
                 </p>
             </div>
             <div class="text-right">
