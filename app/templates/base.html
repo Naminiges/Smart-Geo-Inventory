@@ -221,6 +221,19 @@
             <span class="font-medium">Kategori Barang</span>
           </a>
 
+          <!-- Gudang (Admin Only) -->
+          {% if current_user.is_admin() %}
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'warehouses' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('warehouses.index') }}"
+          >
+            <i
+              class="fas fa-warehouse w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'warehouses' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Daftar Gudang</span>
+          </a>
+          {% endif %}
+
           <!-- Unit (Admin Only) -->
           {% if current_user.is_admin() %}
           <a
@@ -349,20 +362,28 @@
         <div
           class="sticky bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white"
         >
-          <div class="flex items-center mb-3 p-2 bg-gray-50 rounded-lg">
+          <a href="{{ url_for('auth.profile') }}"
+             class="flex items-center mb-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            {% if current_user.profile_image %}
+            <img src="{{ url_for('static', filename=current_user.profile_image) }}"
+                 alt="{{ current_user.name }}"
+                 class="w-10 h-10 rounded-full object-cover mr-3">
+            {% else %}
             <div
               class="bg-emerald-600 rounded-full flex items-center justify-center mr-3"
               style="width: 40px; height: 40px"
             >
               <i class="fas fa-user text-lg text-white"></i>
             </div>
+            {% endif %}
             <div class="flex-1 min-w-0">
               <p class="text-sm font-semibold text-gray-800 truncate">
                 {{ current_user.name }}
               </p>
               <p class="text-xs text-gray-500">{{ current_user.role|replace('_', ' ')|title }}</p>
             </div>
-          </div>
+            <i class="fas fa-chevron-right text-gray-400"></i>
+          </a>
           <a
             href="{{ url_for('auth.logout') }}"
             class="logout-btn flex items-center justify-center w-full px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
@@ -403,14 +424,27 @@
             <div class="flex items-center space-x-1">
               <div class="relative ml-2">
                 <button
-                  class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  class="flex items-center space-x-2 p-1 pr-3 rounded-lg hover:bg-gray-100 transition-colors"
                   onclick="this.nextElementSibling.classList.toggle('hidden')"
                 >
-                  <i class="fas fa-user-circle text-gray-500 text-xl"></i>
+                  {% if current_user.profile_image %}
+                  <img src="{{ url_for('static', filename=current_user.profile_image) }}"
+                       alt="{{ current_user.name }}"
+                       class="w-8 h-8 rounded-full object-cover">
+                  {% else %}
+                  <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-sm"></i>
+                  </div>
+                  {% endif %}
+                  <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
                 </button>
                 <div
                   class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
                 >
+                  <div class="px-4 py-3 border-b border-gray-200">
+                    <p class="text-sm font-semibold text-gray-800">{{ current_user.name }}</p>
+                    <p class="text-xs text-gray-500">{{ current_user.email }}</p>
+                  </div>
                   <a
                     class="flex items-center px-4 py-2.5 hover:bg-gray-50 text-gray-700 hover:text-emerald-600 transition-colors"
                     href="{{ url_for('auth.profile') }}"
@@ -504,6 +538,9 @@
 
     <!-- Confirm Helper -->
     <script src="{{ url_for('static', filename='js/confirm.js') }}"></script>
+
+    <!-- Table Pagination Helper -->
+    <script src="{{ url_for('static', filename='js/pagination.js') }}"></script>
 
     {% block extra_js %}{% endblock %}
   </body>

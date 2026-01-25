@@ -226,7 +226,7 @@
                 <i class="fas fa-arrow-left mr-2"></i>
                 Kembali
             </a>
-            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+            <button type="button" onclick="showConfirmModal()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
                 <i class="fas fa-save mr-2"></i>
                 Konfirmasi Penerimaan
             </button>
@@ -250,6 +250,62 @@
                 <li><i class="fas fa-check-circle mr-2"></i>Anda bisa menerima barang sebagian (partial receiving)</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Setelah semua barang lengkap, pengadaan siap diselesaikan</li>
             </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center mb-4">
+            <div class="bg-blue-100 rounded-full p-3 mr-4">
+                <i class="fas fa-file-invoice text-blue-600 text-xl"></i>
+            </div>
+            <div>
+                <h5 class="text-lg font-semibold text-gray-800 mb-1">Konfirmasi Penerimaan Barang</h5>
+                <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
+            </div>
+        </div>
+
+        <p class="text-gray-700 mb-4">Apakah data penerimaan barang berikut sudah benar?</p>
+
+        <!-- Summary -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h6 class="font-semibold text-gray-800 mb-3">Ringkasan Penerimaan:</h6>
+
+            <div class="space-y-2 text-sm">
+                <div class="flex">
+                    <span class="w-40 text-gray-600">No. Invoice:</span>
+                    <span class="font-medium text-gray-800" id="summaryInvoice">-</span>
+                </div>
+                <div class="flex">
+                    <span class="w-40 text-gray-600">Pengadaan #:</span>
+                    <span class="font-medium text-gray-800">{{ procurement.id }}</span>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <span class="text-sm text-gray-600">Barang yang diterima:</span>
+                <div id="summaryItems" class="mt-2 space-y-1 text-sm">
+                    <!-- Items will be listed here -->
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-gray-200">
+                <div class="flex">
+                    <span class="w-40 text-gray-600">Total Diterima:</span>
+                    <span class="font-bold text-blue-600" id="summaryTotal">0 unit</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+            <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fas fa-times mr-1"></i> Batal
+            </button>
+            <button type="button" onclick="submitForm()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                <i class="fas fa-check mr-1"></i> Ya, Konfirmasi
+            </button>
         </div>
     </div>
 </div>
@@ -338,6 +394,99 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
     {% endif %}
     {% endfor %}
+});
+
+// Modal Functions
+function showConfirmModal() {
+    const form = document.querySelector('form');
+
+    // Check form validation first
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const invoiceField = document.querySelector('[name="receipt_number"]');
+    const invoiceValue = invoiceField ? invoiceField.value.trim() : '{{ procurement.receipt_number or "" }}';
+
+    if (!invoiceValue) {
+        alert('Harap isi nomor invoice/tanda terima!');
+        if (invoiceField) {
+            invoiceField.focus();
+        }
+        return;
+    }
+
+    // Get all procurement items
+    const itemCards = document.querySelectorAll('[id^="quantity_"]');
+    let totalReceived = 0;
+    let hasItem = false;
+
+    // Populate summary items
+    const summaryItems = document.getElementById('summaryItems');
+    summaryItems.innerHTML = '';
+
+    itemCards.forEach(input => {
+        const procItemId = input.id.replace('quantity_', '');
+        const quantity = parseInt(input.value) || 0;
+
+        if (quantity > 0) {
+            hasItem = true;
+            totalReceived += quantity;
+
+            // Find item name (need to get from the DOM)
+            const itemCard = input.closest('.bg-gray-50');
+            const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item Unknown';
+            const requestedQty = itemCard.querySelector('.bg-blue-100')?.textContent.trim() || '';
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'flex items-start justify-between bg-white p-2 rounded';
+            itemDiv.innerHTML = `
+                <div class="flex-1">
+                    <span class="font-medium text-gray-800">${itemName}</span>
+                    <span class="text-gray-500 text-xs ml-2">(${requestedQty})</span>
+                </div>
+                <span class="font-bold text-blue-600">+${quantity} unit</span>
+            `;
+            summaryItems.appendChild(itemDiv);
+        }
+    });
+
+    if (!hasItem) {
+        alert('Harap isi minimal satu barang yang diterima!');
+        return;
+    }
+
+    // Update summary
+    document.getElementById('summaryInvoice').textContent = invoiceValue;
+    document.getElementById('summaryTotal').textContent = totalReceived + ' unit';
+
+    // Show modal
+    document.getElementById('confirmModal').classList.remove('hidden');
+    document.getElementById('confirmModal').classList.add('flex');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+    document.getElementById('confirmModal').classList.remove('flex');
+}
+
+function submitForm() {
+    document.querySelector('form').submit();
+}
+
+// Close modal on outside click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+    }
 });
 </script>
 {% endblock %}

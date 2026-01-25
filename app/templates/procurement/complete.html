@@ -152,15 +152,126 @@
 </div>
 
 <!-- Action Buttons -->
-<form method="POST" class="flex items-center justify-between">
+<form method="POST" id="completeForm" class="flex items-center justify-between">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <a href="{{ url_for('procurement.detail', id=procurement.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
         <i class="fas fa-arrow-left mr-2"></i>
         Kembali
     </a>
-    <button type="submit" onclick="return confirm('Apakah Anda yakin ingin menyelesaikan pengadaan ini? Stok akan ditambahkan ke gudang {{ warehouse.name }}.')" class=" p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg">
+    <button type="button" onclick="showConfirmModal()" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold text-lg">
         <i class="fas fa-check-double mr-2"></i>
         Konfirmasi Penyelesaian
     </button>
 </form>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center mb-4">
+            <div class="bg-green-100 rounded-full p-3 mr-4">
+                <i class="fas fa-check-double text-green-600 text-xl"></i>
+            </div>
+            <div>
+                <h5 class="text-lg font-semibold text-gray-800 mb-1">Konfirmasi Penyelesaian Pengadaan</h5>
+                <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
+            </div>
+        </div>
+
+        <p class="text-gray-700 mb-4">Apakah Anda yakin ingin menyelesaikan pengadaan ini?</p>
+
+        <!-- Summary -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <h6 class="font-semibold text-gray-800 mb-3">Ringkasan Pengadaan:</h6>
+
+            <div class="space-y-2 text-sm">
+                <div class="flex">
+                    <span class="w-40 text-gray-600">Pengadaan #:</span>
+                    <span class="font-medium text-gray-800">{{ procurement.id }}</span>
+                </div>
+                <div class="flex">
+                    <span class="w-40 text-gray-600">No. Invoice:</span>
+                    <span class="font-medium text-gray-800">{{ procurement.receipt_number or 'N/A' }}</span>
+                </div>
+                <div class="flex">
+                    <span class="w-40 text-gray-600">Supplier:</span>
+                    <span class="font-medium text-gray-800">{{ procurement.supplier.name if procurement.supplier else 'N/A' }}</span>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <span class="text-sm text-gray-600">Barang yang akan masuk ke stok:</span>
+                <div class="mt-2 space-y-1 text-sm bg-white p-3 rounded">
+                    {% for item in procurement.items %}
+                    <div class="flex items-center justify-between">
+                        <span class="font-medium text-gray-800">{{ item.item.name if item.item else 'Item Baru' }}</span>
+                        <span class="font-bold text-green-600">{{ item.quantity }} unit</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-gray-200 space-y-2 text-sm">
+                <div class="flex">
+                    <span class="w-40 text-gray-600">Gudang Tujuan:</span>
+                    <span class="font-medium text-gray-800">{{ warehouse.name }}</span>
+                </div>
+                <div class="flex">
+                    <span class="w-40 text-gray-600">Total Barang:</span>
+                    <span class="font-bold text-green-600">{{ procurement.total_quantity }} unit</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+            <p class="text-sm text-amber-800">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                <strong>Tindakan ini akan:</strong>
+            </p>
+            <ul class="text-sm text-amber-800 mt-2 space-y-1 ml-5">
+                <li>• Menambahkan stok ke gudang {{ warehouse.name }}</li>
+                <li>• Mencatat transaksi stok masuk</li>
+                <li>• Mengubah status pengadaan menjadi <strong>Completed</strong></li>
+            </ul>
+        </div>
+
+        <div class="flex gap-3 justify-end">
+            <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fas fa-times mr-1"></i> Batal
+            </button>
+            <button type="button" onclick="submitForm()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                <i class="fas fa-check mr-1"></i> Ya, Selesaikan
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function showConfirmModal() {
+    document.getElementById('confirmModal').classList.remove('hidden');
+    document.getElementById('confirmModal').classList.add('flex');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+    document.getElementById('confirmModal').classList.remove('flex');
+}
+
+function submitForm() {
+    document.getElementById('completeForm').submit();
+}
+
+// Close modal on outside click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+    }
+});
+</script>
 {% endblock %}

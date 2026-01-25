@@ -14,6 +14,7 @@ class User(UserMixin, BaseModel):
     role = db.Column(db.String(50), nullable=False)  # admin | warehouse_staff | field_staff | unit_staff
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'))  # ONLY for warehouse_staff
     is_active = db.Column(db.Boolean, default=True, nullable=False)  # For activation/deactivation
+    profile_image = db.Column(db.String(255), nullable=True)  # Path to profile image
 
     # Relationships
     warehouse = db.relationship('Warehouse', back_populates='users')

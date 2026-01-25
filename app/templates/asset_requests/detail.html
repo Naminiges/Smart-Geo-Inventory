@@ -421,7 +421,7 @@
 
 <!-- Reject Modal -->
 {% if current_user.is_admin() and asset_request.status == 'pending' %}
-<div id="rejectModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+<div id="rejectModal" class="fixed inset-0 hidden items-center justify-center z-50 backdrop-blur-sm bg-gray-900/40">
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
         <form method="POST" action="{{ url_for('asset_requests.reject', id=asset_request.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
