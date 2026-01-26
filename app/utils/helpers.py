@@ -103,11 +103,38 @@ def get_dashboard_stats(warehouse_id=None):
 
     stats = {}
 
-    # Total items and categories
+    # Network device counts - filter by item name containing keywords
+    # Count ItemDetail (physical items like in items list)
+    keywords = [
+        ('access_point', 'access point'),
+        ('server', 'server'),
+        ('battery', ['battery', 'baterai']),
+        ('switch', 'switch')
+    ]
+
+    for key, keyword in keywords:
+        # Build filters for keyword(s)
+        if isinstance(keyword, list):
+            # Multiple keywords (e.g., battery/baterai)
+            filters = [func.lower(Item.name).like(f'%{kw}%') for kw in keyword]
+            keyword_filter = db.or_(*filters)
+        else:
+            # Single keyword
+            keyword_filter = func.lower(Item.name).like(f'%{keyword}%')
+
+        # Count from ItemDetail only (physical items)
+        itemdetail_query = db.session.query(
+            func.count(ItemDetail.id)
+        ).join(
+            Item, ItemDetail.item_id == Item.id
+        ).filter(keyword_filter)
+
+        itemdetail_count = itemdetail_query.scalar() or 0
+        stats[f'{key}_count'] = itemdetail_count
+
+    # Legacy stats for compatibility
     stats['total_items'] = Item.query.count()
     stats['total_categories'] = Item.query.with_entities(func.count(func.distinct(Item.category_id))).scalar()
-
-    # Total warehouses and units
     stats['total_warehouses'] = Warehouse.query.count()
     stats['total_units'] = Unit.query.count()
 
@@ -136,6 +163,108 @@ def get_dashboard_stats(warehouse_id=None):
     # Distribution status
     stats['installing_count'] = Distribution.query.filter(Distribution.status == 'installing').count()
     stats['installed_count'] = Distribution.query.filter(Distribution.status == 'installed').count()
+    stats['broken_count'] = Distribution.query.filter(Distribution.status == 'broken').count()
+
+    return stats
+
+
+def get_warehouse_dashboard_stats(warehouse_id):
+    """Get warehouse dashboard statistics for specific warehouse
+
+    Args:
+        warehouse_id: Warehouse ID to get stats for
+
+    Returns:
+        dict: Statistics including keyword-based item counts for that warehouse
+    """
+    from app.models import Item, ItemDetail, Stock
+    from app import db
+
+    stats = {}
+
+    # Network device counts - filter by item name containing keywords
+    # Count from Stock (warehouse inventory)
+    keywords = [
+        ('access_point', 'access point'),
+        ('server', 'server'),
+        ('battery', ['battery', 'baterai']),
+        ('switch', 'switch')
+    ]
+
+    for key, keyword in keywords:
+        # Build filters for keyword(s)
+        if isinstance(keyword, list):
+            # Multiple keywords (e.g., battery/baterai)
+            filters = [func.lower(Item.name).like(f'%{kw}%') for kw in keyword]
+            keyword_filter = db.or_(*filters)
+        else:
+            # Single keyword
+            keyword_filter = func.lower(Item.name).like(f'%{keyword}%')
+
+        # Count from Stock for this warehouse
+        stock_query = db.session.query(
+            func.sum(Stock.quantity)
+        ).join(
+            Item, Stock.item_id == Item.id
+        ).filter(
+            keyword_filter,
+            Stock.warehouse_id == warehouse_id
+        )
+
+        stock_count = stock_query.scalar() or 0
+        stats[f'{key}_count'] = stock_count
+
+    return stats
+
+
+def get_unit_dashboard_stats(unit_ids):
+    """Get unit dashboard statistics for specific units
+
+    Args:
+        unit_ids: List of unit IDs to get stats for
+
+    Returns:
+        dict: Statistics including keyword-based item counts for those units
+    """
+    from app.models import Item, ItemDetail, Distribution, UnitDetail
+    from app import db
+
+    stats = {}
+
+    # Network device counts - filter by item name containing keywords
+    # Count ItemDetail (physical items) in the specified units only
+    keywords = [
+        ('access_point', 'access point'),
+        ('server', 'server'),
+        ('battery', ['battery', 'baterai']),
+        ('switch', 'switch')
+    ]
+
+    for key, keyword in keywords:
+        # Build filters for keyword(s)
+        if isinstance(keyword, list):
+            # Multiple keywords (e.g., battery/baterai)
+            filters = [func.lower(Item.name).like(f'%{kw}%') for kw in keyword]
+            keyword_filter = db.or_(*filters)
+        else:
+            # Single keyword
+            keyword_filter = func.lower(Item.name).like(f'%{keyword}%')
+
+        # Count from ItemDetail only, filtered by unit_id
+        # Join Distribution to get unit_id, then filter by unit_ids
+        itemdetail_query = db.session.query(
+            func.count(ItemDetail.id)
+        ).join(
+            Item, ItemDetail.item_id == Item.id
+        ).join(
+            Distribution, ItemDetail.id == Distribution.item_detail_id
+        ).filter(
+            keyword_filter,
+            Distribution.unit_id.in_(unit_ids)
+        )
+
+        itemdetail_count = itemdetail_query.scalar() or 0
+        stats[f'{key}_count'] = itemdetail_count
 
     return stats
 

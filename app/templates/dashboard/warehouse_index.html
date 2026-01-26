@@ -1,22 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Smart Geo Inventory{% endblock %}
+{% block title %}Dashboard Warehouse - Smart Geo Inventory{% endblock %}
 
-{% block page_title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard Warehouse{% endblock %}
 
 {% block content %}
 <!-- Welcome Section -->
 <div class="mb-6">
-    <div class="bg-emerald-600 rounded-xl shadow-lg p-6 text-white">
+    <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl shadow-lg p-6 text-white">
         <div class="flex items-center justify-between">
             <div class="flex-1">
-                <h2 class="text-2xl font-bold mb-2">Selamat Datang, {{ current_user.name }}!</h2>
+                <h2 class="text-2xl font-bold mb-2">Selamat Datang, {{ user.name }}!</h2>
                 <p class="mb-0 text-emerald-100">
-                    <i class="fas fa-building mr-2"></i>
-                    {{ warehouse.name if warehouse else 'Gudang Pusat' }}
-                    <span class="mx-2">•</span>
-                    <i class="fas fa-id-badge mr-2"></i>
-                    {{ current_user.role|replace('_', ' ')|title }}
+                    <i class="fas fa-warehouse mr-2"></i>
+                    {{ warehouse.name if warehouse else 'Gudang' }}
                 </p>
             </div>
             <div class="text-right">
@@ -26,161 +23,157 @@
     </div>
 </div>
 
-<!-- Modern Stat Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <!-- Total Barang -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-emerald-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-emerald-100 rounded-full p-3">
-                <i class="fas fa-box text-emerald-600 text-xl"></i>
+<!-- Network Devices Statistics (for this warehouse only) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Access Point -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Access Point</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.access_point_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Stok</div>
             </div>
-            <div class="ml-4">
-                <div class="text-3xl font-bold text-gray-800">{{ stats.total_items or 0 }}</div>
-                <div class="text-sm text-gray-500">Total Barang</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Total Stok -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-blue-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-blue-100 rounded-full p-3">
-                <i class="fas fa-layer-group text-blue-600 text-xl"></i>
-            </div>
-            <div class="ml-4">
-                <div class="text-3xl font-bold text-gray-800">{{ stats.total_stock or 0 }}</div>
-                <div class="text-sm text-gray-500">Total Stok</div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                </svg>
             </div>
         </div>
     </div>
 
-    <!-- Stok Rendah -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-amber-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-amber-100 rounded-full p-3">
-                <i class="fas fa-exclamation-triangle text-amber-600 text-xl"></i>
+    <!-- Server -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Server</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.server_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Stok</div>
             </div>
-            <div class="ml-4">
-                <div class="text-3xl font-bold text-gray-800">{{ stats.low_stock_count or 0 }}</div>
-                <div class="text-sm text-gray-500">Stok Rendah</div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                </svg>
             </div>
         </div>
     </div>
 
-    <!-- Instalasi Aktif -->
-    <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-purple-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-purple-100 rounded-full p-3">
-                <i class="fas fa-tools text-purple-600 text-xl"></i>
+    <!-- Battery -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Baterai</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.battery_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Stok</div>
             </div>
-            <div class="ml-4">
-                <div class="text-3xl font-bold text-gray-800">{{ stats.installing_count or 0 }}</div>
-                <div class="text-sm text-gray-500">Instalasi Aktif</div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Switch -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Switch</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.switch_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Stok</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Information Cards -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <!-- Item Status -->
-    <div class="bg-white rounded-xl shadow-md">
-        <div class="p-6 border-b border-gray-200">
+<!-- Grafik Komparasi Pengadaan vs Distribusi Langsung -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
             <div class="flex items-center">
-                <i class="fas fa-chart-pie text-emerald-600 mr-3"></i>
-                <h5 class="text-lg font-semibold mb-0">Status Barang</h5>
+                <i class="fas fa-chart-bar text-emerald-600 mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Pengadaan vs Distribusi Langsung</h5>
             </div>
-        </div>
-        <div class="p-6">
-            <div class="grid grid-cols-3 gap-4 text-center">
-                <div class="p-4 rounded-lg bg-green-50 border border-green-600">
-                    <h6 class="text-green-600 font-semibold mb-2 text-sm">Tersedia</h6>
-                    <h2 class="text-3xl font-bold text-green-600 mb-0">{{ stats.available_items or 0 }}</h2>
-                </div>
-                <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-600">
-                    <h6 class="text-emerald-600 font-semibold mb-2 text-sm">Terpakai</h6>
-                    <h2 class="text-3xl font-bold text-emerald-600 mb-0">{{ stats.used_items or 0 }}</h2>
-                </div>
-                <div class="p-4 rounded-lg bg-amber-50 border border-amber-600">
-                    <h6 class="text-amber-600 font-semibold mb-2 text-sm">Maintenance</h6>
-                    <h2 class="text-3xl font-bold text-amber-600 mb-0">{{ stats.maintenance_items or 0 }}</h2>
-                </div>
+            <div class="flex items-center gap-2">
+                <select id="filterType" class="form-select form-select-sm text-sm" style="width: auto;">
+                    <option value="month">Per Bulan</option>
+                    <option value="year">Per Tahun</option>
+                </select>
+                <select id="yearFilter" class="form-select form-select-sm text-sm" style="width: auto;">
+                </select>
+                <select id="monthFilter" class="form-select form-select-sm text-sm" style="width: auto;">
+                    <option value="1">Januari</option>
+                    <option value="2">Februari</option>
+                    <option value="3">Maret</option>
+                    <option value="4">April</option>
+                    <option value="5">Mei</option>
+                    <option value="6">Juni</option>
+                    <option value="7">Juli</option>
+                    <option value="8">Agustus</option>
+                    <option value="9">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                </select>
             </div>
         </div>
     </div>
-
-    <!-- Quick Actions -->
-    <div class="bg-white rounded-xl shadow-md">
-        <div class="p-6 border-b border-gray-200">
-            <div class="flex items-center">
-                <i class="fas fa-bolt text-emerald-600 mr-3"></i>
-                <h5 class="text-lg font-semibold mb-0">Aksi Cepat</h5>
-            </div>
+    <div class="p-6">
+        <div class="chart-container" style="position: relative; height: 280px;">
+            <canvas id="comparisonChart"></canvas>
         </div>
-        <div class="p-6">
-            <div class="space-y-3">
-                <a href="{{ url_for('installations.create') }}" class="block w-full bg-emerald-600 text-white px-4 py-3 rounded-lg hover:bg-emerald-700 transition-colors text-center font-semibold">
-                    <i class="fas fa-plus-circle mr-2"></i> Buat Permintaan Instalasi
-                </a>
-                <a href="{{ url_for('stock.add') }}" class="block w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors text-center font-semibold">
-                    <i class="fas fa-arrow-down-circle mr-2"></i> Catat Barang Masuk
-                </a>
-                <a href="{{ url_for('stock.remove') }}" class="block w-full bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors text-center font-semibold">
-                    <i class="fas fa-arrow-up-circle mr-2"></i> Catat Barang Keluar
-                </a>
-                <a href="{{ url_for('map.index') }}" class="block w-full bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors text-center font-semibold">
-                    <i class="fas fa-map mr-2"></i> Lihat Peta GIS
-                </a>
+        <div class="flex justify-center gap-6 mt-4">
+            <div class="flex items-center">
+                <div class="w-4 h-4 rounded bg-blue-600 mr-2"></div>
+                <span class="text-sm text-gray-600">Pengadaan (Procurement)</span>
+            </div>
+            <div class="flex items-center">
+                <div class="w-4 h-4 rounded bg-green-500 mr-2"></div>
+                <span class="text-sm text-gray-600">Distribusi Langsung</span>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Low Stock Items Table -->
-<div class="bg-white rounded-xl shadow-md">
-    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-        <div class="flex items-center">
-            <i class="fas fa-exclamation-triangle text-amber-600 mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Barang dengan Stok Rendah</h5>
+<!-- Permintaan Unit Terbaru (3 latest) -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-file-alt text-blue-600 mr-3"></i>
+                <div>
+                    <h5 class="text-lg font-semibold mb-0">Permintaan Unit Terbaru</h5>
+                    <small class="text-gray-500">3 permintaan terakhir</small>
+                </div>
+            </div>
+            <a href="{{ url_for('asset_requests.index') }}" class="text-blue-600 hover:text-blue-700 text-sm font-semibold">
+                Lihat Semua <i class="fas fa-arrow-right ml-1"></i>
+            </a>
         </div>
-        <a href="{{ url_for('stock.low_stock') }}" class="px-4 py-2 border border-amber-600 text-amber-600 rounded-lg hover:bg-amber-600 hover:text-white transition-colors text-sm font-semibold">
-            <i class="fas fa-arrow-right-circle mr-1"></i> Lihat Semua
-        </a>
     </div>
+
     <div class="p-6 overflow-x-auto">
-        <table class="w-full paginated-table">
+        <table class="w-full">
             <thead>
                 <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Kode</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Nama Barang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Stok</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Jenis Barang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                    <th class="text-center py-3 px-4 font-semibold text-gray-700">Aksi</th>
                 </tr>
             </thead>
-            <tbody>
-                {% if stats.low_stock_items and stats.low_stock_items|length > 0 %}
-                    {% for item in stats.low_stock_items[:5] %}
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-3 px-4"><strong class="text-gray-800">{{ item.item.item_code if item.item else '-' }}</strong></td>
-                        <td class="py-3 px-4 text-gray-600">{{ item.item.name if item.item else '-' }}</td>
-                        <td class="py-3 px-4">
-                            <span class="bg-red-600 text-white px-3 py-1 rounded-full text-sm font-semibold">{{ item.quantity }}</span>
-                        </td>
-                        <td class="py-3 px-4">
-                            <span class="bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-                                <i class="fas fa-exclamation-triangle mr-1"></i> Stok Rendah
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center text-gray-500 py-8">
-                            <i class="fas fa-check-circle text-green-600 mr-2 text-2xl"></i>
-                            <span class="text-lg">Tidak ada barang dengan stok rendah</span>
-                        </td>
-                    </tr>
-                {% endif %}
+            <tbody id="recentRequestsBody">
+                <tr>
+                    <td colspan="5" class="text-center py-8 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p class="text-sm">Memuat data...</p>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -188,10 +181,218 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-// Auto-refresh dashboard every 30 seconds
+let comparisonChart = null;
+
+// Initialize year and month filters
+function initializeFilters() {
+    const yearFilter = document.getElementById('yearFilter');
+    const monthFilter = document.getElementById('monthFilter');
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // Populate year filter (last 5 years + current)
+    for (let y = currentYear; y >= currentYear - 5; y--) {
+        const option = document.createElement('option');
+        option.value = y;
+        option.textContent = y;
+        if (y === currentYear) option.selected = true;
+        yearFilter.appendChild(option);
+    }
+
+    // Set current month
+    monthFilter.value = currentMonth;
+}
+
+// Load chart data
+function loadChartData() {
+    const filterType = document.getElementById('filterType').value;
+    const year = document.getElementById('yearFilter').value;
+    const month = document.getElementById('monthFilter').value;
+
+    // Show/hide month filter based on filter type
+    document.getElementById('monthFilter').style.display = filterType === 'month' ? 'block' : 'none';
+
+    fetch(`{{ url_for('dashboard.api_warehouse_comparison_chart') }}?filter=${filterType}&year=${year}&month=${month}`)
+        .then(response => response.json())
+        .then(data => {
+            updateChart(data);
+        })
+        .catch(error => console.error('Error loading chart data:', error));
+}
+
+// Update chart
+function updateChart(data) {
+    const ctx = document.getElementById('comparisonChart').getContext('2d');
+
+    if (comparisonChart) {
+        comparisonChart.destroy();
+    }
+
+    comparisonChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Pengadaan',
+                    data: data.procurement,
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Distribusi Langsung',
+                    data: data.distribution,
+                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                    borderColor: 'rgba(34, 197, 94, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: {
+                            size: 11
+                        },
+                        stepSize: 1
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 11
+                        },
+                        maxRotation: 45,
+                        minRotation: 0
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+}
+
+// Load recent requests
+function loadRecentRequests() {
+    fetch(`{{ url_for('dashboard.api_warehouse_recent_requests') }}`)
+        .then(response => response.json())
+        .then(data => {
+            renderRequestsTable(data);
+        })
+        .catch(error => {
+            console.error('Error loading requests:', error);
+            document.getElementById('recentRequestsBody').innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center py-8 text-gray-500">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p class="text-sm">Gagal memuat data</p>
+                    </td>
+                </tr>
+            `;
+        });
+}
+
+// Render requests table (like asset_requests/index.html format)
+function renderRequestsTable(requests) {
+    const tbody = document.getElementById('recentRequestsBody');
+
+    if (!requests || requests.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-8 text-gray-500">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p class="text-sm">Belum ada permintaan</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = requests.map(req => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="py-4 px-4 text-gray-600">${req.request_date}</td>
+            <td class="py-4 px-4">
+                <div class="flex items-center">
+                    <div class="bg-orange-100 rounded p-1 mr-2">
+                        <i class="fas fa-building text-orange-600 text-sm"></i>
+                    </div>
+                    <span class="text-gray-800 font-medium">${req.unit_name}</span>
+                </div>
+            </td>
+            <td class="py-4 px-4">
+                <span class="text-gray-800 font-semibold">${req.items_count}</span>
+                <span class="text-gray-500 text-sm"> jenis</span>
+            </td>
+            <td class="py-4 px-4">
+                <span class="px-3 py-1 ${req.status_color} rounded-full text-xs font-semibold">
+                    ${req.status_display}
+                </span>
+            </td>
+            <td class="py-4 px-4">
+                <div class="flex items-center justify-center">
+                    <a href="/asset-requests/${req.id}"
+                       class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-semibold">
+                        <i class="fas fa-eye mr-1"></i> Lihat
+                    </a>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFilters();
+    loadChartData();
+    loadRecentRequests();
+
+    // Event listeners for filters
+    document.getElementById('filterType').addEventListener('change', loadChartData);
+    document.getElementById('yearFilter').addEventListener('change', loadChartData);
+    document.getElementById('monthFilter').addEventListener('change', loadChartData);
+});
+
+// Auto-refresh dashboard every 60 seconds
 setTimeout(function() {
     location.reload();
-}, 30000);
+}, 60000);
 </script>
 {% endblock %}

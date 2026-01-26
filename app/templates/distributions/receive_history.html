@@ -65,7 +65,7 @@
                             </span>
                             <span>
                                 <i class="fas fa-calendar-check mr-1"></i>
-                                Diterima: {{ history.group.verification_received_at|format_wib_datetime }}
+                                Diterima: {{ history.group.verification_received_at.strftime('%d %B %Y, %H:%M') }}
                             </span>
                         </div>
                     </div>
