@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Gedung - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Daftar Gedung{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h5 class="text-lg font-semibold text-gray-900">Daftar Gedung</h5>
+                <p class="text-sm text-gray-600">Daftar gedung dan zona spasial</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Buildings Table -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50 border-b border-gray-200">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Gedung</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Alamat</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Lantai</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Unit</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Ruangan</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Zona Spasial</th>
+                    <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for building in buildings %}
+                <tr class="hover:bg-gray-50 transition-colors duration-150">
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            {{ building.code }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm font-medium text-gray-900">{{ building.name }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-600 max-w-xs truncate">{{ building.address or '-' }}</div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            {{ building.floor_count }} lantai
+                        </span>
+                    </td>
+
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                            {{ building_stats[building.id]['unit_count'] }} unit
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            {{ building_stats[building.id]['room_count'] }} ruang
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if building_stats[building.id]['has_zone'] %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            <i class="fas fa-check-circle"></i>
+                            Ada Zona
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                            <i class="fas fa-minus-circle"></i>
+                            Belum Ada
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center justify-center gap-2">
+                            <a href="{{ url_for('buildings.detail', building_id=building.id) }}"
+                               class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-150"
+                               title="Lihat Detail">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if current_user.is_admin() %}
+                            <a href="{{ url_for('buildings.edit_zone', building_id=building.id) }}"
+                               class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-150"
+                               title="Edit Zona Spasial">
+                                <i class="fas fa-draw-polygon"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-building text-4xl mb-3 text-gray-300"></i>
+                        <p class="text-sm">Belum ada gedung.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

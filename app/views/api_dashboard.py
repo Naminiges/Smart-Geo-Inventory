@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 from flask_login import login_required, current_user
 from app.utils.decorators import role_required
-from app.utils.helpers import get_dashboard_stats
+from app.utils.helpers import get_dashboard_stats, get_user_warehouse_id
 
 bp = Blueprint('api_dashboard', __name__)
 
@@ -10,7 +10,7 @@ bp = Blueprint('api_dashboard', __name__)
 @login_required
 def api_stats():
     """Get dashboard statistics"""
-    warehouse_id = current_user.warehouse_id if current_user.is_warehouse_staff() else None
+    warehouse_id = get_user_warehouse_id(current_user) if current_user.is_warehouse_staff() else None
     stats = get_dashboard_stats(warehouse_id)
 
     return jsonify({
@@ -24,7 +24,7 @@ def api_stats():
 @role_required('warehouse_staff')
 def api_warehouse_stats():
     """Get warehouse-specific statistics"""
-    warehouse_id = current_user.warehouse_id
+    warehouse_id = get_user_warehouse_id(current_user)
     stats = get_dashboard_stats(warehouse_id)
 
     return jsonify({

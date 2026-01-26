@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Verifikasi Tugas #{{ distribution.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Verifikasi Tugas #{{ distribution.id }}{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('installations.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Instalasi
+    </a>
+</div>
+
+<div class="max-w-4xl mx-auto">
+    <!-- Task Information -->
+    <div class="bg-white rounded-xl shadow-md mb-6">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <h1 class="text-2xl font-bold text-gray-800">
+                            {% if distribution.task_type == 'installation' %}
+                            <i class="fas fa-tools text-purple-600"></i> Verifikasi Tugas Instalasi
+                            {% else %}
+                            <i class="fas fa-truck text-indigo-600"></i> Verifikasi Tugas Pengiriman
+                            {% endif %}
+                        </h1>
+                        <span class="px-3 py-1 text-sm rounded-full
+                            {% if distribution.verification_status == 'pending' %}bg-amber-100 text-amber-700
+                            {% elif distribution.verification_status == 'submitted' %}bg-blue-100 text-blue-700
+                            {% elif distribution.verification_status == 'verified' %}bg-green-100 text-green-700
+                            {% else %}bg-red-100 text-red-700{% endif %}">
+                            {{ distribution.verification_status_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Item</p>
+                    <p class="font-semibold text-gray-800">
+                        {{ distribution.item_detail.item.name if distribution.item_detail and distribution.item_detail.item else '-' }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        Serial: {{ distribution.item_detail.serial_number if distribution.item_detail else '-' }}
+                    </p>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Field Staff</p>
+                    <p class="font-semibold text-gray-800">
+                        {{ distribution.field_staff.name if distribution.field_staff else '-' }}
+                    </p>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Lokasi Tujuan</p>
+                    <p class="font-semibold text-gray-800">
+                        {{ distribution.unit.name if distribution.unit else '-' }}
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-door-open mr-1"></i>{{ distribution.unit_detail.room_name if distribution.unit_detail else '-' }}
+                    </p>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-500 mb-1">Alamat</p>
+                    <p class="text-gray-800">
+                        {{ distribution.address or '-' }}
+                    </p>
+                </div>
+            </div>
+
+            {% if distribution.note %}
+            <div class="mt-4 bg-blue-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-1">Catatan Tugas</p>
+                <p class="text-gray-800">{{ distribution.note }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Verification Proof -->
+    {% if distribution.verification_photo or distribution.verification_notes %}
+    <div class="bg-white rounded-xl shadow-md mb-6">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-file-image text-orange-600 mr-2"></i>
+                Bukti Verifikasi dari Field Staff
+            </h3>
+        </div>
+        <div class="p-6">
+            {% if distribution.verification_photo %}
+            <div class="mb-4">
+                <p class="text-sm text-gray-500 mb-2">Foto Bukti</p>
+                <div class="inline-block">
+                    <img src="{{ url_for('static', filename=distribution.verification_photo) }}" alt="Verification Photo" class="max-w-md rounded-lg shadow-md border">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if distribution.verification_notes %}
+            <div>
+                <p class="text-sm text-gray-500 mb-2">Catatan Field Staff</p>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <p class="text-gray-800">{{ distribution.verification_notes }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white rounded-xl shadow-md mb-6">
+        <div class="p-6 text-center text-gray-500">
+            <i class="fas fa-exclamation-circle text-4xl mb-2"></i>
+            <p>Field staff belum mengirim bukti verifikasi</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Verification Actions -->
+    {% if distribution.verification_status == 'submitted' %}
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-clipboard-check text-orange-600 mr-2"></i>
+                Tindakan Verifikasi
+            </h3>
+        </div>
+        <form method="POST" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <!-- Reject Reason (hidden by default) -->
+            <div id="rejectReasonContainer" class="hidden mb-4">
+                <label for="rejection_reason" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-exclamation-triangle text-red-600 mr-1"></i>
+                    Alasan Penolakan
+                </label>
+                <textarea
+                    name="rejection_reason"
+                    id="rejection_reason"
+                    rows="3"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="Jelaskan mengapa verifikasi ditolak..."></textarea>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3">
+                <button type="submit" name="action" value="approve"
+                        class="flex-1 min-w-[200px] inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                    <i class="fas fa-check mr-2"></i>
+                    Terima & Verifikasi
+                </button>
+                <button type="button" onclick="toggleRejectReason()"
+                        class="flex-1 min-w-[200px] inline-flex items-center justify-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                    <i class="fas fa-times mr-2"></i>
+                    Tolak Verifikasi
+                </button>
+            </div>
+
+            <!-- Hidden submit for reject -->
+            <button type="submit" name="action" value="reject" id="rejectSubmit" class="hidden"></button>
+        </form>
+    </div>
+
+    <script>
+    function toggleRejectReason() {
+        const container = document.getElementById('rejectReasonContainer');
+        const submitBtn = document.getElementById('rejectSubmit');
+        container.classList.toggle('hidden');
+        if (!container.classList.contains('hidden')) {
+            container.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    // Update reject submit to show reason first
+    document.querySelector('button[value="reject"]').addEventListener('click', function(e) {
+        const container = document.getElementById('rejectReasonContainer');
+        if (container.classList.contains('hidden')) {
+            e.preventDefault();
+            toggleRejectReason();
+        }
+    });
+    </script>
+    {% elif distribution.verification_status == 'verified' %}
+    <div class="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+            <i class="fas fa-check-circle text-green-600 text-3xl"></i>
+        </div>
+        <h4 class="text-xl font-semibold text-green-800 mb-2">Tugas Sudah Diverifikasi</h4>
+        <p class="text-green-700">Tugas ini telah selesai dan diverifikasi.</p>
+    </div>
+    {% elif distribution.verification_status == 'rejected' %}
+    <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-times-circle text-red-600 text-2xl"></i>
+            </div>
+            <div class="ml-4">
+                <h4 class="text-lg font-semibold text-red-800 mb-2">Verifikasi Ditolak</h4>
+                {% if distribution.verification_rejection_reason %}
+                <p class="text-red-700 mb-2"><strong>Alasan:</strong> {{ distribution.verification_rejection_reason }}</p>
+                {% endif %}
+                <p class="text-sm text-red-600">Field staff perlu mengupload ulang bukti verifikasi.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

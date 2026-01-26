@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Tugas #{{ task.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Detail Tugas #{{ task.id }}{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('field_tasks.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Tugas
+    </a>
+</div>
+
+<!-- Task Header -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-2">
+                    <h1 class="text-2xl font-bold text-gray-800">
+                        {% if task.task_type == 'installation' %}
+                        <i class="fas fa-tools text-purple-600"></i> Tugas Instalasi
+                        {% else %}
+                        <i class="fas fa-truck text-indigo-600"></i> Tugas Pengiriman
+                        {% endif %}
+                    </h1>
+                    <span class="px-3 py-1 text-sm rounded-full
+                        {% if task.verification_status == 'pending' %}bg-amber-100 text-amber-700
+                        {% elif task.verification_status == 'submitted' %}bg-blue-100 text-blue-700
+                        {% elif task.verification_status == 'verified' %}bg-green-100 text-green-700
+                        {% else %}bg-red-100 text-red-700{% endif %}">
+                        {{ task.verification_status_display }}
+                    </span>
+                </div>
+                <p class="text-gray-500 text-sm">
+                    <i class="fas fa-calendar-alt mr-1"></i>
+                    Dibuat pada: {{ task.created_at.strftime('%d/%m/%Y %H:%M') if task.created_at else '-' }}
+                </p>
+            </div>
+            <div class="text-right">
+                <span class="text-4xl font-bold text-orange-600">#{{ task.id }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Details -->
+    <div class="p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Informasi Tugas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-1">Item</p>
+                <p class="font-semibold text-gray-800">
+                    {{ task.item_detail.item.name if task.item_detail and task.item_detail.item else '-' }}
+                </p>
+                <p class="text-sm text-gray-600">
+                    Serial: {{ task.item_detail.serial_number if task.item_detail else '-' }}
+                </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-1">Lokasi Tujuan</p>
+                <p class="font-semibold text-gray-800">
+                    {{ task.unit.name if task.unit else '-' }}
+                </p>
+                <p class="text-sm text-gray-600">
+                    <i class="fas fa-door-open mr-1"></i>{{ task.unit_detail.room_name if task.unit_detail else '-' }}
+                </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4 md:col-span-2">
+                <p class="text-sm text-gray-500 mb-1">Alamat Lengkap</p>
+                <p class="text-gray-800">
+                    <i class="fas fa-map-marker-alt mr-2 text-orange-600"></i>
+                    {{ task.address or '-' }}
+                </p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-1">Status Tugas</p>
+                <p class="font-semibold text-gray-800">{{ task.status_display }}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-sm text-gray-500 mb-1">Jenis Tugas</p>
+                <p class="font-semibold text-gray-800">
+                    {% if task.task_type == 'installation' %}Instalasi{% else %}Pengiriman{% endif %}
+                </p>
+            </div>
+        </div>
+
+        {% if task.note %}
+        <div class="mt-4 bg-blue-50 rounded-lg p-4">
+            <p class="text-sm text-gray-500 mb-1">Catatan Tugas</p>
+            <p class="text-gray-800">{{ task.note }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Verification Status -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-clipboard-check text-orange-600 mr-2"></i>
+            Status Verifikasi
+        </h3>
+    </div>
+    <div class="p-6">
+        {% if task.verification_status == 'pending' %}
+        <div class="text-center py-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-full mb-4">
+                <i class="fas fa-clock text-amber-600 text-2xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold text-gray-800 mb-2">Belum Dikerjakan</h4>
+            <p class="text-gray-500 mb-4">Tugas ini belum Anda kerjakan. Silakan kerjakan tugas dan upload bukti foto.</p>
+            <a href="{{ url_for('field_tasks.submit_verification', id=task.id) }}" class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
+                <i class="fas fa-camera mr-2"></i>
+                Upload Verifikasi
+            </a>
+        </div>
+
+        {% elif task.verification_status == 'submitted' %}
+        <div class="text-center py-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <i class="fas fa-hourglass-half text-blue-600 text-2xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold text-gray-800 mb-2">Menunggu Verifikasi</h4>
+            <p class="text-gray-500">Tugas Anda sedang diverifikasi oleh warehouse staff.</p>
+        </div>
+
+        {% elif task.verification_status == 'verified' %}
+        <div class="text-center py-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                <i class="fas fa-check-circle text-green-600 text-2xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold text-gray-800 mb-2">Terverifikasi</h4>
+            <p class="text-gray-500 mb-2">Tugas Anda telah selesai dan diverifikasi.</p>
+            <p class="text-sm text-gray-400">
+                Diverifikasi oleh: {{ task.verifier.name if task.verifier else '-' }}
+                <br>
+                Pada: {{ task.verified_at.strftime('%d/%m/%Y %H:%M') if task.verified_at else '-' }}
+            </p>
+        </div>
+
+        {% elif task.verification_status == 'rejected' %}
+        <div class="text-center py-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
+                <i class="fas fa-times-circle text-red-600 text-2xl"></i>
+            </div>
+            <h4 class="text-xl font-semibold text-gray-800 mb-2">Verifikasi Ditolak</h4>
+            <p class="text-gray-500 mb-2">Mohon maaf, verifikasi Anda ditolak.</p>
+            {% if task.verification_rejection_reason %}
+            <div class="max-w-md mx-auto bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+                <p class="text-sm font-semibold text-red-800 mb-1">Alasan Penolakan:</p>
+                <p class="text-sm text-red-700">{{ task.verification_rejection_reason }}</p>
+            </div>
+            {% endif %}
+            <a href="{{ url_for('field_tasks.submit_verification', id=task.id) }}" class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors mt-4">
+                <i class="fas fa-redo mr-2"></i>
+                Upload Ulang
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Verification Proof -->
+{% if task.verification_photo or task.verification_notes %}
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-file-image text-orange-600 mr-2"></i>
+            Bukti Verifikasi
+        </h3>
+    </div>
+    <div class="p-6">
+        {% if task.verification_photo %}
+        <div class="mb-4">
+            <p class="text-sm text-gray-500 mb-2">Foto Verifikasi</p>
+            <div class="inline-block">
+                <img src="{{ url_for('static', filename=task.verification_photo) }}" alt="Verification Photo" class="max-w-md rounded-lg shadow-md border">
+            </div>
+        </div>
+        {% endif %}
+
+        {% if task.verification_notes %}
+        <div>
+            <p class="text-sm text-gray-500 mb-2">Catatan Anda</p>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-gray-800">{{ task.verification_notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+{% if task.verification_status == 'pending' or task.verification_status == 'rejected' %}
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6">
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ url_for('field_tasks.submit_verification', id=task.id) }}" class="flex-1 min-w-[200px] inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                <i class="fas fa-check mr-2"></i>
+                Upload Verifikasi
+            </a>
+            {% if task.task_type == 'delivery' and task.status != 'in_transit' %}
+            <form method="POST" action="{{ url_for('field_tasks.start_task', id=task.id) }}" class="flex-1 min-w-[200px]">
+                <button type="submit" class="w-full inline-flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-truck mr-2"></i>
+                    Mulai Pengiriman
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

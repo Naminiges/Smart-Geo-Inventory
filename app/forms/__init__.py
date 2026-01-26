@@ -11,6 +11,17 @@ from app.forms.procurement_forms import (
     ProcurementCompleteForm
 )
 from app.forms.user_forms import UserForm, UserWarehouseAssignmentForm
+from app.forms.asset_request_forms import AssetRequestForm, AssetVerificationForm
+from app.forms.asset_loan_forms import (
+    AssetLoanRequestForm,
+    AssetLoanApproveForm,
+    AssetLoanShipForm,
+    AssetLoanReceiveForm,
+    AssetLoanReturnRequestForm,
+    AssetLoanReturnApproveForm,
+    AssetLoanItemReturnVerifyForm,
+    AssetLoanItemUploadProofForm
+)
 
 __all__ = [
     'LoginForm', 'RegistrationForm',
@@ -24,5 +35,15 @@ __all__ = [
     'GoodsReceiptForm',
     'ProcurementCompleteForm',
     'UserForm',
-    'UserWarehouseAssignmentForm'
+    'UserWarehouseAssignmentForm',
+    'AssetRequestForm',
+    'AssetVerificationForm',
+    'AssetLoanRequestForm',
+    'AssetLoanApproveForm',
+    'AssetLoanShipForm',
+    'AssetLoanReceiveForm',
+    'AssetLoanReturnRequestForm',
+    'AssetLoanReturnApproveForm',
+    'AssetLoanItemReturnVerifyForm',
+    'AssetLoanItemUploadProofForm'
 ]

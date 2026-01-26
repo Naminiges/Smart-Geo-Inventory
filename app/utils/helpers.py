@@ -2,6 +2,7 @@ from flask import send_file
 import math
 from geoalchemy2.functions import ST_Distance_Sphere
 from sqlalchemy import func
+from flask_login import current_user
 
 
 def generate_barcode(code, barcode_type='code128'):
@@ -80,6 +81,21 @@ def get_low_stock_items(threshold=10):
     return Stock.query.filter(Stock.quantity < threshold).all()
 
 
+def get_user_warehouse_id(user):
+    """Helper function to get warehouse_id from UserWarehouse relationship"""
+    from app.models.user import UserWarehouse
+
+    if not user or not user.is_authenticated:
+        return None
+
+    if user.is_admin():
+        return None  # Admin can access all warehouses
+
+    # For warehouse_staff, get their assigned warehouse
+    user_warehouse = UserWarehouse.query.filter_by(user_id=user.id).first()
+    return user_warehouse.warehouse_id if user_warehouse else None
+
+
 def get_dashboard_stats(warehouse_id=None):
     """Get dashboard statistics"""
     from app.models import Item, ItemDetail, Stock, Warehouse, Unit, Distribution
@@ -106,6 +122,7 @@ def get_dashboard_stats(warehouse_id=None):
     if warehouse_id:
         low_stock_query = low_stock_query.filter(Stock.warehouse_id == warehouse_id)
     stats['low_stock_count'] = low_stock_query.count()
+    stats['low_stock_items'] = low_stock_query.order_by(Stock.quantity.asc()).all()
 
     # Item details by status
     item_detail_query = ItemDetail.query
@@ -121,3 +138,117 @@ def get_dashboard_stats(warehouse_id=None):
     stats['installed_count'] = Distribution.query.filter(Distribution.status == 'installed').count()
 
     return stats
+
+
+def notification_counts():
+    """Context processor to provide notification counts to templates"""
+    if not current_user.is_authenticated:
+        return {
+            'pending_request_count': 0,
+            'verified_request_count': 0,
+            'draft_distribution_count': 0,
+            'pending_distribution_count': 0,
+            'pending_procurement_count': 0
+        }
+
+    from app.models import AssetRequest, UserUnit, Distribution, DistributionGroup, Procurement
+
+    counts = {
+        'pending_request_count': 0,
+        'verified_request_count': 0,
+        'draft_distribution_count': 0,
+        'pending_distribution_count': 0,
+        'pending_procurement_count': 0
+    }
+
+    try:
+        if current_user.is_admin():
+            # ADMIN NOTIFICATIONS
+
+            # 1. Permohonan Unit: Status 'pending' (menunggu verifikasi admin)
+            counts['pending_request_count'] = AssetRequest.query.filter_by(status='pending').count()
+
+            # 2. Procurement: Status 'pending' (menunggu persetujuan admin)
+            pending_proc = Procurement.query.filter_by(status='pending').count()
+            counts['pending_procurement_count'] = pending_proc
+            print(f"DEBUG Admin {current_user.name}: pending_procurement_count={pending_proc}")
+
+            # 3. Distribusi Langsung: Draft batch yang is_draft=True (menunggu verifikasi admin)
+            counts['draft_distribution_count'] = DistributionGroup.query.filter_by(is_draft=True).count()
+
+            # Admin tidak butuh notifikasi 'verified_request_count' dan 'pending_distribution_count'
+            counts['verified_request_count'] = 0
+            counts['pending_distribution_count'] = 0
+
+        elif current_user.is_warehouse_staff():
+            # WAREHOUSE STAFF NOTIFICATIONS
+            from app.models.user import UserWarehouse
+
+            # Get warehouse from UserWarehouse relationship
+            user_warehouse = UserWarehouse.query.filter_by(user_id=current_user.id).first()
+
+            if user_warehouse:
+                # Warehouse staff hanya melihat:
+                # 1. Distribusi Langsung: Draft batch dari warehouse mereka (is_draft=True)
+                counts['draft_distribution_count'] = DistributionGroup.query.filter_by(
+                    warehouse_id=user_warehouse.warehouse_id,
+                    is_draft=True
+                ).count()
+            else:
+                # If no warehouse assigned, no notifications
+                counts['draft_distribution_count'] = 0
+
+            # Warehouse staff tidak butuh notifikasi lain
+            counts['pending_request_count'] = 0
+            counts['verified_request_count'] = 0
+            counts['pending_distribution_count'] = 0
+            counts['pending_procurement_count'] = 0
+
+        elif current_user.is_unit_staff():
+            # UNIT STAFF NOTIFICATIONS
+
+            # Get user's assigned units
+            user_unit_ids = [uu.unit_id for uu in UserUnit.query.filter_by(user_id=current_user.id).all()]
+
+            if user_unit_ids:
+                # 1. Permohonan Unit: Status 'pending' (menunggu verifikasi admin) - untuk sidebar "Daftar Permohonan"
+                pending_reqs = AssetRequest.query.filter(
+                    AssetRequest.unit_id.in_(user_unit_ids),
+                    AssetRequest.status == 'pending'
+                ).all()
+                counts['pending_request_count'] = len(pending_reqs)
+
+                # Debug: print hasil
+                print(f"DEBUG Unit Staff {current_user.name}: unit_ids={user_unit_ids}, pending_count={counts['pending_request_count']}")
+
+                # 2. Permohonan Unit: Status 'verified' (siap didistribusikan warehouse)
+                counts['verified_request_count'] = AssetRequest.query.filter(
+                    AssetRequest.unit_id.in_(user_unit_ids),
+                    AssetRequest.status == 'verified'
+                ).count()
+
+                # 3. Terima Distribusi: Batch approved yang siap diterima
+                # (verification_status='pending', status in 'installing'/'in_transit')
+                counts['pending_distribution_count'] = DistributionGroup.query.filter(
+                    DistributionGroup.is_draft == False,
+                    DistributionGroup.status == 'approved'
+                ).join(Distribution).filter(
+                    Distribution.unit_id.in_(user_unit_ids),
+                    Distribution.verification_status == 'pending',
+                    Distribution.status.in_(['installing', 'in_transit'])
+                ).distinct().count()
+
+            # Unit staff tidak butuh notifikasi draft_distribution_count dan pending_procurement_count
+            counts['draft_distribution_count'] = 0
+            counts['pending_procurement_count'] = 0
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        counts['pending_request_count'] = 0
+        counts['verified_request_count'] = 0
+        counts['draft_distribution_count'] = 0
+        counts['pending_distribution_count'] = 0
+        counts['pending_procurement_count'] = 0
+
+    return counts

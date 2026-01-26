@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Gudang {{ warehouse.name }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Edit Gudang{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fas fa-edit text-blue-500 mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Form Edit Gudang</h5>
+            </div>
+        </div>
+        <div class="p-6">
+            <form method="POST" id="warehouseForm">
+                {{ form.hidden_tag() }}
+
+                <!-- Informasi Dasar -->
+                <h6 class="text-lg font-semibold mb-4"><i class="fas fa-building mr-2"></i>Informasi Gudang</h6>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.name.label }} <span class="text-red-500">*</span></label>
+                    {{ form.name(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent", placeholder="Masukkan nama gudang", required=True) }}
+                    {% if form.name.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.name.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.address.label }} <span class="text-red-500">*</span></label>
+                    {{ form.address(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent", rows="3", placeholder="Masukkan alamat lengkap gudang", id="addressInput", required=True) }}
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="text-xs text-gray-500">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Alamat akan terisi otomatis saat menggunakan tombol "Lokasi Saya" atau klik pada peta
+                        </span>
+                        <span id="addressStatus" class="text-xs text-emerald-600 hidden">
+                            <i class="fas fa-check-circle mr-1"></i>
+                            <span>Alamat diperbarui otomatis</span>
+                        </span>
+                    </div>
+                    {% if form.address.errors %}
+                        <div class="text-red-500 mt-1">
+                            {% for error in form.address.errors %}
+                                <small class="text-xs">{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-6 border-gray-200">
+
+                <!-- Lokasi -->
+                <h6 class="text-lg font-semibold mb-4"><i class="fas fa-map-marker-alt mr-2"></i>Lokasi Gudang</h6>
+
+                <!-- Peta untuk memilih lokasi -->
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Pilih Lokasi di Peta</label>
+                    <div class="text-sm text-gray-500 mb-2">Klik pada peta untuk menentukan lokasi gudang</div>
+                    <div id="map" style="height: 400px;" class="rounded-lg border border-gray-300"></div>
+                </div>
+
+                <!-- Input Manual Latitude & Longitude -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.latitude.label }}</label>
+                        <div class="flex">
+                            {{ form.latitude(class="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent", placeholder="Contoh: -6.2088", step="any", id="latitudeInput") }}
+                            <button type="button" onclick="getCurrentLocation()" class="px-3 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 transition-colors" title="Gunakan lokasi saya saat ini">
+                                <i class="fas fa-location-arrow"></i>
+                            </button>
+                        </div>
+                        {% if form.latitude.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.latitude.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">{{ form.longitude.label }}</label>
+                        {{ form.longitude(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent", placeholder="Contoh: 106.8456", step="any", id="longitudeInput") }}
+                        {% if form.longitude.errors %}
+                            <div class="text-red-500 mt-1">
+                                {% for error in form.longitude.errors %}
+                                    <small class="text-xs">{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex items-end">
+                        <button type="button" onclick="searchLocation()" class="w-full px-4 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-600 transition-colors">
+                            <i class="fas fa-search mr-2"></i>
+                            <i class="fas fa-map-marker-alt mr-1"></i> Cari & Preview
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Location Info -->
+                <div id="locationInfo" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                    <div class="flex items-start">
+                        <i class="fas fa-info-circle text-blue-600 mt-1 mr-2"></i>
+                        <div class="flex-1">
+                            <p class="text-sm text-blue-900 font-medium" id="locationMessage">Lokasi ditemukan!</p>
+                            <p class="text-xs text-blue-700 mt-1" id="locationCoords"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="flex justify-between">
+                    <a href="{{ url_for('warehouses.detail', id=warehouse.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-arrow-left mr-1"></i> Kembali
+                    </a>
+                    <button type="button" onclick="showConfirmModal()" class="px-6 py-3 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                        <i class="fas fa-save mr-1"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+        <div class="flex items-center mb-4">
+            <div class="bg-blue-100 rounded-full p-3 mr-4">
+                <i class="fas fa-edit text-blue-600 text-xl"></i>
+            </div>
+            <div>
+                <h5 class="text-lg font-semibold text-gray-800 mb-1">Konfirmasi Simpan Perubahan</h5>
+                <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
+            </div>
+        </div>
+        <p class="text-gray-700 mb-6">Apakah Anda yakin ingin menyimpan perubahan pada gudang <strong id="modalWarehouseName"></strong>?</p>
+        <div class="flex gap-3 justify-end">
+            <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                Batal
+            </button>
+            <button type="button" onclick="submitForm()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                <i class="fas fa-check mr-1"></i> Ya, Simpan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+let map;
+let marker;
+let isUpdatingFromCode = false;
+let existingCoords = {{ warehouse.get_coordinates()|tojson if warehouse.get_coordinates() else '{}' }};
+
+// Initialize map
+document.addEventListener('DOMContentLoaded', function() {
+    // Center on existing coordinates or Jakarta
+    const center = existingCoords && existingCoords.latitude
+        ? [existingCoords.latitude, existingCoords.longitude]
+        : [-6.2088, 106.8456];
+
+    const zoom = existingCoords && existingCoords.latitude ? 17 : 11;
+
+    map = L.map('map').setView(center, zoom);
+
+    // Add tile layer (OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Add existing marker if coordinates exist
+    if (existingCoords && existingCoords.latitude) {
+        marker = L.marker([existingCoords.latitude, existingCoords.longitude]).addTo(map);
+    }
+
+    // Click on map to set marker
+    map.on('click', function(e) {
+        setMarker(e.latlng.lat, e.latlng.lng);
+        // Reverse geocode untuk dapat alamat
+        reverseGeocode(e.latlng.lat, e.latlng.lng);
+    });
+
+    // Add input event listeners untuk auto-search saat user selesai mengetik
+    let searchTimeout;
+    const latInput = document.getElementById('latitudeInput');
+    const lngInput = document.getElementById('longitudeInput');
+
+    latInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            if (latInput.value && lngInput.value) {
+                searchLocation();
+            }
+        }, 1000);
+    });
+
+    lngInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            if (latInput.value && lngInput.value) {
+                searchLocation();
+            }
+        }, 1000);
+    });
+});
+
+function setMarker(lat, lng) {
+    isUpdatingFromCode = true;
+
+    // Update input fields
+    document.getElementById('latitudeInput').value = lat.toFixed(6);
+    document.getElementById('longitudeInput').value = lng.toFixed(6);
+
+    // Remove existing marker
+    if (marker) {
+        map.removeLayer(marker);
+    }
+
+    // Add new marker
+    marker = L.marker([lat, lng]).addTo(map);
+
+    // Pan to marker
+    map.panTo([lat, lng]);
+
+    // Zoom in untuk melihat area lebih jelas
+    map.setZoom(17);
+
+    isUpdatingFromCode = false;
+
+    // Show location info
+    showLocationInfo(lat, lng);
+}
+
+function showLocationInfo(lat, lng) {
+    const locationInfo = document.getElementById('locationInfo');
+    const locationMessage = document.getElementById('locationMessage');
+    const locationCoords = document.getElementById('locationCoords');
+
+    locationInfo.classList.remove('hidden');
+    locationMessage.textContent = 'Marker ditempatkan pada peta!';
+    locationCoords.textContent = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+}
+
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        // Show loading state
+        const locationInfo = document.getElementById('locationInfo');
+        const locationMessage = document.getElementById('locationMessage');
+        locationInfo.classList.remove('hidden');
+        locationMessage.textContent = 'Mencari lokasi Anda...';
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                setMarker(lat, lng);
+                map.setView([lat, lng], 17);
+
+                // Reverse geocode untuk dapat alamat otomatis
+                reverseGeocode(lat, lng);
+            },
+            function(error) {
+                let errorMessage = 'Tidak bisa mendapatkan lokasi Anda.';
+                switch(error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Akses lokasi ditolak. Silakan izinkan akses lokasi di browser.';
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Informasi lokasi tidak tersedia.';
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = 'Waktu habis untuk mendapatkan lokasi.';
+                        break;
+                }
+
+                locationMessage.textContent = errorMessage;
+                locationInfo.classList.remove('bg-blue-50', 'border-blue-200');
+                locationInfo.classList.add('bg-red-50', 'border-red-200');
+
+                console.error(error);
+            }
+        );
+    } else {
+        alert('Geolocation tidak didukung oleh browser ini.');
+    }
+}
+
+function searchLocation() {
+    const latInput = document.getElementById('latitudeInput');
+    const lngInput = document.getElementById('longitudeInput');
+
+    const lat = parseFloat(latInput.value);
+    const lng = parseFloat(lngInput.value);
+
+    if (isNaN(lat) || isNaN(lng)) {
+        showLocationError('Masukkan koordinat yang valid (latitude: -90 sampai 90, longitude: -180 sampai 180)');
+        return;
+    }
+
+    if (lat < -90 || lat > 90) {
+        showLocationError('Latitude harus antara -90 dan 90');
+        return;
+    }
+
+    if (lng < -180 || lng > 180) {
+        showLocationError('Longitude harus antara -180 dan 180');
+        return;
+    }
+
+    // Validasi berhasil, set marker dan update peta
+    if (!isUpdatingFromCode) {
+        setMarker(lat, lng);
+        map.setView([lat, lng], 17);
+
+        // Reverse geocode untuk dapat alamat
+        reverseGeocode(lat, lng);
+    }
+}
+
+function showLocationError(message) {
+    const locationInfo = document.getElementById('locationInfo');
+    const locationMessage = document.getElementById('locationMessage');
+    const locationCoords = document.getElementById('locationCoords');
+
+    locationInfo.classList.remove('hidden', 'bg-blue-50', 'border-blue-200');
+    locationInfo.classList.add('bg-red-50', 'border-red-200');
+    locationMessage.textContent = message;
+    locationCoords.textContent = '';
+}
+
+function reverseGeocode(lat, lng) {
+    // Menggunakan Nominatim OpenStreetMap untuk reverse geocoding (gratis)
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.display_name) {
+                // Update alamat field
+                const addressInput = document.getElementById('addressInput');
+                addressInput.value = data.display_name;
+
+                // Show status message
+                const addressStatus = document.getElementById('addressStatus');
+                addressStatus.classList.remove('hidden');
+                addressStatus.querySelector('span').textContent = 'Alamat diperbarui otomatis berdasarkan lokasi!';
+
+                // Hide status after 3 seconds
+                setTimeout(() => {
+                    addressStatus.classList.add('hidden');
+                }, 3000);
+            }
+        })
+        .catch(error => {
+            console.error('Error reverse geocoding:', error);
+        });
+}
+
+// Modal Functions
+function showConfirmModal() {
+    const form = document.getElementById('warehouseForm');
+    const nameInput = document.querySelector('[name="name"]');
+    const warehouseName = nameInput ? nameInput.value : '';
+
+    // Check if form is valid
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    document.getElementById('modalWarehouseName').textContent = warehouseName || 'ini';
+    document.getElementById('confirmModal').classList.remove('hidden');
+    document.getElementById('confirmModal').classList.add('flex');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+    document.getElementById('confirmModal').classList.remove('flex');
+}
+
+function submitForm() {
+    document.getElementById('warehouseForm').submit();
+}
+
+// Close modal on outside click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+    }
+});
+</script>
+{% endblock %}

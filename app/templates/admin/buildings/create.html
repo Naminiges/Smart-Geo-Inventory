@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Tambah Gedung - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Tambah Gedung{% endblock %}
+
+{% block extra_css %}
+<style>
+    #zoneMap {
+        height: 400px;
+        border-radius: 0.75rem;
+        border: 2px solid #e5e7eb;
+    }
+    .zone-marker {
+        background-color: #8b5cf6;
+        border: 3px solid #6d28d9;
+        border-radius: 50%;
+        width: 16px;
+        height: 16px;
+    }
+    .zone-polygon {
+        color: #8b5cf6;
+        weight: 3;
+        fillColor: #a78bfa;
+        fillOpacity: 0.25;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="flex items-center gap-2 text-sm text-gray-600">
+        <a href="{{ url_for('admin_buildings.index') }}" class="hover:text-emerald-600">
+            <i class="fas fa-building"></i> Gedung
+        </a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span>Tambah Gedung</span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Form Gedung -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h5 class="text-lg font-semibold text-gray-900 mb-4">Informasi Gedung</h5>
+
+        <form method="POST" id="buildingForm" class="space-y-4">
+            {{ form.hidden_tag() }}
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Kode Gedung <span class="text-red-500">*</span>
+                </label>
+                {{ form.code(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500", placeholder="Contoh: GD.A") }}
+                {% if form.code.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.code.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Nama Gedung <span class="text-red-500">*</span>
+                </label>
+                {{ form.name(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500", placeholder="Contoh: Gedung A") }}
+                {% if form.name.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.name.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Alamat</label>
+                {{ form.address(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500", rows="3", placeholder="Alamat lengkap gedung") }}
+                {% if form.address.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.address.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah Lantai</label>
+                {{ form.floor_count(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500", type="number", min="1", value="1") }}
+                {% if form.floor_count.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.floor_count.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Hidden fields for zone data -->
+            {{ form.zone_kode() }}
+            {{ form.zone_deskripsi() }}
+            {{ form.zone_coordinates() }}
+
+            <div class="flex gap-3 pt-4">
+                <a href="{{ url_for('admin_buildings.index') }}"
+                   class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 text-center">
+                    <i class="fas fa-times mr-2"></i>Batal
+                </a>
+                <button type="submit"
+                        class="flex-1 px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-all duration-200 shadow-md">
+                    <i class="fas fa-save mr-2"></i>Simpan Gedung
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Zona Spasial -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h5 class="text-lg font-semibold text-gray-900">Zona Spasial</h5>
+            <div class="flex gap-2">
+                <button onclick="undoLastMarker()"
+                        class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="fas fa-undo mr-1"></i>Undo
+                </button>
+                <button onclick="resetMarkers()"
+                        class="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors">
+                    <i class="fas fa-trash mr-1"></i>Reset
+                </button>
+            </div>
+        </div>
+
+        <p class="text-sm text-gray-600 mb-4">
+            Klik pada peta untuk menambahkan titik koordinat. Minimal 3 titik untuk membentuk zona.
+        </p>
+
+        <!-- Zone Form -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kode Zona</label>
+                <input type="text" id="inputZoneKode"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                       placeholder="Contoh: ZONA.A">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                <input type="text" id="inputZoneDeskripsi"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                       placeholder="Deskripsi zona">
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div id="zoneMap" class="mb-4"></div>
+
+        <!-- Marker Count -->
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">
+                <i class="fas fa-map-marker-alt text-purple-600 mr-1"></i>
+                Jumlah Titik: <span id="markerCount" class="font-semibold">0</span>
+            </span>
+            <span id="zoneStatus" class="text-amber-600 font-medium">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Minimal 3 titik diperlukan
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Initialize map
+var map = L.map('zoneMap').setView([3.561676, 98.6563423], 16);
+
+// Add tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+}).addTo(map);
+
+var markers = [];
+var polygon = null;
+
+// Map click handler
+map.on('click', function(e) {
+    var marker = L.marker(e.latlng, {
+        draggable: true
+    }).addTo(map);
+
+    markers.push(marker);
+
+    // Update polygon when marker is dragged
+    marker.on('drag', updatePolygon);
+
+    updatePolygon();
+    updateMarkerCount();
+});
+
+// Update polygon
+function updatePolygon() {
+    if (polygon) {
+        map.removeLayer(polygon);
+    }
+
+    if (markers.length >= 3) {
+        var latlngs = markers.map(function(m) { return m.getLatLng(); });
+        polygon = L.polygon(latlngs, {
+            color: '#8b5cf6',
+            weight: 3,
+            fillColor: '#a78bfa',
+            fillOpacity: 0.25
+        }).addTo(map);
+
+        document.getElementById('zoneStatus').innerHTML = '<i class="fas fa-check-circle mr-1"></i>Zona siap dibuat';
+        document.getElementById('zoneStatus').className = 'text-emerald-600 font-medium';
+    } else {
+        document.getElementById('zoneStatus').innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Minimal 3 titik diperlukan';
+        document.getElementById('zoneStatus').className = 'text-amber-600 font-medium';
+    }
+}
+
+// Update marker count display
+function updateMarkerCount() {
+    document.getElementById('markerCount').textContent = markers.length;
+}
+
+// Undo last marker
+function undoLastMarker() {
+    if (markers.length > 0) {
+        var lastMarker = markers.pop();
+        map.removeLayer(lastMarker);
+        updatePolygon();
+        updateMarkerCount();
+    }
+}
+
+// Reset all markers
+function resetMarkers() {
+    markers.forEach(function(marker) {
+        map.removeLayer(marker);
+    });
+    markers = [];
+    if (polygon) {
+        map.removeLayer(polygon);
+        polygon = null;
+    }
+    updateMarkerCount();
+}
+
+// Form submit handler
+document.getElementById('buildingForm').addEventListener('submit', function(e) {
+    // Update hidden fields
+    document.getElementById('zone_kode').value = document.getElementById('inputZoneKode').value;
+    document.getElementById('zone_deskripsi').value = document.getElementById('inputZoneDeskripsi').value;
+
+    if (markers.length >= 3) {
+        var coords = markers.map(function(m) {
+            var lngLat = m.getLatLng();
+            return [lngLat.lng, lngLat.lat];
+        });
+        document.getElementById('zone_coordinates').value = JSON.stringify(coords);
+    } else {
+        document.getElementById('zone_coordinates').value = '';
+    }
+});
+</script>
+{% endblock %}

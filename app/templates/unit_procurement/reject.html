@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Tolak Permohonan #{{ procurement.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Tolak Permohonan Pengadaan{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('unit_procurement.admin_detail', id=procurement.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail
+    </a>
+</div>
+
+<!-- Page Title -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Tolak Permohonan Pengadaan</h1>
+    <p class="text-gray-500 text-sm mt-1">Permohonan #{{ procurement.id }} dari Unit: {{ procurement.unit.name }}</p>
+</div>
+
+<!-- Warning Banner -->
+<div class="mb-6 bg-red-50 border border-red-300 rounded-lg p-4">
+    <div class="flex items-start">
+        <i class="fas fa-exclamation-triangle text-red-600 text-2xl mr-3"></i>
+        <div>
+            <h3 class="text-lg font-semibold text-red-900">Perhatian</h3>
+            <p class="text-sm text-red-800 mt-1">Anda akan menolak permohonan pengadaan ini. Tindakan ini akan mengubah status permohonan menjadi "Ditolak" dan tidak dapat dibatalkan.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Request Summary -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <div class="flex items-center mb-4">
+        <div class="bg-gray-100 rounded-lg p-3 mr-4">
+            <i class="fas fa-clipboard-list text-gray-600 text-2xl"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800">Ringkasan Permohonan</h3>
+            <p class="text-sm text-gray-500">{{ procurement.created_at.strftime('%d/%m/%Y %H:%M') }} oleh {{ procurement.requester.full_name }}</p>
+        </div>
+    </div>
+
+    <!-- Items -->
+    <div class="mb-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Barang yang Diminta:</h4>
+        <div class="bg-gray-50 rounded-lg p-3">
+            {% for item in procurement.items %}
+            <div class="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
+                <div>
+                    <p class="text-sm font-medium text-gray-900">{{ item.item.name if item.item else 'N/A' }}</p>
+                    <p class="text-xs text-gray-500">{{ item.item.item_code if item.item else '' }}</p>
+                </div>
+                <span class="text-sm font-bold text-gray-900">{{ item.quantity }} {{ item.item.unit if item.item else '' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Request Notes -->
+    <div>
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Alasan Permohonan:</h4>
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p class="text-sm text-gray-700">{{ procurement.request_notes or '-' }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Rejection Form -->
+<div class="bg-white rounded-xl shadow-md p-6">
+    <div class="flex items-center mb-4">
+        <div class="bg-red-100 rounded-lg p-3 mr-4">
+            <i class="fas fa-times-circle text-red-600 text-2xl"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800">Form Penolakan Permohonan</h3>
+            <p class="text-sm text-gray-500">Berikan alasan penolakan yang jelas</p>
+        </div>
+    </div>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <!-- Rejection Reason -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-comment-alt mr-1 text-red-600"></i>
+                Alasan Penolakan
+            </label>
+            {{ form.rejection_reason(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all", rows="5", placeholder="Jelaskan alasan penolakan permohonan ini (min. 10 karakter)", required) }}
+            {% if form.rejection_reason.errors %}
+                {% for error in form.rejection_reason.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">Contoh: Barang yang diminta tidak sesuai budget, Quantity terlalu banyak, Barang sudah tersedia di gudang, dll</p>
+        </div>
+
+        <!-- Rejection Reasons Suggestions -->
+        <div class="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">Alasan Penolakan Umum:</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <button type="button" class="text-left text-xs text-gray-600 hover:text-gray-800 p-2 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors" onclick="copyRejectionReason(this)">
+                    Barang yang diminta tidak sesuai budget
+                </button>
+                <button type="button" class="text-left text-xs text-gray-600 hover:text-gray-800 p-2 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors" onclick="copyRejectionReason(this)">
+                    Quantity yang diminta terlalu banyak
+                </button>
+                <button type="button" class="text-left text-xs text-gray-600 hover:text-gray-800 p-2 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors" onclick="copyRejectionReason(this)">
+                    Barang sudah tersedia di stok gudang
+                </button>
+                <button type="button" class="text-left text-xs text-gray-600 hover:text-gray-800 p-2 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors" onclick="copyRejectionReason(this)">
+                    Permohonan tidak lengkap atau tidak jelas
+                </button>
+                <button type="button" class="text-left text-xs text-gray-600 hover:text-gray-800 p-2 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors" onclick="copyRejectionReason(this)">
+                    Waktu pengadaan tidak tepat
+                </button>
+                <button type="button" class="text-left text-xs text-gray-600 hover:text-gray-800 p-2 bg-white border border-gray-200 rounded hover:bg-gray-100 transition-colors" onclick="copyRejectionReason(this)">
+                    Unit tidak memerlukan barang tersebut
+                </button>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-red-600 text-xl mr-3 mt-1"></i>
+                <div>
+                    <h4 class="font-semibold text-red-900 mb-2">Konsekuensi Penolakan</h4>
+                    <ul class="text-sm text-red-800 space-y-1">
+                        <li><i class="fas fa-times-circle mr-2"></i>Permohonan akan ditandai sebagai "Ditolak"</li>
+                        <li><i class="fas fa-times-circle mr-2"></i>Unit dapat melihat alasan penolakan</li>
+                        <li><i class="fas fa-times-circle mr-2"></i>Unit perlu membuat permohonan baru jika masih membutuhkan barang</li>
+                        <li><i class="fas fa-times-circle mr-2"></i>Tidak ada pengadaan warehouse yang akan dibuat</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+            <a href="{{ url_for('unit_procurement.admin_detail', id=procurement.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Batal
+            </a>
+            <button type="submit" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold" onclick="return confirm('Apakah Anda yakin ingin menolak permohonan ini?')">
+                <i class="fas fa-times mr-2"></i>
+                Tolak Permohonan
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function copyRejectionReason(button) {
+    const textarea = document.getElementById('rejection_reason');
+    const reason = button.textContent.trim();
+    textarea.value = reason;
+    textarea.focus();
+}
+</script>
+{% endblock %}

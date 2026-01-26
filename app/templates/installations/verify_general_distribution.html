@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Verifikasi Distribusi - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Verifikasi Draft Distribusi{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('installations.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar
+    </a>
+</div>
+
+<!-- Draft Info Banner -->
+<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start">
+        <div class="bg-yellow-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-file-alt text-yellow-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-yellow-900 mb-2">Draft Distribusi ({{ total_items }} Barang)</h4>
+            <p class="text-sm text-yellow-800">
+                Draft distribusi yang dibuat oleh {{ ref_distribution.draft_creator.name if ref_distribution.draft_creator else '-' }}.
+                Silakan periksa detail dan setujui atau tolak draft ini.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Distribution Details -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Detail Distribusi</h3>
+    </div>
+    <div class="p-6">
+        <!-- Destination Information -->
+        <div class="mb-6">
+            <h4 class="font-semibold text-gray-700 mb-3">
+                <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Unit Tujuan
+            </h4>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="font-medium text-lg">{{ ref_distribution.unit.name if ref_distribution.unit else '-' }}</p>
+                <p class="text-gray-600">{{ ref_distribution.unit.address if ref_distribution.unit else '-' }}</p>
+            </div>
+        </div>
+
+        <!-- Items Grouped by Location -->
+        <div>
+            <h4 class="font-semibold text-gray-700 mb-3">
+                <i class="fas fa-box text-emerald-600 mr-2"></i>Barang yang Akan Didistribusikan ({{ total_items }} item)
+            </h4>
+
+            {% for loc_key, loc_data in items_by_location.items() %}
+            <div class="mb-4 bg-gray-50 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="font-medium text-gray-700">
+                        {% if loc_data.unit_detail %}
+                        {{ loc_data.unit_detail.room_name }} (Lantai {{ loc_data.unit_detail.floor }})
+                        {% else %}
+                        Lokasi Utama Unit
+                        {% endif %}
+                    </h5>
+                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                        {{ loc_data.item_list|length }} barang
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {% for item_detail in loc_data.item_list %}
+                    <div class="bg-white rounded-lg p-3 border border-gray-200">
+                        <div class="font-semibold text-gray-800">{{ item_detail.item.name if item_detail and item_detail.item else '-' }}</div>
+                        <div class="text-sm text-gray-600">{{ item_detail.item.category.name if item_detail and item_detail.item and item_detail.item.category else '-' }}</div>
+                        <div class="text-sm font-medium text-blue-600 mt-1">{{ item_detail.serial_number if item_detail else '-' }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if ref_distribution.draft_notes %}
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <span class="text-sm text-gray-600">Catatan:</span>
+            <p class="text-sm text-gray-800 mt-1">{{ ref_distribution.draft_notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Forms -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Approve Form -->
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200 bg-green-50">
+            <h3 class="text-lg font-semibold text-green-800">
+                <i class="fas fa-check-circle mr-2"></i>Setujui Draft
+            </h3>
+            <p class="text-sm text-green-700 mt-1">Setujui semua {{ total_items }} distribusi dalam batch ini</p>
+        </div>
+        <div class="p-6">
+            <form method="POST" action="{{ url_for('installations.approve_general_distribution', id=ref_distribution.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-3">
+                        Dengan menyetujui draft ini:
+                    </p>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        <li>• Semua {{ total_items }} distribusi akan dibuat dengan status aktif</li>
+                        <li>• Status barang akan berubah menjadi "processing"</li>
+                        <li>• Field staff akan ditugaskan untuk instalasi/pengiriman</li>
+                        <li>• Task akan muncul di daftar tugas field staff</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
+                    <i class="fas fa-check mr-2"></i>
+                    Setujui Semua ({{ total_items }}) Draft
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reject Form -->
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200 bg-red-50">
+            <h3 class="text-lg font-semibold text-red-800">
+                <i class="fas fa-times-circle mr-2"></i>Tolak Draft
+            </h3>
+            <p class="text-sm text-red-700 mt-1">Tolak semua {{ total_items }} draft dan kembalikan stok</p>
+        </div>
+        <div class="p-6">
+            <form method="POST" action="{{ url_for('installations.reject_general_distribution', id=ref_distribution.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Alasan Penolakan</label>
+                    <textarea name="reason" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Jelaskan alasan penolakan..." required></textarea>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600 mb-3">
+                        Dengan menolak draft ini:
+                    </p>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                        <li>• Semua {{ total_items }} draft akan ditandai sebagai ditolak</li>
+                        <li>• Status semua barang akan dikembalikan menjadi "available"</li>
+                        <li>• Distribusi tidak akan dibuat</li>
+                    </ul>
+                </div>
+
+                <button type="submit" class="w-full px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
+                    <i class="fas fa-times mr-2"></i>
+                    Tolak Semua ({{ total_items }}) Draft
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

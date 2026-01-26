@@ -1,0 +1,339 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Gudang {{ warehouse.name }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Detail Gudang{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('warehouses.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Gudang
+    </a>
+</div>
+
+<!-- Warehouse Info Card with Map -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="bg-emerald-100 rounded-lg p-3 mr-4">
+                    <i class="fas fa-warehouse text-emerald-600 text-2xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-semibold text-gray-800">{{ warehouse.name }}</h3>
+                    <p class="text-sm text-gray-500">{{ warehouse.address }}</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ url_for('warehouses.edit', id=warehouse.id) }}" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm">
+                    <i class="fas fa-edit mr-1"></i> Edit
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Statistics -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <i class="fas fa-boxes text-2xl text-blue-500 mb-2"></i>
+                    <p class="text-2xl font-bold text-gray-800">{{ total_items }}</p>
+                    <p class="text-xs text-gray-500">Jenis Item</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <i class="fas fa-cubes text-2xl text-emerald-500 mb-2"></i>
+                    <p class="text-2xl font-bold text-gray-800">{{ total_quantity }}</p>
+                    <p class="text-xs text-gray-500">Total Stok</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <i class="fas fa-barcode text-2xl text-purple-500 mb-2"></i>
+                    <p class="text-2xl font-bold text-gray-800">{{ total_item_details }}</p>
+                    <p class="text-xs text-gray-500">Item Details</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                    <i class="fas fa-check-circle text-2xl text-green-500 mb-2"></i>
+                    <p class="text-2xl font-bold text-gray-800">{{ available_details }}</p>
+                    <p class="text-xs text-gray-500">Tersedia</p>
+                </div>
+            </div>
+
+            <!-- Map -->
+            {% set coords = warehouse.get_coordinates() %}
+            {% if coords %}
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-gray-700 mb-2">
+                    <i class="fas fa-map-marker-alt text-red-500 mr-1"></i>
+                    Lokasi Gudang
+                </h4>
+                <div id="warehouseMap" style="height: 250px;" class="rounded-lg border border-gray-300 mb-3"></div>
+                <div class="flex items-center justify-between text-sm">
+                    <span class="font-mono text-gray-600">
+                        <i class="fas fa-crosshairs mr-1"></i>
+                        {{ coords.latitude|round(6) }}, {{ coords.longitude|round(6) }}
+                    </span>
+                    <a href="https://www.google.com/maps?q={{ coords.latitude }},{{ coords.longitude }}" target="_blank" class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-external-link-alt mr-1"></i> Buka di Google Maps
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-center">
+                <div class="text-center text-gray-400">
+                    <i class="fas fa-map-marked-alt text-4xl mb-2"></i>
+                    <p class="text-sm">Lokasi belum ditetapkan</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Status Summary -->
+        <div class="grid grid-cols-4 gap-4 mt-4">
+            <div class="bg-green-50 rounded-lg p-3 text-center border border-green-200">
+                <p class="text-xs text-green-600">Tersedia</p>
+                <p class="text-lg font-bold text-green-900">{{ available_details }}</p>
+            </div>
+            <div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
+                <p class="text-xs text-blue-600">Di Unit</p>
+                <p class="text-lg font-bold text-blue-900">{{ in_unit_details }}</p>
+            </div>
+            <div class="bg-amber-50 rounded-lg p-3 text-center border border-amber-200">
+                <p class="text-xs text-amber-600">Maintenance</p>
+                <p class="text-lg font-bold text-amber-900">{{ maintenance_details }}</p>
+            </div>
+            <div class="bg-purple-50 rounded-lg p-3 text-center border border-purple-200">
+                <p class="text-xs text-purple-600">Digunakan</p>
+                <p class="text-lg font-bold text-purple-900">{{ used_details }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stock by Item -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-boxes text-emerald-500 mr-3"></i>
+                <h5 class="font-semibold mb-0">Stok Barang per Kategori</h5>
+            </div>
+        </div>
+    </div>
+    <div class="p-6">
+        {% if stocks and stocks|length > 0 %}
+        {% set grouped_stocks = {} %}
+        {% for stock in stocks %}
+            {% set category = stock.item.category.name if stock.item.category else 'Uncategorized' %}
+            {% if category not in grouped_stocks %}
+                {% set _ = grouped_stocks.update({category: []}) %}
+            {% endif %}
+            {% set _ = grouped_stocks[category].append(stock) %}
+        {% endfor %}
+
+        <div class="space-y-6">
+            {% for category, category_stocks in grouped_stocks.items()|sort %}
+            <div class="bg-gray-50 rounded-xl overflow-hidden">
+                <!-- Category Header -->
+                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-folder text-black mr-2"></i>
+                            <h6 class="text-lg font-semibold text-black">{{ category }}</h6>
+                            <span class="ml-3 px-2 py-1 bg-white/20 text-white rounded-full text-xs">
+                                {{ category_stocks|length }} jenis barang
+                            </span>
+                        </div>
+                        <span class="text-white/90 text-sm">
+                            Total: {{ category_stocks|sum(attribute='quantity') }} unit
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Category Items - Scrollable -->
+                <div class="p-4 max-h-80 overflow-y-auto custom-scrollbar">
+                    <div class="space-y-2">
+                        {% for stock in category_stocks %}
+                        <div class="bg-white rounded-lg p-3 border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <div class="flex items-center">
+                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-mono mr-2">
+                                            {{ stock.item.item_code }}
+                                        </span>
+                                        <span class="font-medium text-gray-800">{{ stock.item.name }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Satuan: {{ stock.item.unit }}</p>
+                                </div>
+                                <div class="text-right ml-4">
+                                    <span class="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg font-bold">
+                                        {{ stock.quantity }} {{ stock.item.unit }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-gray-500 py-12">
+            <i class="fas fa-boxes text-5xl mb-3 text-gray-300"></i>
+            <p class="mb-0">Belum ada stok barang di gudang ini</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Item Details by Category -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-barcode text-purple-500 mr-3"></i>
+                <h5 class="font-semibold mb-0">Item Details (Serial Numbers) per Kategori</h5>
+            </div>
+        </div>
+    </div>
+    <div class="p-6">
+        {% if item_details and item_details|length > 0 %}
+        {% set grouped_details = {} %}
+        {% for detail in item_details %}
+            {% set category = detail.item.category.name if detail.item and detail.item.category else 'Uncategorized' %}
+            {% if category not in grouped_details %}
+                {% set _ = grouped_details.update({category: []}) %}
+            {% endif %}
+            {% set _ = grouped_details[category].append(detail) %}
+        {% endfor %}
+
+        <div class="space-y-6">
+            {% for category, category_details in grouped_details.items()|sort %}
+            <div class="bg-gray-50 rounded-xl overflow-hidden">
+                <!-- Category Header -->
+                <div class="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-layer-group text-black mr-2"></i>
+                            <h6 class="text-lg font-semibold text-black">{{ category }}</h6>
+                            <span class="ml-3 px-2 py-1 bg-white/20 text-white rounded-full text-xs">
+                                {{ category_details|length }} item
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Details - Scrollable Grid -->
+                <div class="p-4 max-h-96 overflow-y-auto custom-scrollbar">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% for detail in category_details %}
+                        <div class="bg-white rounded-lg p-3 border-l-4
+                            {% if detail.status == 'available' %}border-green-500
+                            {% elif detail.status == 'in_unit' %}border-blue-500
+                            {% elif detail.status == 'maintenance' %}border-amber-500
+                            {% elif detail.status == 'used' %}border-purple-500
+                            {% elif detail.status == 'processing' %}border-cyan-500
+                            {% else %}border-gray-500{% endif %}
+                            hover:shadow-md transition-all">
+                            <div class="flex items-start justify-between mb-2">
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-semibold text-gray-800 truncate">{{ detail.item.name if detail.item else 'Unknown' }}</p>
+                                    <p class="text-xs text-gray-500 font-mono truncate">{{ detail.serial_number }}</p>
+                                    {% if detail.serial_unit %}
+                                    <p class="text-xs text-gray-500 font-mono truncate">Unit: {{ detail.serial_unit }}</p>
+                                    {% endif %}
+                                </div>
+                                <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2
+                                    {% if detail.status == 'available' %}bg-green-100 text-green-700
+                                    {% elif detail.status == 'in_unit' %}bg-blue-100 text-blue-700
+                                    {% elif detail.status == 'maintenance' %}bg-amber-100 text-amber-700
+                                    {% elif detail.status == 'used' %}bg-purple-100 text-purple-700
+                                    {% elif detail.status == 'processing' %}bg-cyan-100 text-cyan-700
+                                    {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                    {{ detail.status|replace('_', ' ')|title }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-gray-500 py-12">
+            <i class="fas fa-barcode text-5xl mb-3 text-gray-300"></i>
+            <p class="mb-0">Belum ada item detail di gudang ini</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Custom Scrollbar Style -->
+<style>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+</style>
+
+<!-- Leaflet CSS & JS -->
+{% if warehouse.get_coordinates() %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const coords = {{ warehouse.get_coordinates()|tojson }};
+    const warehouseName = "{{ warehouse.name }}";
+
+    if (coords && coords.latitude) {
+        // Initialize map centered on warehouse with max zoom
+        const map = L.map('warehouseMap', {
+            center: [coords.latitude, coords.longitude],
+            zoom: 18, // Maximum zoom level
+            zoomControl: true,
+            scrollWheelZoom: true
+        });
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add marker
+        const marker = L.marker([coords.latitude, coords.longitude]).addTo(map);
+
+        // Add popup with warehouse info
+        const popupContent = `
+            <div class="text-center">
+                <strong>${warehouseName}</strong><br>
+                <small>${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}</small>
+            </div>
+        `;
+        marker.bindPopup(popupContent).openPopup();
+
+        // Fit bounds to ensure marker is visible
+        map.fitBounds([
+            [coords.latitude, coords.longitude],
+            [coords.latitude, coords.longitude]
+        ], { padding: [50, 50] });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

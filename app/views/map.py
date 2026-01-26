@@ -8,6 +8,7 @@ bp = Blueprint('map', __name__, url_prefix='/map')
 
 @bp.route('/')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def index():
     """Main map page"""
     return render_template('map/index.html', user=current_user)
@@ -15,6 +16,7 @@ def index():
 
 @bp.route('/warehouses')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def warehouses():
     """Map showing all warehouses"""
     warehouses = Warehouse.query.all()
@@ -26,6 +28,7 @@ def warehouses():
 
 @bp.route('/units')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def units():
     """Map showing all units/buildings"""
     units = Unit.query.all()
@@ -37,6 +40,7 @@ def units():
 
 @bp.route('/distributions')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def distributions():
     """Map showing all distributions"""
     distributions = Distribution.query.all()
@@ -48,6 +52,7 @@ def distributions():
 
 @bp.route('/assets')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def assets():
     """Map showing all assets"""
     # Get available items in warehouses

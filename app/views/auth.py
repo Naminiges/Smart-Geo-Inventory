@@ -24,6 +24,11 @@ def login():
         user = User.query.filter_by(email=form.email.data).first()
 
         if user and user.check_password(form.password.data):
+            # Check if user is inactive
+            if not user.is_active:
+                flash('Akun Anda dinonaktifkan. Mohon hubungi admin.', 'danger')
+                return render_template('auth/login.html', form=form)
+
             login_user(user)
             ActivityLog.log_activity(user, 'LOGIN', 'users', user.id, ip_address=request.remote_addr)
 
@@ -34,6 +39,8 @@ def login():
                 return redirect(url_for('dashboard.warehouse_index'))
             elif user.is_field_staff():
                 return redirect(url_for('dashboard.field_index'))
+            elif user.is_unit_staff():
+                return redirect(url_for('dashboard.unit_index'))
         else:
             flash('Email atau password salah.', 'danger')
 
@@ -55,3 +62,5 @@ def logout():
 def profile():
     """Display user profile"""
     return render_template('auth/profile.html', user=current_user)
+
+

@@ -31,8 +31,54 @@ class Item(BaseModel):
     item_details = db.relationship('ItemDetail', back_populates='item', lazy='dynamic')
     stocks = db.relationship('Stock', back_populates='item', lazy='dynamic')
 
+    @property
+    def total_stock(self):
+        """Get total stock across all warehouses"""
+        from app.models.inventory import Stock
+        result = db.session.query(db.func.sum(Stock.quantity)).filter(Stock.item_id == self.id).scalar()
+        return result or 0
+
+    @property
+    def total_details(self):
+        """Get total item details (serial numbers) count"""
+        return self.item_details.count()
+
+    @property
+    def available_details(self):
+        """Get total available item details count"""
+        return self.item_details.filter_by(status='available').count()
+
+    @property
+    def used_details(self):
+        """Get total used item details count"""
+        return self.item_details.filter_by(status='used').count()
+
+    @property
+    def in_unit_details(self):
+        """Get total item details in unit count"""
+        return self.item_details.filter_by(status='in_unit').count()
+
+    @property
+    def processing_details(self):
+        """Get total processing item details count"""
+        return self.item_details.filter_by(status='processing').count()
+
+    @property
+    def maintenance_details(self):
+        """Get total maintenance item details count"""
+        return self.item_details.filter_by(status='maintenance').count()
+
+    @property
+    def returned_details(self):
+        """Get total returned item details count (includes maintenance status)"""
+        return self.item_details.filter(db.or_(
+            ItemDetail.status == 'returned',
+            ItemDetail.status == 'maintenance'
+        )).count()
+
     def get_total_stock(self, warehouse_id=None):
         """Get total stock across all warehouses or specific warehouse"""
+        from app.models.inventory import Stock
         query = db.session.query(db.func.sum(Stock.quantity)).filter(Stock.item_id == self.id)
         if warehouse_id:
             query = query.filter(Stock.warehouse_id == warehouse_id)
@@ -48,7 +94,8 @@ class ItemDetail(BaseModel):
 
     item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
     serial_number = db.Column(db.String(100), unique=True, nullable=False)
-    status = db.Column(db.String(50), default='available')  # available, processing, maintenance, used
+    serial_unit = db.Column(db.String(100))  # Serial unit internal untuk tracking aset
+    status = db.Column(db.String(50), default='available')  # available, processing, maintenance, used, in_unit, returned
     specification_notes = db.Column(db.Text)
     supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'))
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'))

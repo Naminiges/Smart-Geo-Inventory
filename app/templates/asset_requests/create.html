@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Permohonan Aset - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Buat Permohonan Aset{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('asset_requests.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Permohonan
+    </a>
+</div>
+
+<!-- Page Title -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Buat Permohonan Aset Baru</h1>
+    <p class="text-gray-500 text-sm mt-1">Unit: {{ unit.name if unit else 'Unit Anda' }}</p>
+</div>
+
+<!-- Main Form Card -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center">
+            <div class="bg-blue-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-box-open text-blue-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-1">Form Permohonan Aset</h3>
+                <p class="text-sm text-gray-500">Pilih aset dari stok yang tersedia untuk diterima ke unit Anda</p>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" id="assetRequestForm" class="p-6">
+        {{ form.hidden_tag() }}
+
+        <!-- Step Indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div class="flex items-center">
+                    <div class="bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">1</div>
+                    <span class="ml-2 text-sm font-medium text-gray-800">Permohonan</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2 hidden md:block"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">2</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Verifikasi Admin</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2 hidden md:block"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">3</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Distribusi Barang</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-200 mx-2 hidden md:block"></div>
+                <div class="flex items-center">
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">4</div>
+                    <span class="ml-2 text-sm font-medium text-gray-500">Selesai</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Section -->
+        <div class="mb-6">
+            <div class="mb-3">
+                <label class="block text-sm font-semibold text-gray-700">
+                    <i class="fas fa-boxes mr-1 text-blue-600"></i>
+                    Daftar Aset yang Dimohonkan
+                </label>
+            </div>
+
+            <div id="itemsContainer">
+                <!-- Items will be added dynamically here -->
+            </div>
+
+            <!-- Add Item Button - Placed at the bottom for easy access -->
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <button type="button" id="addItemBtn" class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Tambah Aset Lagi
+                </button>
+            </div>
+
+            <p class="mt-2 text-xs text-gray-500 text-center">
+                <i class="fas fa-info-circle mr-1"></i>
+                Klik tombol di atas untuk menambahkan aset ke dalam permohonan. Minimal 1 aset.
+            </p>
+        </div>
+
+        <!-- Request Notes -->
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-comment-alt mr-1 text-amber-600"></i>
+                Alasan Permohonan
+            </label>
+            {{ form.request_notes(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all", rows="4", placeholder="Jelaskan alasan permohonan aset ini (min. 10 karakter)") }}
+            {% if form.request_notes.errors %}
+                {% for error in form.request_notes.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">Contoh: Penggantian aset yang rusak, Tambahan aset baru, dll</p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+            <a href="{{ url_for('asset_requests.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-times mr-2"></i>
+                Batal
+            </a>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i class="fas fa-paper-plane mr-2"></i>
+                Ajukan Permohonan
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Info Card -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-info-circle text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-900 mb-2">Informasi Penting</h4>
+            <ul class="text-sm text-blue-800 space-y-1">
+                <li><i class="fas fa-check-circle mr-2"></i>Anda dapat menambahkan multiple aset dalam satu permohonan</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Pilih aset dari daftar stok yang tersedia di gudang</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Tentukan lokasi ruangan untuk setiap aset (opsional)</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Permohonan akan melalui proses verifikasi admin</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Setelah disetujui, barang akan didistribusikan ke unit Anda</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Item Template (Hidden) -->
+<template id="itemTemplate">
+    <div class="item-card bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4" data-item-index="">
+        <div class="flex items-center justify-between mb-3">
+            <h5 class="text-sm font-semibold text-gray-800">
+                <span class="item-number">1</span>. Aset
+            </h5>
+            <button type="button" class="remove-item-btn text-red-600 hover:text-red-800 transition-colors">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+
+        <!-- Item Selection -->
+        <div class="mb-3">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Pilih Aset</label>
+            <select class="item-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" required>
+                <option value="">-- Pilih dari daftar aset --</option>
+                {% for item in items %}
+                <option value="{{ item.id }}" data-item-name="{{ item.name }}">
+                    {{ item.name }} (Kategori: {{ item.category.name if item.category else '-' }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Quantity -->
+        <div class="mb-3">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Jumlah</label>
+            <input type="number" class="item-quantity w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm" placeholder="Masukkan jumlah aset" min="1" value="1" required>
+        </div>
+
+        <!-- Location (Room) -->
+        <div class="mb-3">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Lokasi (Ruangan)</label>
+            <select class="unit-detail-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+                <option value="">-- Pilih Lokasi (Opsional) --</option>
+                {% for ud in unit_details %}
+                <option value="{{ ud.id }}">{{ ud.room_name }} ({{ ud.floor }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Room Notes -->
+        <div class="mb-0">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Catatan Ruangan</label>
+            <input type="text" class="room-notes-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" placeholder="Catatan tambahan (opsional)">
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('assetRequestForm');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const addItemBtn = document.getElementById('addItemBtn');
+    const itemTemplate = document.getElementById('itemTemplate');
+    let itemCount = 0;
+
+    // Add first item by default
+    addItem();
+
+    // Add item button click handler
+    addItemBtn.addEventListener('click', addItem);
+
+    function addItem() {
+        const template = itemTemplate.content.cloneNode(true);
+        const itemCard = template.querySelector('.item-card');
+
+        // Set unique index
+        itemCard.dataset.itemIndex = itemCount;
+        itemCard.querySelector('.item-number').textContent = itemCount + 1;
+
+        // Add event listeners for this item
+        const removeBtn = itemCard.querySelector('.remove-item-btn');
+
+        // Remove item button
+        removeBtn.addEventListener('click', function() {
+            if (itemsContainer.children.length > 1) {
+                itemCard.remove();
+                updateItemNumbers();
+            } else {
+                alert('Minimal harus ada satu aset!');
+            }
+        });
+
+        itemsContainer.appendChild(itemCard);
+        itemCount++;
+    }
+
+    function updateItemNumbers() {
+        const itemCards = itemsContainer.querySelectorAll('.item-card');
+        itemCards.forEach((card, index) => {
+            card.querySelector('.item-number').textContent = index + 1;
+        });
+    }
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        const itemCards = itemsContainer.querySelectorAll('.item-card');
+        const itemsData = [];
+
+        for (let card of itemCards) {
+            const itemSelect = card.querySelector('.item-select');
+            const itemQuantity = card.querySelector('.item-quantity');
+            const unitDetailSelect = card.querySelector('.unit-detail-select');
+            const roomNotesInput = card.querySelector('.room-notes-input');
+
+            const itemId = parseInt(itemSelect.value);
+            const quantity = parseInt(itemQuantity.value);
+
+            // Validation
+            if (!itemId || itemId === 0) {
+                e.preventDefault();
+                alert('Harap pilih aset dari daftar!');
+                itemSelect.focus();
+                return false;
+            }
+
+            if (!quantity || quantity <= 0) {
+                e.preventDefault();
+                alert('Harap isi jumlah aset dengan benar!');
+                itemQuantity.focus();
+                return false;
+            }
+
+            // Collect item data
+            const itemData = {
+                item_id: itemId,
+                quantity: quantity,
+                unit_detail_id: unitDetailSelect.value ? parseInt(unitDetailSelect.value) : null,
+                room_notes: roomNotesInput.value
+            };
+
+            itemsData.push(itemData);
+        }
+
+        // Add items data as hidden fields
+        for (let itemData of itemsData) {
+            const hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = 'items';
+            hiddenField.value = JSON.stringify(itemData);
+            form.appendChild(hiddenField);
+        }
+    });
+});
+</script>
+{% endblock %}
