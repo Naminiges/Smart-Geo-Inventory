@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Zona - {{ building.name }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Edit Zona: {{ building.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    #zoneMap {
+        height: 500px;
+        border-radius: 0.75rem;
+        border: 2px solid #e5e7eb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="flex items-center gap-2 text-sm text-gray-600">
+        <a href="{{ url_for('buildings.index') }}" class="hover:text-emerald-600">
+            <i class="fas fa-building"></i> Gedung
+        </a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <a href="{{ url_for('buildings.detail', building_id=building.id) }}" class="hover:text-emerald-600">
+            {{ building.name }}
+        </a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span>Edit Zona</span>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Map -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <h5 class="text-lg font-semibold text-gray-900">Peta Zona Spasial</h5>
+            <button onclick="fitToBounds()"
+                    class="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors">
+                <i class="fas fa-expand mr-1"></i>Fit to Bounds
+            </button>
+        </div>
+
+        <p class="text-sm text-gray-600 mb-4">
+            Klik pada peta untuk menambahkan titik koordinat. Minimal 3 titik untuk membentuk zona.
+            {% if zone_data %}
+            <br><span class="text-purple-600"><i class="fas fa-info-circle mr-1"></i>Zona sudah ada, Anda bisa mengeditnya dengan menambah/menghapus titik.</span>
+            {% endif %}
+        </p>
+
+        <div id="zoneMap"></div>
+    </div>
+
+    <!-- Zona Form -->
+    <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h5 class="text-lg font-semibold text-gray-900 mb-4">Informasi Zona</h5>
+
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kode Zona</label>
+                <input type="text" id="inputZoneKode"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                       placeholder="Contoh: ZONA.A"
+                       {% if zone_data %}value="{{ zone_data.properties.kode_zona }}"{% endif %}>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+                <input type="text" id="inputZoneDeskripsi"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                       placeholder="Deskripsi zona"
+                       {% if zone_data %}value="{{ zone_data.properties.deskripsi }}"{% endif %}>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h6 class="text-sm font-semibold text-gray-700 mb-2">Kontrol</h6>
+        <div class="space-y-2">
+            <button onclick="undoLastMarker()"
+                    class="w-full px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
+                <i class="fas fa-undo"></i>Undo Titik Terakhir
+            </button>
+            <button onclick="resetMarkers()"
+                    class="w-full px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors flex items-center justify-center gap-2">
+                <i class="fas fa-trash"></i>Reset Semua
+            </button>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="bg-purple-50 rounded-lg p-3">
+            <div class="flex items-center justify-between text-sm mb-1">
+                <span class="text-gray-600">Jumlah Titik:</span>
+                <span id="markerCount" class="font-semibold text-purple-700">0</span>
+            </div>
+            <div id="zoneStatus" class="text-sm text-amber-600">
+                <i class="fas fa-exclamation-triangle mr-1"></i>
+                Minimal 3 titik
+            </div>
+        </div>
+
+        <div class="flex gap-2 pt-4">
+            <a href="{{ url_for('buildings.detail', building_id=building.id) }}"
+               class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-all duration-200 text-center text-sm">
+                <i class="fas fa-times mr-1"></i>Batal
+            </a>
+            <button onclick="saveZone()"
+                    id="saveBtn"
+                    class="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    disabled>
+                <i class="fas fa-save mr-1"></i>Simpan Zona
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+var buildingId = {{ building.id }};
+var existingZone = {{ zone_data | tojson if zone_data else 'null' }};
+
+// Initialize map
+var map = L.map('zoneMap').setView([3.561676, 98.6563423], 16);
+
+// Add tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+}).addTo(map);
+
+var markers = [];
+var polygon = null;
+
+// Load existing zone if available
+if (existingZone && existingZone.geometry && existingZone.geometry.coordinates[0]) {
+    var existingCoords = existingZone.geometry.coordinates[0];
+
+    // Create markers from existing coordinates
+    existingCoords.forEach(function(coord) {
+        var latlng = [coord[1], coord[0]];
+        var marker = L.marker(latlng, {
+            draggable: true
+        }).addTo(map);
+
+        marker.on('drag', updatePolygon);
+        markers.push(marker);
+    });
+
+    updatePolygon();
+    updateMarkerCount();
+
+    // Fit map to show the entire polygon
+    setTimeout(fitToBounds, 500);
+}
+
+// Map click handler
+map.on('click', function(e) {
+    var marker = L.marker(e.latlng, {
+        draggable: true
+    }).addTo(map);
+
+    markers.push(marker);
+
+    // Update polygon when marker is dragged
+    marker.on('drag', updatePolygon);
+
+    updatePolygon();
+    updateMarkerCount();
+});
+
+// Update polygon
+function updatePolygon() {
+    if (polygon) {
+        map.removeLayer(polygon);
+    }
+
+    if (markers.length >= 3) {
+        var latlngs = markers.map(function(m) { return m.getLatLng(); });
+        polygon = L.polygon(latlngs, {
+            color: '#8b5cf6',
+            weight: 3,
+            fillColor: '#a78bfa',
+            fillOpacity: 0.25
+        }).addTo(map);
+
+        document.getElementById('zoneStatus').innerHTML = '<i class="fas fa-check-circle mr-1"></i>Zona siap';
+        document.getElementById('zoneStatus').className = 'text-sm text-emerald-600';
+        document.getElementById('saveBtn').disabled = false;
+    } else {
+        document.getElementById('zoneStatus').innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Minimal 3 titik';
+        document.getElementById('zoneStatus').className = 'text-sm text-amber-600';
+        document.getElementById('saveBtn').disabled = true;
+    }
+}
+
+// Update marker count display
+function updateMarkerCount() {
+    document.getElementById('markerCount').textContent = markers.length;
+}
+
+// Undo last marker
+function undoLastMarker() {
+    if (markers.length > 0) {
+        var lastMarker = markers.pop();
+        map.removeLayer(lastMarker);
+        updatePolygon();
+        updateMarkerCount();
+    }
+}
+
+// Reset all markers
+function resetMarkers() {
+    if (confirm('Hapus semua titik zona?')) {
+        markers.forEach(function(marker) {
+            map.removeLayer(marker);
+        });
+        markers = [];
+        if (polygon) {
+            map.removeLayer(polygon);
+            polygon = null;
+        }
+        updateMarkerCount();
+    }
+}
+
+// Fit map to show entire polygon
+function fitToBounds() {
+    if (polygon) {
+        map.fitBounds(polygon.getBounds(), { padding: [50, 50] });
+    } else if (markers.length > 0) {
+        var group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+}
+
+// Save zone
+function saveZone() {
+    if (markers.length < 3) {
+        alert('Minimal 3 titik diperlukan untuk membuat zona.');
+        return;
+    }
+
+    var coords = markers.map(function(m) {
+        var lngLat = m.getLatLng();
+        return [lngLat.lng, lngLat.lat];
+    });
+
+    fetch('/buildings/{{ building.id }}/edit-zone', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            kode: document.getElementById('inputZoneKode').value,
+            deskripsi: document.getElementById('inputZoneDeskripsi').value,
+            coordinates: coords
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            window.location.href = '{{ url_for("buildings.detail", building_id=building.id) }}';
+        } else {
+            alert(data.message || 'Gagal menyimpan zona');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Terjadi kesalahan saat menyimpan zona: ' + error.message);
+    });
+}
+</script>
+{% endblock %}

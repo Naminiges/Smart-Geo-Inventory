@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import func
 from geoalchemy2.functions import ST_AsGeoJSON
 from app import db
-from app.models import Warehouse, Unit, Distribution, ItemDetail
+from app.models import Warehouse, Unit, Distribution, ItemDetail, Building
 from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('api_map', __name__)
@@ -275,4 +275,47 @@ def api_nearby():
         'success': True,
         'warehouses': warehouse_data,
         'units': unit_data
+    })
+
+
+@bp.route('/buildings')
+@login_required
+def api_buildings():
+    """Get all buildings with their zones and units as GeoJSON"""
+    buildings = Building.query.all()
+
+    features = []
+    for building in buildings:
+        # Get units in this building
+        units_list = Unit.query.filter_by(building_id=building.id).all()
+        units_data = [{'id': u.id, 'name': u.name} for u in units_list]
+
+        # Get coordinates if available
+        coords = building.get_coordinates()
+
+        # Use zone_json if available, otherwise skip
+        if building.zone_json:
+            import json
+            zone_data = json.loads(building.zone_json)
+
+            features.append({
+                'type': 'Feature',
+                'geometry': zone_data.get('geometry'),
+                'properties': {
+                    'id': building.id,
+                    'code': building.code,
+                    'name': building.name,
+                    'address': building.address,
+                    'floor_count': building.floor_count,
+                    'units': units_data,
+                    'units_count': len(units_data),
+                    'latitude': coords['latitude'] if coords else None,
+                    'longitude': coords['longitude'] if coords else None,
+                    'layer': 'building_zone'
+                }
+            })
+
+    return jsonify({
+        'type': 'FeatureCollection',
+        'features': features
     })

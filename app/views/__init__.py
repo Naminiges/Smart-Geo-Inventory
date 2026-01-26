@@ -9,6 +9,7 @@ from app.views.map import bp
 from app.views.procurement import bp
 from app.views.users import bp
 from app.views.categories import bp
+from app.views.admin.buildings import bp as admin_buildings_bp
 
 # API blueprint imports
 from app.views.api_auth import bp

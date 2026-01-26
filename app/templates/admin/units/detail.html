@@ -34,7 +34,24 @@
         </div>
     </div>
     <div class="p-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Building -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Gedung</h4>
+                {% if unit.building %}
+                <a href="{{ url_for('admin_buildings.detail', building_id=unit.building.id) }}" class="block">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                            {{ unit.building.code }}
+                        </span>
+                    </div>
+                    <p class="text-sm font-medium text-gray-800 mt-1">{{ unit.building.name }}</p>
+                </a>
+                {% else %}
+                <span class="text-gray-500 text-sm">-</span>
+                {% endif %}
+            </div>
+
             <!-- Status -->
             <div class="bg-gray-50 rounded-lg p-4">
                 <h4 class="text-sm font-semibold text-gray-600 mb-2">Status</h4>
@@ -59,64 +76,15 @@
 
             <!-- Total Items -->
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Total Item Terinstall</h4>
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Total Item</h4>
                 <p class="text-2xl font-bold text-gray-800">{{ unit.items_count }}</p>
             </div>
 
-            <!-- Created Date -->
+            <!-- Total Rooms -->
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Tanggal Dibuat</h4>
-                <p class="text-base font-semibold text-gray-800">{{ unit.created_at.strftime('%d/%m/%Y') }}</p>
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Total Ruangan</h4>
+                <p class="text-2xl font-bold text-gray-800">{{ unit.rooms_count }}</p>
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Address & Location -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <!-- Address -->
-    <div class="bg-white rounded-xl shadow-md">
-        <div class="p-6 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-800">
-                <i class="fas fa-map-marker-alt mr-2 text-red-600"></i>
-                Alamat
-            </h3>
-        </div>
-        <div class="p-6">
-            <p class="text-gray-700">{{ unit.address }}</p>
-        </div>
-    </div>
-
-    <!-- Coordinates -->
-    <div class="bg-white rounded-xl shadow-md">
-        <div class="p-6 border-b border-gray-200">
-            <h3 class="text-lg font-semibold text-gray-800">
-                <i class="fas fa-globe mr-2 text-green-600"></i>
-                Koordinat GPS
-            </h3>
-        </div>
-        <div class="p-6">
-            {% if coordinates %}
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-gray-50 rounded-lg p-3">
-                    <h4 class="text-xs font-semibold text-gray-600 mb-1">Latitude</h4>
-                    <p class="text-lg font-mono font-semibold text-gray-800">{{ "%.6f"|format(coordinates.latitude) }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-3">
-                    <h4 class="text-xs font-semibold text-gray-600 mb-1">Longitude</h4>
-                    <p class="text-lg font-mono font-semibold text-gray-800">{{ "%.6f"|format(coordinates.longitude) }}</p>
-                </div>
-            </div>
-            <a href="https://www.google.com/maps?q={{ coordinates.latitude }},{{ coordinates.longitude }}" target="_blank" class="mt-3 inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold text-sm">
-                <i class="fas fa-external-link-alt mr-1"></i>
-                Lihat di Google Maps
-            </a>
-            {% else %}
-            <p class="text-gray-500 text-sm">
-                <i class="fas fa-exclamation-circle mr-1"></i>
-                Koordinat belum di-set
-            </p>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -132,31 +100,53 @@
     <div class="p-6">
         {% set unit_details_list = unit.unit_details.all() %}
         {% if unit_details_list and unit_details_list|length > 0 %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {% for room in unit_details_list %}
-            <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 hover:shadow-md transition-all">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex-1">
-                        <h4 class="font-semibold text-gray-800">{{ room.room_name or 'Ruangan Tanpa Nama' }}</h4>
-                        {% if room.floor %}
-                        <p class="text-sm text-gray-600">
-                            <i class="fas fa-layer-group mr-1"></i>Lantai {{ room.floor }}
-                        </p>
-                        {% endif %}
-                    </div>
-                    <div class="bg-purple-100 rounded-lg p-2">
-                        <i class="fas fa-door-closed text-purple-600"></i>
-                    </div>
-                </div>
-                {% if room.description %}
-                <p class="text-sm text-gray-600 mb-3">{{ room.description[:80] }}{{ '...' if room.description and room.description|length > 80 else '' }}</p>
-                {% endif %}
-                <button onclick="showRoomAssets({{ room.id }}, '{{ room.room_name or 'Ruangan' }}')" class="w-full px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">
-                    <i class="fas fa-boxes mr-1"></i> Lihat Aset
-                </button>
+
+        {% set rooms_by_building = namespace() %}
+        {% set rooms_by_building.dict = {} %}
+        {% for room in unit_details_list %}
+            {% set building_code = room.room_name.split()[0] if room.room_name and room.room_name.split()[0].startswith('GD.') else 'Lainnya' %}
+            {% if building_code not in rooms_by_building.dict %}
+                {% set _ = rooms_by_building.dict.update({building_code: []}) %}
+            {% endif %}
+            {% set _ = rooms_by_building.dict[building_code].append(room) %}
+        {% endfor %}
+
+        {% for building_code, rooms in rooms_by_building.dict.items() %}
+        <div class="mb-6">
+            <div class="flex items-center gap-2 mb-3">
+                <span class="px-3 py-1.5 bg-blue-100 text-blue-800 rounded-lg font-semibold text-sm">
+                    {{ building_code }}
+                </span>
+                <span class="text-sm text-gray-600">{{ rooms|length }} ruangan</span>
             </div>
-            {% endfor %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for room in rooms %}
+                <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-300 hover:shadow-md transition-all">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-800">{{ room.room_name or 'Ruangan Tanpa Nama' }}</h4>
+                            {% if room.floor %}
+                            <p class="text-sm text-gray-600">
+                                <i class="fas fa-layer-group mr-1"></i>Lantai {{ room.floor }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        <div class="bg-purple-100 rounded-lg p-2">
+                            <i class="fas fa-door-closed text-purple-600"></i>
+                        </div>
+                    </div>
+                    {% if room.description %}
+                    <p class="text-sm text-gray-600 mb-3">{{ room.description[:80] }}{{ '...' if room.description and room.description|length > 80 else '' }}</p>
+                    {% endif %}
+                    <button onclick="showRoomAssets({{ room.id }}, '{{ room.room_name or 'Ruangan' }}')" class="w-full px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-semibold">
+                        <i class="fas fa-boxes mr-1"></i> Lihat Aset
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
         </div>
+        {% endfor %}
+
         {% else %}
         <div class="text-center py-8 bg-gray-50 border border-gray-200 rounded-lg">
             <i class="fas fa-door-open text-gray-400 text-3xl mb-2"></i>

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Peminjaman Tempat - Smart Geo Inventory{% endblock %}
+{% block title %}Daftar Unit - Smart Geo Inventory{% endblock %}
 
-{% block page_title %}Verifikasi Peminjaman Tempat{% endblock %}
+{% block page_title %}Daftar Unit{% endblock %}
 
 {% block content %}
 <!-- Statistics Cards -->
@@ -10,23 +10,11 @@
     <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-600 hover:shadow-lg transition-shadow">
         <div class="flex items-center">
             <div class="bg-blue-100 rounded-full p-2">
-                <i class="fas fa-door-open text-blue-600"></i>
+                <i class="fas fa-building text-blue-600"></i>
             </div>
             <div class="ml-3">
                 <div class="text-2xl font-bold text-gray-800">{{ stats.total }}</div>
-                <div class="text-xs text-gray-500">Total</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-yellow-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-yellow-100 rounded-full p-2">
-                <i class="fas fa-clock text-yellow-600"></i>
-            </div>
-            <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.pending }}</div>
-                <div class="text-xs text-gray-500">Pending</div>
+                <div class="text-xs text-gray-500">Total Unit</div>
             </div>
         </div>
     </div>
@@ -37,8 +25,8 @@
                 <i class="fas fa-check text-green-600"></i>
             </div>
             <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.approved }}</div>
-                <div class="text-xs text-gray-500">Disetujui</div>
+                <div class="text-2xl font-bold text-gray-800">{{ stats.available }}</div>
+                <div class="text-xs text-gray-500">Available</div>
             </div>
         </div>
     </div>
@@ -46,120 +34,104 @@
     <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-600 hover:shadow-lg transition-shadow">
         <div class="flex items-center">
             <div class="bg-purple-100 rounded-full p-2">
-                <i class="fas fa-handshake text-purple-600"></i>
+                <i class="fas fa-user text-purple-600"></i>
             </div>
             <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.active }}</div>
-                <div class="text-xs text-gray-500">Dipinjam</div>
+                <div class="text-2xl font-bold text-gray-800">{{ stats.in_use }}</div>
+                <div class="text-xs text-gray-500">In Use</div>
             </div>
         </div>
     </div>
 
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-gray-600 hover:shadow-lg transition-shadow">
+    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-amber-600 hover:shadow-lg transition-shadow">
         <div class="flex items-center">
-            <div class="bg-gray-100 rounded-full p-2">
-                <i class="fas fa-check-circle text-gray-600"></i>
+            <div class="bg-amber-100 rounded-full p-2">
+                <i class="fas fa-tools text-amber-600"></i>
             </div>
             <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.completed }}</div>
-                <div class="text-xs text-gray-500">Selesai</div>
+                <div class="text-2xl font-bold text-gray-800">{{ stats.maintenance }}</div>
+                <div class="text-xs text-gray-500">Maintenance</div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Filters -->
+<!-- Header -->
 <div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ url_for('units.index') }}?status="
-               class="px-4 py-2 {% if status_filter == '' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Semua
-            </a>
-            <a href="{{ url_for('units.index') }}?status=pending"
-               class="px-4 py-2 {% if status_filter == 'pending' %}bg-yellow-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Pending
-            </a>
-            <a href="{{ url_for('units.index') }}?status=approved"
-               class="px-4 py-2 {% if status_filter == 'approved' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Disetujui
-            </a>
-            <a href="{{ url_for('units.index') }}?status=active"
-               class="px-4 py-2 {% if status_filter == 'active' %}bg-purple-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Dipinjam
-            </a>
-            <a href="{{ url_for('units.index') }}?status=completed"
-               class="px-4 py-2 {% if status_filter == 'completed' %}bg-gray-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Selesai
-            </a>
-            <a href="{{ url_for('units.index') }}?status=rejected"
-               class="px-4 py-2 {% if status_filter == 'rejected' %}bg-red-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Ditolak
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Venue Loans Table -->
-<div class="bg-white rounded-xl shadow-md">
     <div class="p-6 border-b border-gray-200">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
-                <i class="fas fa-door-open text-orange-600 text-2xl mr-3"></i>
+                <i class="fas fa-building text-orange-600 text-2xl mr-3"></i>
                 <div>
-                    <h5 class="text-lg font-semibold mb-0">Daftar Peminjaman Tempat</h5>
-                    <small class="text-gray-500">Menunggu verifikasi admin</small>
+                    <h5 class="text-lg font-semibold mb-0">Daftar Unit</h5>
+                    <small class="text-gray-500">Kelola data Gedung, Unit, & Ruangan</small>
                 </div>
             </div>
-            {% if venue_loans and venue_loans|length > 0 %}
-            <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                {{ venue_loans|length }} Peminjaman
-            </span>
-            {% endif %}
+            <div class="flex gap-2">
+                <a href="{{ url_for('units.loans') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-all duration-200 shadow-md">
+                    <i class="fas fa-door-open"></i>
+                    Daftar Peminjaman
+                </a>
+            </div>
         </div>
     </div>
+</div>
 
+<!-- Units Table -->
+<div class="bg-white rounded-xl shadow-md">
     <div class="p-6 overflow-x-auto">
-        {% if venue_loans and venue_loans|length > 0 %}
+        {% if units and units|length > 0 %}
         <table class="w-full paginated-table">
             <thead>
                 <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Peminjam</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tempat</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Acara</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Waktu</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Nama Unit</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Ruangan</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Item</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
                 </tr>
             </thead>
             <tbody>
-                {% for loan in venue_loans %}
+                {% for unit in units %}
                 <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="py-3 px-4"><strong class="text-gray-800">#{{ loan.id }}</strong></td>
-                    <td class="py-3 px-4 text-gray-600">
-                        {{ loan.borrower_unit.name if loan.borrower_unit else 'Unknown' }}
-                        <br><small class="text-gray-400">{{ loan.borrower_user.name if loan.borrower_user else '' }}</small>
-                    </td>
-                    <td class="py-3 px-4 text-gray-600">
-                        {{ loan.unit_detail.unit.name if loan.unit_detail and loan.unit_detail.unit else '' }}
-                        <br><small class="text-gray-400">{{ loan.unit_detail.room_name if loan.unit_detail else '' }}</small>
-                    </td>
-                    <td class="py-3 px-4 text-gray-800 font-semibold">{{ loan.event_name }}</td>
+                    <td class="py-3 px-4 text-gray-800 font-semibold">{{ unit.name }}</td>
                     <td class="py-3 px-4 text-gray-600 text-sm">
-                        <div>{{ loan.start_datetime.strftime('%d/%m/%Y %H:%M') }}</div>
-                        <div class="text-xs text-gray-500">s/d {{ loan.end_datetime.strftime('%d/%m/%Y %H:%M') }}</div>
+                        <span class="px-2 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold">
+                            {{ unit.rooms_count }} ruang
+                        </span>
                     </td>
-                    <td class="py-3 px-4">
-                        <span class="px-3 py-1 {{ loan.status_badge_class }} rounded-full text-xs font-semibold">
-                            {{ loan.status_display }}
+                    <td class="py-3 px-4 text-gray-600 text-sm">
+                        <span class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                            {{ unit.items_count }} item
                         </span>
                     </td>
                     <td class="py-3 px-4">
-                        <a href="{{ url_for('venue_loans.admin_detail', id=loan.id) }}"
-                           class="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors text-xs font-semibold">
-                            <i class="fas fa-eye mr-1"></i> Detail
-                        </a>
+                        {% if unit.status == 'available' %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-check mr-1"></i> Available
+                        </span>
+                        {% elif unit.status == 'in_use' %}
+                        <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-user mr-1"></i> In Use
+                        </span>
+                        {% elif unit.status == 'maintenance' %}
+                        <span class="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-tools mr-1"></i> Maintenance
+                        </span>
+                        {% else %}
+                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
+                            {{ unit.status|title }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="flex gap-1">
+                            <a href="{{ url_for('units.detail', id=unit.id) }}"
+                               class="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors text-xs font-semibold"
+                               title="Lihat Detail">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -167,14 +139,8 @@
         </table>
         {% else %}
         <div class="text-center text-gray-500 py-12">
-            <i class="fas fa-door-open text-6xl mb-4 opacity-30"></i>
-            <p class="text-lg mb-0">
-                {% if status_filter %}
-                Tidak ada peminjaman tempat dengan status {{ status_filter }}
-                {% else %}
-                Tidak ada permohonan peminjaman tempat
-                {% endif %}
-            </p>
+            <i class="fas fa-building text-6xl mb-4 opacity-30"></i>
+            <p class="text-lg mb-0">Tidak ada unit</p>
         </div>
         {% endif %}
     </div>

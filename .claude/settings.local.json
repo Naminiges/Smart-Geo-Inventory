@@ -13,7 +13,9 @@
       "Bash(do echo:*)",
       "Bash(done)",
       "Bash(grep:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(curl:*)",
+      "Bash(psql:*)"
     ]
   }
 }

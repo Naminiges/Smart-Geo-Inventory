@@ -67,18 +67,18 @@
                            type="checkbox" id="showWarehouses" checked onclick="event.stopPropagation()">
                 </div>
 
-                <!-- Unit/Gedung Toggle -->
-                <div class="layer-toggle flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 bg-gray-50 hover:border-emerald-500 hover:bg-white hover:shadow-md transition-all duration-300 cursor-pointer group"
-                     onclick="toggleCheckbox('showUnits')">
-                    <div class="icon-wrapper w-9 h-9 rounded-full bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                        <i class="fas fa-building text-green-600"></i>
+                <!-- Zona Gedung Toggle -->
+                <div class="layer-toggle flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 bg-gray-50 hover:border-amber-500 hover:bg-white hover:shadow-md transition-all duration-300 cursor-pointer group"
+                     onclick="toggleCheckbox('showBuildingZones')">
+                    <div class="icon-wrapper w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-vector-square text-amber-600"></i>
                     </div>
                     <div class="flex flex-col">
-                        <span class="font-semibold text-gray-800 text-sm">Unit/Gedung</span>
-                        <span class="text-gray-500 text-xs">Bangunan unit</span>
+                        <span class="font-semibold text-gray-800 text-sm">Zona Gedung</span>
+                        <span class="text-gray-500 text-xs">Area zona gedung & unit</span>
                     </div>
                     <input class="w-5 h-5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer ml-2"
-                           type="checkbox" id="showUnits" checked onclick="event.stopPropagation()">
+                           type="checkbox" id="showBuildingZones" checked onclick="event.stopPropagation()">
                 </div>
             </div>
         </div>
@@ -96,8 +96,8 @@
 
 {% block extra_js %}
 <script>
-// Initialize map
-var map = L.map('map').setView([3.561676, 98.6563423], 13);
+// Initialize map - Center on USU Pusat Sistem Informasi
+var map = L.map('map').setView([3.562340190703258, 98.65947020175743], 25);
 
 // Add tile layer
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -105,41 +105,20 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19
 }).addTo(map);
 
-// Layer groups
+// Layer groups (order matters - first added is at bottom)
+var buildingZoneLayer = L.layerGroup().addTo(map);  // Add zones first (bottom layer)
 var warehouseLayer = L.layerGroup().addTo(map);
-var unitLayer = L.layerGroup().addTo(map);
-
-// Custom icons
-var warehouseIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
-
-var unitIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
 
 // Load map data
 function loadMapData() {
     $.get('/api/map/all', function(data) {
         // Clear existing markers
         warehouseLayer.clearLayers();
-        unitLayer.clearLayers();
 
         // Add features
         data.features.forEach(function(feature) {
             if (feature.geometry && feature.geometry.coordinates) {
                 var coords = [feature.geometry.coordinates[1], feature.geometry.coordinates[0]];
-                var marker = L.marker(coords);
 
                 // Create popup content
                 var popupContent = '<div class="popup-content">';
@@ -148,18 +127,89 @@ function loadMapData() {
 
                 if (feature.properties.layer === 'warehouse') {
                     popupContent += '<p><strong>Tipe:</strong> Gudang</p>';
-                    marker.setIcon(warehouseIcon);
-                    marker.addTo(warehouseLayer);
-                } else if (feature.properties.layer === 'unit') {
-                    popupContent += '<p><strong>Tipe:</strong> Unit/Gedung</p>';
-                    marker.setIcon(unitIcon);
-                    marker.addTo(unitLayer);
-                }
 
-                popupContent += '</div>';
-                marker.bindPopup(popupContent);
+                    // Create custom warehouse icon
+                    var warehouseIcon = L.divIcon({
+                        html: '<div style="background-color: #3b82f6; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-warehouse" style="color: white; font-size: 18px;"></i></div>',
+                        className: 'warehouse-marker',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -20]
+                    });
+
+                    var marker = L.marker(coords, {icon: warehouseIcon});
+                    marker.bindPopup(popupContent);
+                    marker.addTo(warehouseLayer);
+                }
             }
         });
+    });
+}
+
+// Load Building Zones with Units info
+function loadBuildingZones() {
+    $.get('/api/map/buildings', function(data) {
+        L.geoJSON(data, {
+            style: function(feature) {
+                return {
+                    color: "#f59e0b",      // Amber border
+                    weight: 3,
+                    fillColor: "#fbbf24",  // Light amber fill
+                    fillOpacity: 0.25
+                };
+            },
+            onEachFeature: function (feature, layer) {
+                var props = feature.properties;
+
+                // Add building location marker if coordinates exist
+                if (props.latitude && props.longitude) {
+                    var buildingIcon = L.divIcon({
+                        html: '<div style="background-color: #10b981; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas fa-building" style="color: white; font-size: 18px;"></i></div>',
+                        className: 'building-marker',
+                        iconSize: [36, 36],
+                        iconAnchor: [18, 18],
+                        popupAnchor: [0, -20]
+                    });
+
+                    var marker = L.marker([props.latitude, props.longitude], {icon: buildingIcon});
+
+                    var popupContent = '<div class="popup-content">';
+                    popupContent += '<h5>' + props.code + ' - ' + props.name + '</h5>';
+                    popupContent += '<p><strong>Alamat:</strong> ' + (props.address || '-') + '</p>';
+                    popupContent += '<p><strong>Jumlah Lantai:</strong> ' + props.floor_count + '</p>';
+                    popupContent += '<p><strong>Unit (' + props.units_count + '):</strong><ul>';
+                    props.units.forEach(function(u) {
+                        popupContent += '<li>' + u.name + '</li>';
+                    });
+                    popupContent += '</ul></p>';
+                    popupContent += '</div>';
+
+                    marker.bindPopup(popupContent);
+                    marker.addTo(buildingZoneLayer);
+                }
+
+                // Bind popup to the zone polygon as well
+                var popupContent = '<div class="popup-content">';
+                popupContent += '<h5>' + props.code + ' - ' + props.name + '</h5>';
+                popupContent += '<p><strong>Alamat:</strong> ' + (props.address || '-') + '</p>';
+                popupContent += '<p><strong>Jumlah Lantai:</strong> ' + props.floor_count + '</p>';
+                popupContent += '<p><strong>Unit (' + props.units_count + '):</strong><ul>';
+                props.units.forEach(function(u) {
+                    popupContent += '<li>' + u.name + '</li>';
+                });
+                popupContent += '</ul></p>';
+                popupContent += '<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">';
+                popupContent += '<a href="/buildings/' + props.id + '" style="display: inline-block; padding: 6px 12px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 500; text-align: center;"';
+                popupContent += 'onmouseover="this.style.backgroundColor=\'#2563eb\'" onmouseout="this.style.backgroundColor=\'#3b82f6\'">';
+                popupContent += '<i class="fas fa-eye" style="margin-right: 5px;"></i>Lihat Detail';
+                popupContent += '</a>';
+                popupContent += '</div>';
+                popupContent += '</div>';
+                layer.bindPopup(popupContent);
+            }
+        }).addTo(buildingZoneLayer);
+    }).fail(function() {
+        console.log('Failed to load building zones');
     });
 }
 
@@ -172,11 +222,11 @@ $('#showWarehouses').change(function() {
     }
 });
 
-$('#showUnits').change(function() {
+$('#showBuildingZones').change(function() {
     if ($(this).is(':checked')) {
-        map.addLayer(unitLayer);
+        map.addLayer(buildingZoneLayer);
     } else {
-        map.removeLayer(unitLayer);
+        map.removeLayer(buildingZoneLayer);
     }
 });
 
@@ -209,6 +259,7 @@ map.on('locationerror', function(e) {
 // Load data on page load
 $(document).ready(function() {
     loadMapData();
+    loadBuildingZones();
 });
 </script>
 {% endblock %}

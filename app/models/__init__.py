@@ -1,6 +1,6 @@
 from app.models.base import BaseModel
 from app.models.master_data import Category, Item, ItemDetail, Supplier, Warehouse
-from app.models.facilities import Unit, UnitDetail
+from app.models.facilities import Unit, UnitDetail, Building
 from app.models.inventory import Stock, StockTransaction
 from app.models.user import User, UserWarehouse, UserUnit
 from app.models.distribution import Distribution
@@ -16,7 +16,7 @@ from app.models.venue_loan import VenueLoan
 __all__ = [
     'BaseModel',
     'Category', 'Item', 'ItemDetail', 'Supplier', 'Warehouse',
-    'Unit', 'UnitDetail',
+    'Unit', 'UnitDetail', 'Building',
     'Stock', 'StockTransaction',
     'User', 'UserWarehouse', 'UserUnit',
     'Distribution', 'DistributionGroup', 'RejectedDistribution',
