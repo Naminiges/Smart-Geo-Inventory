@@ -11,6 +11,7 @@ bp = Blueprint('suppliers', __name__, url_prefix='/suppliers')
 
 @bp.route('/')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def index():
     """List all suppliers with search and pagination"""
     page = request.args.get('page', 1, type=int)

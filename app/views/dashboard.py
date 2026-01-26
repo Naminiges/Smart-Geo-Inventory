@@ -56,21 +56,16 @@ def warehouse_index():
 @role_required('admin')
 def admin_index():
     """Admin dashboard"""
-    from app.models import AssetRequest, UserUnit, Unit
+    from app.models import AssetRequest, UserUnit
 
     stats = get_dashboard_stats()
 
-    # Get pending request count (units with pending status)
-    pending_request_count = Unit.query.filter_by(status='pending').count()
-
-    # Get verified asset requests count
-    verified_request_count = AssetRequest.query.filter_by(status='verified').count()
+    # Jangan override pending_request_count, biarkan pakai context processor
+    # Context processor sudah menghitung AssetRequest dengan status 'pending'
 
     return render_template('dashboard/admin_index.html',
                          stats=stats,
-                         user=current_user,
-                         pending_request_count=pending_request_count,
-                         verified_request_count=verified_request_count)
+                         user=current_user)
 
 
 @bp.route('/field')

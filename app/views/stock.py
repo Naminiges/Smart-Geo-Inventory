@@ -21,6 +21,7 @@ bp = Blueprint('stock', __name__, url_prefix='/stock')
 
 @bp.route('/')
 @login_required
+@role_required('admin')
 def index():
     """Stock history page - only warehouse stock transactions"""
     # Get filter parameters
@@ -252,6 +253,7 @@ def index():
 
 @bp.route('/recap')
 @login_required
+@role_required('admin')
 def recap():
     """Annual recap/report page"""
     year = request.args.get('year', datetime.now().year, type=int)
@@ -397,6 +399,7 @@ def recap():
 
 @bp.route('/recap/pdf')
 @login_required
+@role_required('admin')
 def recap_pdf():
     """Generate professional PDF report using ReportLab with footer"""
     from app.models.procurement import Procurement
@@ -939,6 +942,7 @@ def recap_pdf():
 
 @bp.route('/per-unit')
 @login_required
+@role_required('admin')
 def per_unit():
     """Show list of all units with their stock summary"""
     from app.models import Unit
@@ -987,6 +991,7 @@ def per_unit():
 
 @bp.route('/per-unit/<int:unit_id>')
 @login_required
+@role_required('admin')
 def per_unit_detail(unit_id):
     """Show detailed stock for a specific unit (similar to unit-assets)"""
     from app.models import Unit
@@ -1169,6 +1174,7 @@ def remove():
 
 @bp.route('/low-stock')
 @login_required
+@role_required('admin')
 def low_stock():
     """Show low stock items"""
     threshold = request.args.get('threshold', 10, type=int)
@@ -1179,6 +1185,7 @@ def low_stock():
 
 @bp.route('/transactions')
 @login_required
+@role_required('admin')
 def transactions():
     """Show stock transaction history"""
     if current_user.is_warehouse_staff():
@@ -1196,6 +1203,7 @@ def transactions():
 
 @bp.route('/item/<int:item_id>')
 @login_required
+@role_required('admin')
 def item_stock(item_id):
     """Show stock for specific item across warehouses"""
     item = Item.query.get_or_404(item_id)

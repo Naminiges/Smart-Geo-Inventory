@@ -12,6 +12,7 @@ bp = Blueprint('items', __name__, url_prefix='/items')
 
 @bp.route('/categories')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def categories():
     """List all categories"""
     categories = Category.query.all()
@@ -43,13 +44,24 @@ def create_category():
 
 @bp.route('/')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def index():
-    """List all items with category filter"""
+    """List all items with category filter and search"""
     category_id = request.args.get('category_id', '', type=int)
+    search = request.args.get('search', '')
+
     query = Item.query
 
     if category_id:
         query = query.filter_by(category_id=category_id)
+
+    if search:
+        query = query.filter(
+            db.or_(
+                Item.name.ilike(f'%{search}%'),
+                Item.item_code.ilike(f'%{search}%')
+            )
+        )
 
     items = query.all()
     categories = Category.query.all()
@@ -85,6 +97,7 @@ def create():
 
 @bp.route('/<int:id>/details')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def details(id):
     """Show item details and list of item details (serial numbers)"""
     from app.models import Warehouse, Unit, Distribution, ReturnItem, VenueLoan
@@ -238,6 +251,7 @@ def create_detail():
 
 @bp.route('/barcode/<serial_number>')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def barcode(serial_number):
     """Generate barcode for item"""
     return generate_barcode(serial_number)
@@ -245,6 +259,7 @@ def barcode(serial_number):
 
 @bp.route('/search')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def search():
     """Search items"""
     query = request.args.get('q', '')

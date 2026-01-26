@@ -6,22 +6,12 @@
 
 {% block content %}
 <!-- Navigation Cards -->
-<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
     <a href="{{ url_for('stock.recap') }}" class="bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 block">
         <div class="flex items-center justify-between">
             <div>
                 <h5 class="text-lg font-semibold mb-1"><i class="fas fa-chart-line mr-2"></i>Laporan Tahunan</h5>
                 <p class="text-sm opacity-90">Lihat rekap barang masuk dan keluar</p>
-            </div>
-            <i class="fas fa-arrow-right text-2xl opacity-70"></i>
-        </div>
-    </a>
-
-    <a href="{{ url_for('stock.per_unit') }}" class="bg-emerald-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 block">
-        <div class="flex items-center justify-between">
-            <div>
-                <h5 class="text-lg font-semibold mb-1"><i class="fas fa-building mr-2"></i>Barang di Unit</h5>
-                <p class="text-sm opacity-90">Lihat stok barang di setiap unit</p>
             </div>
             <i class="fas fa-arrow-right text-2xl opacity-70"></i>
         </div>

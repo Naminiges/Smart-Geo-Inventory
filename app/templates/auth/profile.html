@@ -9,7 +9,7 @@
     <!-- Profile Header Card -->
     <div class="bg-white rounded-2xl shadow-xl overflow-hidden mb-6">
         <!-- Cover Background with Pattern -->
-        <div class="h-32 sm:h-40 bg-emerald-600 relative overflow-hidden">
+        <div class="h-32 sm:h-40 bg-gradient-to-r from-emerald-500 to-teal-600 relative overflow-hidden">
             <!-- Decorative Pattern -->
             <div class="absolute inset-0 opacity-10">
                 <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
@@ -27,26 +27,38 @@
         <div class="pt-8 pb-8 px-6 sm:px-10">
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div class="flex-1">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ user.name }}</h1>
-                    <p class="text-gray-500 text-lg mb-4">{{ user.email }}</p>
+                    <!-- Avatar with Initial -->
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-xl mb-4">
+                        <span class="text-white text-3xl sm:text-4xl font-bold">{{ user.name[0]|upper }}</span>
+                    </div>
 
-                    <!-- Role Badge -->
-                    {% set role_colors = {
-                        'admin': 'bg-purple-100 text-purple-800 border-purple-200',
-                        'warehouse_staff': 'bg-blue-100 text-blue-800 border-blue-200',
-                        'field_staff': 'bg-amber-100 text-amber-800 border-amber-200',
-                        'unit_staff': 'bg-green-100 text-green-800 border-green-200'
-                    } %}
-                    {% set role_labels = {
-                        'admin': 'Administrator',
-                        'warehouse_staff': 'Warehouse Staff',
-                        'field_staff': 'Field Staff',
-                        'unit_staff': 'Unit Staff'
-                    } %}
-                    <span class="inline-flex items-center px-4 py-2 {{ role_colors.get(user.role, 'bg-gray-100 text-gray-800 border-gray-200') }} rounded-full text-sm font-semibold border">
-                        <i class="fas fa-shield-alt mr-2"></i>
-                        {{ role_labels.get(user.role, user.role|replace('_', ' ')|title) }}
-                    </span>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{{ user.name }}</h1>
+                    <p class="text-gray-500 mb-3">{{ user.email }}</p>
+
+                    <!-- Role Badge & Status -->
+                    <div class="flex flex-wrap gap-2">
+                        {% set role_colors = {
+                            'admin': 'bg-purple-100 text-purple-800 border-purple-200',
+                            'warehouse_staff': 'bg-blue-100 text-blue-800 border-blue-200',
+                            'field_staff': 'bg-amber-100 text-amber-800 border-amber-200',
+                            'unit_staff': 'bg-green-100 text-green-800 border-green-200'
+                        } %}
+                        {% set role_labels = {
+                            'admin': 'Administrator',
+                            'warehouse_staff': 'Warehouse Staff',
+                            'field_staff': 'Field Staff',
+                            'unit_staff': 'Unit Staff'
+                        } %}
+                        <span class="inline-flex items-center px-3 py-1 {{ role_colors.get(user.role, 'bg-gray-100 text-gray-800 border-gray-200') }} rounded-full text-sm font-semibold border">
+                            <i class="fas fa-shield-alt mr-2 text-xs"></i>
+                            {{ role_labels.get(user.role, user.role|replace('_', ' ')|title) }}
+                        </span>
+
+                        <span class="inline-flex items-center px-3 py-1 {{ 'bg-green-100 text-green-800 border-green-200' if user.is_active else 'bg-red-100 text-red-800 border-red-200' }} rounded-full text-sm font-semibold border">
+                            <i class="fas {{ 'fa-check-circle' if user.is_active else 'fa-times-circle' }} mr-2 text-xs"></i>
+                            {{ 'Aktif' if user.is_active else 'Nonaktif' }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -58,8 +70,8 @@
         <div class="bg-white rounded-2xl shadow-lg">
             <div class="p-6 border-b border-gray-100">
                 <h2 class="text-lg font-semibold text-gray-800 flex items-center">
-                    <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center mr-3">
-                        <i class="fas fa-user text-emerald-600"></i>
+                    <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mr-3">
+                        <i class="fas fa-user text-blue-600"></i>
                     </div>
                     Informasi Akun
                 </h2>
