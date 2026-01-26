@@ -77,11 +77,6 @@
             <div class="mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <label class="block text-sm font-medium text-gray-700">Barang yang Akan Didistribusikan</label>
-                    <button type="button" id="addItemBtn"
-                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
-                        disabled>
-                        <i class="fas fa-plus mr-2"></i>Tambah Barang
-                    </button>
                 </div>
 
                 <!-- Items Container -->
@@ -95,6 +90,15 @@
                     <p class="text-gray-500">Pilih unit terlebih dahulu</p>
                     <p class="text-sm text-gray-400">Setelah memilih unit, Anda dapat menambahkan barang</p>
                 </div>
+            </div>
+
+            <!-- Add Item Button -->
+            <div class="mb-6">
+                <button type="button" id="addItemBtn"
+                        class=" w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        disabled>
+                        <i class="fas fa-plus mr-2"></i>Tambah Barang
+                    </button>
             </div>
 
             <!-- Notes -->
@@ -307,6 +311,25 @@
         const itemSelect = container.querySelector('.item-select');
         itemSelect.addEventListener('change', function () {
             const itemId = this.value;
+
+            // Check for duplicate items
+            const allItemSelects = document.querySelectorAll('.item-select');
+            let duplicateFound = false;
+            let duplicateName = '';
+
+            allItemSelects.forEach(select => {
+                if (select !== itemSelect && select.value === itemId && itemId !== '') {
+                    duplicateFound = true;
+                    duplicateName = select.options[select.selectedIndex].text;
+                }
+            });
+
+            if (duplicateFound) {
+                alert(`Barang "${duplicateName}" sudah dipilih!\n\nSilakan pilih barang yang lain atau hapus salah satu dari daftar.`);
+                itemSelect.value = '';
+                return;
+            }
+
             itemsData.push({
                 containerId: containerId,
                 itemId: itemId

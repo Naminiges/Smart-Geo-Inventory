@@ -9,8 +9,9 @@ bp = Blueprint('buildings', __name__, url_prefix='/buildings')
 
 @bp.route('/')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def index():
-    """Display all buildings - accessible by all roles"""
+    """Display all buildings - accessible by admin and warehouse staff only"""
     from app.models.facilities import UnitDetail
     buildings = Building.query.order_by(Building.code).all()
 
@@ -36,8 +37,9 @@ def index():
 
 @bp.route('/<int:building_id>')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def detail(building_id):
-    """Building detail page - accessible by all roles"""
+    """Building detail page - accessible by admin and warehouse staff only"""
     from app.models.facilities import UnitDetail
     building = Building.query.get_or_404(building_id)
 

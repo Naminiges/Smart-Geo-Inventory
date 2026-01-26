@@ -180,7 +180,7 @@
                     <div class="text-xs text-gray-600 space-y-1">
                         <p><i class="fas fa-map-marker-alt mr-1 text-red-500"></i>{{ detail.location }}</p>
                         {% if detail.distribution_date %}
-                        <p><i class="fas fa-calendar mr-1 text-green-500"></i>{{ detail.distribution_date.strftime('%d/%m/%Y %H:%M') }}</p>
+                        <p><i class="fas fa-calendar mr-1 text-green-500"></i>{{ detail.distribution_date|format_wib_datetime }}</p>
                         {% endif %}
                     </div>
                 </div>

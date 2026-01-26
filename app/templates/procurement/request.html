@@ -269,7 +269,7 @@
 
 <!-- Confirmation Modal -->
 <div id="confirmModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-32 mx-4 max-h-[90vh] overflow-y-auto">
         <div class="flex items-center mb-4">
             <div class="{% if is_admin %}bg-emerald-100{% else %}bg-blue-100{% endif %} rounded-full p-3 mr-4">
                 <i class="fas {% if is_admin %}fa-clipboard-check text-emerald-600{% else %}fa-clipboard-list text-blue-600{% endif %} text-xl"></i>
@@ -318,7 +318,7 @@
             <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
                 <i class="fas fa-times mr-1"></i> Batal
             </button>
-            <button type="button" onclick="submitForm()" class="px-4 py-2 {% if is_admin %}bg-emerald-500 hover:bg-emerald-600{% else %}bg-blue-500 hover:bg-blue-600{% endif %} text-white rounded-lg transition-colors">
+            <button type="button" onclick="submitForm()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">
                 <i class="fas fa-check mr-1"></i> Ya, Ajukan
             </button>
         </div>
@@ -359,6 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 newItemFields.classList.add('hidden');
             }
+
+            // Check for duplicate items
+            checkDuplicateItems();
         });
 
         // Remove item button
@@ -382,77 +385,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Form submission
-    form.addEventListener('submit', function(e) {
+    // Check for duplicate items
+    function checkDuplicateItems() {
         const itemCards = itemsContainer.querySelectorAll('.item-card');
-        const itemsData = [];
+        const selectedItems = [];
 
-        for (let card of itemCards) {
+        itemCards.forEach(card => {
             const itemSelect = card.querySelector('.item-select');
-            const itemQuantity = card.querySelector('.item-quantity');
-            const newItemName = card.querySelector('.new-item-name');
-            const newItemCategory = card.querySelector('.new-item-category');
-            const newItemUnit = card.querySelector('.new-item-unit');
+            const itemId = itemSelect.value;
 
-            const itemId = parseInt(itemSelect.value);
-            const quantity = parseInt(itemQuantity.value);
+            if (itemId && itemId !== '0' && itemId !== '-1') {
+                const itemName = itemSelect.options[itemSelect.selectedIndex].text;
 
-            // Validation
-            if (!itemId || itemId === 0) {
-                e.preventDefault();
-                alert('Harap pilih barang dari daftar atau pilih "Lainnya"!');
-                itemSelect.focus();
-                return false;
-            }
-
-            if (!quantity || quantity <= 0) {
-                e.preventDefault();
-                alert('Harap isi jumlah barang dengan benar!');
-                itemQuantity.focus();
-                return false;
-            }
-
-            // If new item, validate new item fields
-            if (itemId === -1) {
-                if (!newItemName.value.trim()) {
-                    e.preventDefault();
-                    alert('Harap isi nama barang baru!');
-                    newItemName.focus();
-                    return false;
+                if (selectedItems.includes(itemId)) {
+                    // Duplicate found!
+                    alert(`Barang "${itemName}" sudah dipilih!\n\nSilakan pilih barang yang lain atau hapus salah satu dari daftar.`);
+                    itemSelect.value = '0'; // Reset selection
+                    return;
                 }
 
-                if (!newItemCategory.value || newItemCategory.value === '0') {
-                    e.preventDefault();
-                    alert('Harap pilih kategori barang baru!');
-                    newItemCategory.focus();
-                    return false;
-                }
+                selectedItems.push(itemId);
             }
-
-            // Collect item data
-            const itemData = {
-                item_id: itemId,
-                quantity: quantity
-            };
-
-            if (itemId === -1) {
-                itemData.item_name = newItemName.value.trim();
-                itemData.item_category_id = parseInt(newItemCategory.value);
-                itemData.item_unit = newItemUnit.value.trim() || 'pcs';
-            }
-
-            itemsData.push(itemData);
-        }
-
-        // Add items data as hidden fields
-        for (let itemData of itemsData) {
-            const hiddenField = document.createElement('input');
-            hiddenField.type = 'hidden';
-            hiddenField.name = 'items';
-            hiddenField.value = JSON.stringify(itemData);
-            form.appendChild(hiddenField);
-        }
-    });
+        });
+    }
 });
 
 // Modal Functions
@@ -558,7 +513,48 @@ function closeConfirmModal() {
 }
 
 function submitForm() {
-    document.getElementById('procurementForm').submit();
+    const form = document.getElementById('procurementForm');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const itemCards = itemsContainer.querySelectorAll('.item-card');
+    const itemsData = [];
+
+    // Collect items data before submission
+    for (let card of itemCards) {
+        const itemSelect = card.querySelector('.item-select');
+        const itemQuantity = card.querySelector('.item-quantity');
+        const newItemName = card.querySelector('.new-item-name');
+        const newItemCategory = card.querySelector('.new-item-category');
+        const newItemUnit = card.querySelector('.new-item-unit');
+
+        const itemId = parseInt(itemSelect.value);
+        const quantity = parseInt(itemQuantity.value);
+
+        // Collect item data
+        const itemData = {
+            item_id: itemId,
+            quantity: quantity
+        };
+
+        if (itemId === -1) {
+            itemData.item_name = newItemName.value.trim();
+            itemData.item_category_id = parseInt(newItemCategory.value);
+            itemData.item_unit = newItemUnit.value.trim() || 'pcs';
+        }
+
+        itemsData.push(itemData);
+    }
+
+    // Add items data as hidden fields
+    for (let itemData of itemsData) {
+        const hiddenField = document.createElement('input');
+        hiddenField.type = 'hidden';
+        hiddenField.name = 'items';
+        hiddenField.value = JSON.stringify(itemData);
+        form.appendChild(hiddenField);
+    }
+
+    // Submit the form
+    form.submit();
 }
 
 // Close modal on outside click

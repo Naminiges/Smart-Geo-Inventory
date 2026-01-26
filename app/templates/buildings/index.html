@@ -47,29 +47,29 @@
                         <div class="text-sm text-gray-600 max-w-xs truncate">{{ building.address or '-' }}</div>
                     </td>
                     <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                             {{ building.floor_count }} lantai
                         </span>
                     </td>
 
                     <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                             {{ building_stats[building.id]['unit_count'] }} unit
                         </span>
                     </td>
                     <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                             {{ building_stats[building.id]['room_count'] }} ruang
                         </span>
                     </td>
                     <td class="px-6 py-4 text-center">
                         {% if building_stats[building.id]['has_zone'] %}
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        <span class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                             <i class="fas fa-check-circle"></i>
                             Ada Zona
                         </span>
                         {% else %}
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                        <span class="inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
                             <i class="fas fa-minus-circle"></i>
                             Belum Ada
                         </span>

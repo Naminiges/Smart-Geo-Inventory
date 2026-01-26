@@ -14,6 +14,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import HRFlowable
+from reportlab.pdfbase import pdfdoc
 import io
 
 bp = Blueprint('stock', __name__, url_prefix='/stock')
@@ -402,6 +403,16 @@ def recap():
 @role_required('admin')
 def recap_pdf():
     """Generate professional PDF report using ReportLab with footer"""
+    # Verify user is authenticated
+    if not current_user or not current_user.is_authenticated:
+        flash('Anda harus login untuk mengakses halaman ini.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    # Verify user is admin
+    if not current_user.is_admin():
+        flash('Anda tidak memiliki izin untuk mengakses halaman ini.', 'danger')
+        return redirect(url_for('dashboard.index'))
+
     from app.models.procurement import Procurement
     from app.models.master_data import ItemDetail
     from app.models.return_batch import ReturnBatch
@@ -410,7 +421,7 @@ def recap_pdf():
     from reportlab.lib.units import cm
     from reportlab.lib import colors
     from reportlab.platypus import (
-        SimpleDocTemplate, Table, TableStyle, Paragraph, 
+        SimpleDocTemplate, Table, TableStyle, Paragraph,
         Spacer, PageBreak, Frame, PageTemplate
     )
     from reportlab.pdfgen import canvas
@@ -420,54 +431,25 @@ def recap_pdf():
     year = request.args.get('year', datetime.now().year, type=int)
     now = datetime.now()
 
-    # Get data
-    if current_user.is_warehouse_staff():
-        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
-        if user_warehouse_ids:
-            procurements = Procurement.query.filter(
-                Procurement.warehouse_id.in_(user_warehouse_ids),
-                Procurement.status == 'completed',
-                func.extract('year', Procurement.completion_date) == year
-            ).all()
-            stock_out = StockTransaction.query.filter(
-                StockTransaction.warehouse_id.in_(user_warehouse_ids),
-                StockTransaction.transaction_type == 'OUT',
-                func.extract('year', StockTransaction.transaction_date) == year
-            ).all()
-            distributions = Distribution.query.filter(
-                Distribution.warehouse_id.in_(user_warehouse_ids),
-                func.extract('year', Distribution.created_at) == year
-            ).all()
-            return_batches = ReturnBatch.query.filter(
-                ReturnBatch.warehouse_id.in_(user_warehouse_ids),
-                ReturnBatch.status == 'confirmed',
-                func.extract('year', ReturnBatch.confirmed_at) == year
-            ).all()
-            obname_items = ItemDetail.query.filter(
-                ItemDetail.warehouse_id.in_(user_warehouse_ids),
-                ItemDetail.status == 'available'
-            ).all()
-        else:
-            procurements = stock_out = distributions = return_batches = obname_items = []
-    else:
-        procurements = Procurement.query.filter(
-            Procurement.status == 'completed',
-            func.extract('year', Procurement.completion_date) == year
-        ).all()
-        stock_out = StockTransaction.query.filter(
-            StockTransaction.transaction_type == 'OUT',
-            func.extract('year', StockTransaction.transaction_date) == year
-        ).all()
-        distributions = Distribution.query.filter(
-            func.extract('year', Distribution.created_at) == year
-        ).all()
-        return_batches = ReturnBatch.query.filter(
-            ReturnBatch.status == 'confirmed',
-            func.extract('year', ReturnBatch.confirmed_at) == year
-        ).all()
-        obname_items = ItemDetail.query.filter(
-            ItemDetail.status == 'available'
-        ).all()
+    # Get data (admin only - no warehouse filter needed)
+    procurements = Procurement.query.filter(
+        Procurement.status == 'completed',
+        func.extract('year', Procurement.completion_date) == year
+    ).all()
+    stock_out = StockTransaction.query.filter(
+        StockTransaction.transaction_type == 'OUT',
+        func.extract('year', StockTransaction.transaction_date) == year
+    ).all()
+    distributions = Distribution.query.filter(
+        func.extract('year', Distribution.created_at) == year
+    ).all()
+    return_batches = ReturnBatch.query.filter(
+        ReturnBatch.status == 'confirmed',
+        func.extract('year', ReturnBatch.confirmed_at) == year
+    ).all()
+    obname_items = ItemDetail.query.filter(
+        ItemDetail.status == 'available'
+    ).all()
 
     # Calculate totals
     total_procurement = sum(item.quantity for proc in procurements for item in proc.items)
@@ -924,6 +906,12 @@ def recap_pdf():
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
     content.append(note_table)
+
+    # ========== SET PDF METADATA ==========
+    doc.title = f'Laporan Rekap Tahunan - {year}'
+    doc.author = f'{current_user.name} ({current_user.email})'
+    doc.subject = f'Laporan Rekap Stok Tahun {year}'
+    doc.creator = 'Smart Geo Inventory System'
 
     # ========== BUILD PDF ==========
     doc.build(content, canvasmaker=FooterCanvas)

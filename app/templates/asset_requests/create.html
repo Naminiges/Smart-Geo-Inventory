@@ -209,7 +209,28 @@ document.addEventListener('DOMContentLoaded', function() {
         itemCard.querySelector('.item-number').textContent = itemCount + 1;
 
         // Add event listeners for this item
+        const itemSelect = itemCard.querySelector('.item-select');
         const removeBtn = itemCard.querySelector('.remove-item-btn');
+
+        // Check for duplicate items when selection changes
+        itemSelect.addEventListener('change', function() {
+            const allItemSelects = itemsContainer.querySelectorAll('.item-select');
+            let duplicateFound = false;
+            let duplicateName = '';
+
+            allItemSelects.forEach(select => {
+                if (select !== itemSelect && select.value === itemSelect.value && itemSelect.value !== '') {
+                    duplicateFound = true;
+                    duplicateName = select.options[select.selectedIndex].text;
+                }
+            });
+
+            if (duplicateFound) {
+                alert(`Aset "${duplicateName}" sudah dipilih!\n\nSilakan pilih aset yang lain atau hapus salah satu dari daftar.`);
+                itemSelect.value = '';
+                return;
+            }
+        });
 
         // Remove item button
         removeBtn.addEventListener('click', function() {

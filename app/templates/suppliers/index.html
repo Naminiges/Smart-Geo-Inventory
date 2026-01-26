@@ -72,7 +72,9 @@
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Telepon</th>
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Email</th>
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Alamat</th>
+                        {% if current_user.is_admin() %}
                         <th class="text-left py-3 px-2 text-sm font-medium text-gray-700">Aksi</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
