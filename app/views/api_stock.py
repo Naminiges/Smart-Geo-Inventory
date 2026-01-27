@@ -3,6 +3,8 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Stock, StockTransaction, Item
 from app.utils.decorators import role_required
+from app.utils.pagination_helpers import paginated_response
+from app.utils.cache_helpers import get_user_warehouse_ids
 
 bp = Blueprint('api_stock', __name__)
 
@@ -10,21 +12,26 @@ bp = Blueprint('api_stock', __name__)
 @bp.route('/')
 @login_required
 def api_list():
-    """Get all stock"""
-    if current_user.is_warehouse_staff():
-        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
-        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
-        if user_warehouse_ids:
-            stocks = Stock.query.filter(Stock.warehouse_id.in_(user_warehouse_ids)).all()
-        else:
-            stocks = []
-    else:
-        stocks = Stock.query.all()
+    """Get all stock with pagination"""
+    # Get base query
+    query = Stock.query
 
-    return jsonify({
-        'success': True,
-        'stocks': [stock.to_dict() for stock in stocks]
-    })
+    # Filter by user's warehouse access
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = get_user_warehouse_ids(current_user)
+        if user_warehouse_ids:
+            query = query.filter(Stock.warehouse_id.in_(user_warehouse_ids))
+        else:
+            query = query.filter(Stock.warehouse_id == -1)  # Return empty
+
+    # Apply eager loading for better performance
+    query = query.options(
+        db.joinedload(Stock.item),
+        db.joinedload(Stock.warehouse)
+    )
+
+    # Return paginated response
+    return jsonify(paginated_response(query, max_per_page=100))
 
 
 @bp.route('/transaction', methods=['POST'])
@@ -93,34 +100,41 @@ def api_low_stock():
 @bp.route('/transactions')
 @login_required
 def api_transactions():
-    """Get transaction history"""
-    if current_user.is_warehouse_staff():
-        # Get warehouse IDs from UserWarehouse assignments (many-to-many)
-        user_warehouse_ids = [uw.warehouse_id for uw in current_user.user_warehouses.all()]
-        if user_warehouse_ids:
-            transactions = StockTransaction.query.filter(
-                StockTransaction.warehouse_id.in_(user_warehouse_ids)
-            ).order_by(StockTransaction.transaction_date.desc()).limit(100).all()
-        else:
-            transactions = []
-    else:
-        transactions = StockTransaction.query.order_by(
-            StockTransaction.transaction_date.desc()
-        ).limit(100).all()
+    """Get transaction history with pagination"""
+    # Get base query
+    query = StockTransaction.query
 
-    return jsonify({
-        'success': True,
-        'transactions': [t.to_dict() for t in transactions]
-    })
+    # Filter by user's warehouse access
+    if current_user.is_warehouse_staff():
+        user_warehouse_ids = get_user_warehouse_ids(current_user)
+        if user_warehouse_ids:
+            query = query.filter(StockTransaction.warehouse_id.in_(user_warehouse_ids))
+        else:
+            query = query.filter(StockTransaction.warehouse_id == -1)  # Return empty
+
+    # Order by date descending (newest first)
+    query = query.order_by(StockTransaction.transaction_date.desc())
+
+    # Apply eager loading
+    query = query.options(
+        db.joinedload(StockTransaction.item),
+        db.joinedload(StockTransaction.warehouse)
+    )
+
+    # Return paginated response
+    return jsonify(paginated_response(query, max_per_page=100))
 
 
 @bp.route('/item/<int:item_id>')
 @login_required
 def api_item_stock(item_id):
     """Get stock for specific item"""
-    stocks = Stock.query.filter_by(item_id=item_id).all()
+    query = Stock.query.filter_by(item_id=item_id)
 
-    return jsonify({
-        'success': True,
-        'stocks': [stock.to_dict() for stock in stocks]
-    })
+    # Apply eager loading
+    query = query.options(
+        db.joinedload(Stock.item),
+        db.joinedload(Stock.warehouse)
+    )
+
+    return jsonify(paginated_response(query, max_per_page=100))

@@ -17,6 +17,22 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False  # Set to True for SQL query debugging
 
+    # Database Connection Pooling - Optimized for performance
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 20,              # Base pool size for concurrent connections
+        'max_overflow': 30,           # Additional connections when pool is full
+        'pool_timeout': 30,           # Timeout in seconds for getting connection
+        'pool_recycle': 3600,         # Recycle connections every hour (prevent stale)
+        'pool_pre_ping': True,        # Verify connections before using
+        'echo_pool': False,           # Set to True for pool debugging
+    }
+
+    # Caching Configuration
+    CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'SimpleCache'  # Use 'RedisCache' in production
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    CACHE_DEFAULT_TIMEOUT = 300  # 5 minutes default cache timeout
+    CACHE_KEY_PREFIX = 'sgi_'    # Prefix for cache keys
+
     # Session
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
@@ -61,6 +77,20 @@ class ProductionConfig(Config):
     DEBUG = False
     SESSION_COOKIE_SECURE = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+
+    # Production-specific optimizations
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 30,              # Larger pool for production
+        'max_overflow': 50,           # More overflow capacity
+        'pool_timeout': 30,
+        'pool_recycle': 3600,
+        'pool_pre_ping': True,
+    }
+
+    # Use Redis for caching in production
+    CACHE_TYPE = 'RedisCache'
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    CACHE_DEFAULT_TIMEOUT = 600  # 10 minutes for production
 
 
 class TestingConfig(Config):

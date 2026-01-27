@@ -4,6 +4,9 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect
+from flask_caching import Cache
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
 from app.utils.status_helper import translate_status, get_status_color, get_status_icon
@@ -14,6 +17,12 @@ login_manager = LoginManager()
 migrate = Migrate()
 cors = CORS()
 csrf = CSRFProtect()
+cache = Cache()
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 
 def create_app(config_name='default'):
@@ -28,6 +37,12 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     cors.init_app(app)
     csrf.init_app(app)
+    cache.init_app(app)
+    limiter.init_app(app)
+
+    # Register rate limit error handler
+    from app.utils.rate_limit_helpers import register_rate_limit_error_handler
+    register_rate_limit_error_handler(app)
 
     # Configure login manager
     login_manager.login_view = 'auth.login'
