@@ -6,6 +6,7 @@ from wtforms.validators import DataRequired, Length, Optional
 class CategoryForm(FlaskForm):
     """Form for creating/editing categories"""
     name = StringField('Nama Kategori', validators=[DataRequired(), Length(min=2, max=100)])
+    code = StringField('Kode Kategori', validators=[DataRequired(), Length(min=2, max=10)], description='Kode untuk prefix item code (contoh: JAR, ELE, SRV, MEB, LNY)')
     description = TextAreaField('Deskripsi', validators=[Optional()])
     submit = SubmitField('Simpan')
 

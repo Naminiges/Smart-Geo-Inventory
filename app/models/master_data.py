@@ -8,13 +8,14 @@ class Category(BaseModel):
     __tablename__ = 'categories'
 
     name = db.Column(db.String(100), nullable=False, unique=True)
+    code = db.Column(db.String(10), nullable=False, unique=True)  # Category code for item_code prefix (e.g., JAR, ELE, SRV)
     description = db.Column(db.Text)
 
     # Relationships
     items = db.relationship('Item', back_populates='category', lazy='dynamic')
 
     def __repr__(self):
-        return f'<Category {self.name}>'
+        return f'<Category {self.name} ({self.code})>'
 
 
 class Item(BaseModel):

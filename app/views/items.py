@@ -30,6 +30,7 @@ def create_category():
         try:
             category = Category(
                 name=form.name.data,
+                code=form.code.data.upper(),  # Convert to uppercase
                 description=form.description.data
             )
             category.save()
