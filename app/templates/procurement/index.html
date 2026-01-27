@@ -157,7 +157,6 @@
                 <tr class="border-b border-gray-200">
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Supplier</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
@@ -184,7 +183,6 @@
                         <span class="text-xs text-green-600">(Diterima: {{ procurement.total_received }}/{{ procurement.total_quantity }})</span>
                         {% endif %}
                     </td>
-                    <td class="py-3 px-4 text-gray-600 text-sm">{{ procurement.supplier.name if procurement.supplier else '-' }}</td>
                     <td class="py-3 px-4">
                         <span class="px-3 py-1 {{ procurement.status|get_status_color }} rounded-full text-xs font-semibold">
                             <i class="{{ procurement.status|get_status_icon }} mr-1"></i> {{ procurement.status|translate_status }}

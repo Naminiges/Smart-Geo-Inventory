@@ -32,7 +32,7 @@ def utc_to_wib(utc_datetime):
     return utc_datetime.astimezone(WIB)
 
 
-def format_wib_datetime(dt, format_str='%d/%m/%Y - %H:%M'):
+def format_wib_datetime(dt, format_str='%d/%m/%Y %H:%M'):
     """
     Format datetime to WIB (GMT+7) string
     Converts from UTC to WIB if needed

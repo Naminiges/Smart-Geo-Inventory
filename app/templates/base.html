@@ -23,7 +23,7 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='css/output.css') }}"
     />
-
+    
     {% block extra_css %}{% endblock %}
   </head>
   <body class="bg-gray-50">
@@ -331,6 +331,17 @@
             <span class="font-medium">Barang Kembali</span>
           </a>
 
+          <!-- Pemindahan Barang (Admin & Warehouse Staff Only) -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_transfer' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_transfer.index') }}"
+          >
+            <i
+              class="fas fa-exchange-alt w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_transfer' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Pemindahan Barang</span>
+          </a>
+
           <!-- Stok (All Users) -->
           {% if current_user.is_admin() %}
           <a
@@ -341,18 +352,6 @@
               class="fas fa-history w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'stock' in request.endpoint else 'text-gray-400' }}"
             ></i>
             <span class="font-medium">Riwayat Keluar Masuk</span>
-          </a>
-          {% endif %}
-          <!-- Supplier -->
-          {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
-          <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'suppliers' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
-            href="{{ url_for('suppliers.index') }}"
-          >
-            <i
-              class="fas fa-truck w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'suppliers' in request.endpoint else 'text-gray-400' }}"
-            ></i>
-            <span class="font-medium">Daftar Supplier</span>
           </a>
           {% endif %}
 

@@ -16,6 +16,8 @@ bp = Blueprint('units', __name__, url_prefix='/admin/units')
 @role_required('admin')
 def index():
     """List all units"""
+    from app.models import VenueLoan
+
     units = Unit.query.order_by(Unit.created_at.desc()).all()
 
     # Get statistics
@@ -24,6 +26,9 @@ def index():
     in_use_count = Unit.query.filter_by(status='in_use').count()
     maintenance_count = Unit.query.filter_by(status='maintenance').count()
 
+    # Get pending venue loans count
+    pending_loans_count = VenueLoan.query.filter_by(status='pending').count()
+
     return render_template('admin/units/index.html',
                          units=units,
                          stats={
@@ -31,7 +36,8 @@ def index():
                              'available': available_count,
                              'in_use': in_use_count,
                              'maintenance': maintenance_count
-                         })
+                         },
+                         pending_loans_count=pending_loans_count)
 
 
 @bp.route('/loans')
@@ -78,18 +84,13 @@ def create():
     """Create new unit"""
     form = UnitForm()
 
-    # Populate building choices
-    buildings = Building.query.order_by(Building.code).all()
-    form.building_id.choices = [(0, '-- Pilih Gedung --')] + [(b.id, f"{b.code} - {b.name}") for b in buildings]
-
     if form.validate_on_submit():
         try:
             # Create unit
             unit = Unit(
                 name=form.name.data,
                 address=form.address.data,
-                status=form.status.data,
-                building_id=form.building_id.data if form.building_id.data != 0 else None
+                status=form.status.data
             )
 
             # Set coordinates if provided
@@ -213,21 +214,12 @@ def edit(id):
     unit = Unit.query.get_or_404(id)
     form = UnitForm(obj=unit)
 
-    # Populate building choices
-    buildings = Building.query.order_by(Building.code).all()
-    form.building_id.choices = [(0, '-- Pilih Gedung --')] + [(b.id, f"{b.code} - {b.name}") for b in buildings]
-
     # Pre-fill coordinates if available
     if request.method == 'GET':
         coordinates = unit.get_coordinates()
         if coordinates:
             form.latitude.data = coordinates['latitude']
             form.longitude.data = coordinates['longitude']
-        # Set building_id
-        if unit.building_id:
-            form.building_id.data = unit.building_id
-        else:
-            form.building_id.data = 0
 
     if form.validate_on_submit():
         try:
@@ -235,11 +227,12 @@ def edit(id):
             unit.name = form.name.data
             unit.address = form.address.data
             unit.status = form.status.data
-            unit.building_id = form.building_id.data if form.building_id.data != 0 else None
 
             # Update coordinates if provided
             if form.latitude.data and form.longitude.data:
                 unit.set_coordinates(form.latitude.data, form.longitude.data)
+            else:
+                unit.geom = None
 
             unit.save()
             flash(f'Unit {unit.name} berhasil diupdate!', 'success')

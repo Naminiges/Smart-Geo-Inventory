@@ -41,31 +41,31 @@
         </div>
         <div class="flex gap-2">
             {% if asset_request.status == 'pending' and current_user.is_admin() %}
-            <a href="{{ url_for('asset_requests.verify', id=asset_request.id) }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                <i class="fas fa-check mr-2"></i>Verifikasi
+            <a href="{{ url_for('asset_requests.verify', id=asset_request.id) }}" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium text-sm">
+                <i class="fas fa-check mr-1"></i>Verifikasi
             </a>
-            <button type="button" onclick="toggleRejectModal()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                <i class="fas fa-times mr-2"></i>Tolak
+            <button type="button" onclick="toggleRejectModal()" class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                <i class="fas fa-times mr-1"></i>Tolak
             </button>
             {% endif %}
             {% if asset_request.status == 'verified' and (current_user.is_warehouse_staff() or current_user.is_admin()) %}
-            <a href="{{ url_for('asset_requests.distribute', id=asset_request.id) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                <i class="fas fa-truck mr-2"></i>Proses Distribusi
+            <a href="{{ url_for('asset_requests.distribute', id=asset_request.id) }}" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                <i class="fas fa-truck mr-1"></i>Proses Distribusi
             </a>
             {% endif %}
             {% if asset_request.status == 'distributing' and current_user.is_unit_staff() %}
-            <div class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg">
-                <i class="fas fa-truck mr-2"></i>Barang sedang didistribusikan
+            <div class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg font-medium text-sm">
+                <i class="fas fa-truck mr-1"></i>Barang sedang didistribusikan
             </div>
             {% endif %}
             {% if asset_request.status == 'verified' and current_user.is_unit_staff() %}
             {% if asset_request.distribution_id %}
-            <a href="{{ url_for('asset_requests.confirm_receipt', id=asset_request.id) }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                <i class="fas fa-check-circle mr-2"></i>Tandai Selesai
+            <a href="{{ url_for('asset_requests.confirm_receipt', id=asset_request.id) }}" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                <i class="fas fa-check-circle mr-1"></i>Tandai Selesai
             </a>
             {% else %}
-            <div class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg">
-                <i class="fas fa-clock mr-2"></i>Menunggu distribusi
+            <div class="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg font-medium text-sm">
+                <i class="fas fa-clock mr-1"></i>Menunggu distribusi
             </div>
             {% endif %}
             {% endif %}
@@ -398,7 +398,7 @@
                 </p>
 
                 {% if current_user.is_unit_staff() %}
-                <a href="{{ url_for('asset_requests.confirm_receipt', id=asset_request.id) }}" class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold mt-4">
+                <a href="{{ url_for('asset_requests.confirm_receipt', id=asset_request.id) }}" class="inline-flex items-center px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium mt-4">
                     <i class="fas fa-check-circle mr-2"></i>
                     Konfirmasi Penerimaan Barang
                 </a>
@@ -451,6 +451,7 @@
     </div>
     {% endif %}
 </div>
+</div>
 
 <!-- Reject Modal -->
 {% if current_user.is_admin() and asset_request.status == 'pending' %}
@@ -470,10 +471,10 @@
                 </div>
             </div>
             <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
-                <button type="button" onclick="toggleRejectModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                <button type="button" onclick="toggleRejectModal()" class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
                     Batal
                 </button>
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                <button type="submit" class="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
                     <i class="fas fa-times mr-2"></i>Tolak Permohonan
                 </button>
             </div>

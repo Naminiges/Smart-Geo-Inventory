@@ -98,34 +98,15 @@ class ItemDetail(BaseModel):
     serial_unit = db.Column(db.String(100))  # Serial unit internal untuk tracking aset
     status = db.Column(db.String(50), default='available')  # available, processing, maintenance, used, in_unit, returned
     specification_notes = db.Column(db.Text)
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'))
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'))
 
     # Relationships
     item = db.relationship('Item', back_populates='item_details')
-    supplier = db.relationship('Supplier', back_populates='item_details')
     warehouse = db.relationship('Warehouse', back_populates='item_details')
     distribution = db.relationship('Distribution', uselist=False, back_populates='item_detail')
 
     def __repr__(self):
         return f'<ItemDetail {self.serial_number}>'
-
-
-class Supplier(BaseModel):
-    """Supplier model for vendor management"""
-    __tablename__ = 'suppliers'
-
-    name = db.Column(db.String(200), nullable=False)
-    contact_person = db.Column(db.String(100))
-    phone = db.Column(db.String(20))
-    email = db.Column(db.String(120))
-    address = db.Column(db.Text)
-
-    # Relationships
-    item_details = db.relationship('ItemDetail', back_populates='supplier', lazy='dynamic')
-
-    def __repr__(self):
-        return f'<Supplier {self.name}>'
 
 
 class Warehouse(BaseModel):

@@ -284,7 +284,7 @@ class ProcurementItem(BaseModel):
             return False, f'Serial number sudah terdaftar di pengiriman sebelumnya: {", ".join(duplicates[:5])}{"..." if len(duplicates) > 5 else ""}'
 
         # Create ItemDetail records immediately upon receipt
-        # Get procurement object to access supplier_id
+        # Get procurement object
         from app.models.procurement import Procurement
         procurement = Procurement.query.filter(
             Procurement.items.any(id=self.id)
@@ -311,7 +311,6 @@ class ProcurementItem(BaseModel):
                 serial_number=serial_number,  # Manual for networking, auto-generated for non-networking
                 serial_unit=serial_unit,  # Always auto-generated
                 status='available',
-                supplier_id=procurement.supplier_id if procurement else None,
                 warehouse_id=None,  # Will be assigned when distributed/added to stock
                 specification_notes=f'Diterima melalui procurement #{procurement.id if procurement else "N/A"}'
             )
@@ -351,7 +350,6 @@ class Procurement(BaseModel):
     """Procurement model for tracking purchase requests and orders"""
     __tablename__ = 'procurements'
 
-    supplier_id = db.Column(db.Integer, db.ForeignKey('suppliers.id'), nullable=True)
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'), nullable=True)  # Warehouse tujuan
     # item_id and quantity removed - now using ProcurementItem for multiple items
     # item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=True)
@@ -397,7 +395,6 @@ class Procurement(BaseModel):
     notes = db.Column(db.Text)  # Catatan tambahan
 
     # Relationships
-    supplier = db.relationship('Supplier', backref='procurements')
     warehouse = db.relationship('Warehouse', backref='procurements')
     # item = db.relationship('Item', backref='procurements') - removed, now using ProcurementItem
     requester = db.relationship('User', foreign_keys=[requested_by], backref='requested_procurements')
@@ -434,7 +431,7 @@ class Procurement(BaseModel):
         """Check if procurement can be completed"""
         return self.status == 'received' and self.is_fully_received
 
-    def approve(self, user_id, supplier_id=None):
+    def approve(self, user_id):
         """Approve procurement request"""
         if self.status != 'pending':
             return False, 'Hanya pengadaan dengan status pending yang bisa disetujui'
@@ -442,8 +439,6 @@ class Procurement(BaseModel):
         self.status = 'approved'
         self.approved_by = user_id
         self.approval_date = datetime.utcnow()
-        if supplier_id:
-            self.supplier_id = supplier_id
         self.save()
         return True, 'Pengadaan berhasil disetujui'
 

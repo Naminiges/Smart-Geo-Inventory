@@ -16,8 +16,8 @@
 </div>
 
 <!-- Building Info -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+<div class="grid gap-6 mb-6">
+    <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div class="flex items-start justify-between mb-4">
             <div>
                 <h5 class="text-xl font-bold text-gray-900">{{ building.name }}</h5>
@@ -29,8 +29,16 @@
             </div>
             {% if current_user.is_admin() %}
             <div class="flex gap-2">
+                <a href="{{ url_for('buildings.edit', id=building.id) }}"
+                   class="px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium text-sm">
+                    <i class="fas fa-edit mr-1"></i>Edit Gedung
+                </a>
+                <a href="{{ url_for('buildings.create_room', building_id=building.id) }}"
+                   class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">
+                    <i class="fas fa-plus mr-1"></i>Tambah Ruangan
+                </a>
                 <a href="{{ url_for('buildings.edit_zone', building_id=building.id) }}"
-                   class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                   class="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm">
                     <i class="fas fa-draw-polygon mr-1"></i>Edit Zona Spasial
                 </a>
             </div>
@@ -47,8 +55,12 @@
                 <p class="text-sm font-medium text-gray-900">{{ building.floor_count }} lantai</p>
             </div>
             <div>
-                <p class="text-sm text-gray-500 mb-1">Total Unit</p>
-                <p class="text-sm font-medium text-gray-900">{{ units_with_rooms|length }} unit</p>
+                <p class="text-sm text-gray-500 mb-1">Status Zona</p>
+                {% if building.zone_json %}
+                <span class="text-sm font-medium text-gray-900">Ada</span>
+                {% else %}
+                <span class="text-lg font-bold text-gray-400">-</span>
+                {% endif %}
             </div>
             <div>
                 <p class="text-sm text-gray-500 mb-1">Status Zona</p>
@@ -64,93 +76,77 @@
             </div>
         </div>
     </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h5 class="text-lg font-semibold text-gray-900 mb-4">Statistik</h5>
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Total Unit</span>
-                <span class="text-lg font-bold text-emerald-600">{{ units_with_rooms|length }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Jumlah Lantai</span>
-                <span class="text-lg font-bold text-blue-600">{{ building.floor_count }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-600">Status Zona</span>
-                {% if building.zone_json %}
-                <span class="text-lg font-bold text-purple-600">Ada</span>
-                {% else %}
-                <span class="text-lg font-bold text-gray-400">-</span>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- Units in Building -->
+<!-- Rooms in Building -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200">
     <div class="p-6 border-b border-gray-200">
-        <h5 class="text-lg font-semibold text-gray-900">Unit dengan Ruangan di Gedung Ini</h5>
-        <p class="text-sm text-gray-600 mt-1">Daftar unit yang memiliki ruangan di {{ building.name }}</p>
+        <h5 class="text-lg font-semibold text-gray-900">Daftar Ruangan</h5>
+        <p class="text-sm text-gray-600 mt-1">Ruangan-ruangan di {{ building.name }}</p>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full">
             <thead class="bg-gray-50 border-b border-gray-200">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nama Unit</th>
-                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Markas</th>
-                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Jumlah Ruangan</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Daftar Ruangan</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nama Ruangan</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Lantai</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Deskripsi</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Barang Terdistribusi</th>
                     <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
-                {% for item in units_with_rooms %}
+                {% for room in rooms %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4">
-                        <span class="text-sm font-medium text-gray-900">{{ item.unit.name }}</span>
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        {% if item.unit.building %}
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {% if item.unit.building.id == building.id %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-600{% endif %}">
-                            {{ item.unit.building.code }}
-                        </span>
-                        {% else %}
-                        <span class="text-gray-400 text-xs">-</span>
-                        {% endif %}
-                    </td>
-                    <td class="px-6 py-4 text-center">
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {{ item.room_count }} ruang
+                            {{ room.room_name }}
                         </span>
                     </td>
                     <td class="px-6 py-4">
-                        <div class="flex flex-wrap gap-1">
-                            {% for room in item.rooms[:3] %}
-                            <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
-                                {{ room.room_name }}
-                            </span>
-                            {% endfor %}
-                            {% if item.rooms|length > 3 %}
-                            <span class="inline-flex items-center px-2 py-1 rounded text-xs bg-gray-100 text-gray-700">
-                                +{{ item.rooms|length - 3 }} lainnya
-                            </span>
-                            {% endif %}
-                        </div>
+                        <span class="text-sm text-gray-600">{{ room.floor or '-' }}</span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm text-gray-600 max-w-xs truncate">{{ room.description or '-' }}</span>
                     </td>
                     <td class="px-6 py-4 text-center">
-                        <a href="{{ url_for('units.detail', id=item.unit.id) }}"
-                           class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                            <i class="fas fa-eye mr-1"></i>Detail
-                        </a>
+                        <button onclick="viewRoomItems({{ room.id }}, '{{ room.room_name }}')"
+                                class="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">
+                            <i class="fas fa-box"></i>
+                            <span>Lihat Barang</span>
+                        </button>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        {% if current_user.is_admin() %}
+                        <div class="flex items-center justify-center gap-2">
+                            <a href="{{ url_for('buildings.edit_room', room_id=room.id) }}"
+                               class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors duration-150"
+                               title="Edit Ruangan">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button data-room-id="{{ room.id }}" data-room-name="{{ room.room_name }}"
+                                    onclick="confirmDeleteRoom(this)"
+                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                                    title="Hapus Ruangan">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% else %}
+                        <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
                     <td colspan="5" class="px-6 py-12 text-center text-gray-500">
-                        <i class="fas fa-box-open text-4xl mb-3 text-gray-300"></i>
-                        <p class="text-sm">Belum ada unit yang memiliki ruangan di gedung ini.</p>
+                        <i class="fas fa-door-open text-4xl mb-3 text-gray-300"></i>
+                        <p class="text-sm">Belum ada ruangan di gedung ini.</p>
+                        {% if current_user.is_admin() %}
+                        <a href="{{ url_for('buildings.create_room', building_id=building.id) }}"
+                           class="inline-flex items-center mt-3 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm">
+                            <i class="fas fa-plus mr-2"></i>Tambah Ruangan
+                        </a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
@@ -158,4 +154,185 @@
         </table>
     </div>
 </div>
+
+<!-- Modal: Daftar Barang di Ruangan -->
+<div id="roomItemsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+        <!-- Modal Header -->
+        <div class="bg-emerald-600 px-6 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-white" id="modalRoomName">Barang di Ruangan</h3>
+                <p class="text-emerald-100 text-sm" id="modalBuildingName"></p>
+            </div>
+            <button onclick="closeRoomItemsModal()" class="text-white hover:text-emerald-200 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <!-- Loading State -->
+            <div id="modalLoading" class="hidden text-center py-8">
+                <i class="fas fa-spinner fa-spin text-4xl text-emerald-600 mb-4"></i>
+                <p class="text-gray-600">Memuat data barang...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="modalEmpty" class="hidden text-center py-8">
+                <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-600">Belum ada barang yang terdistribusi di ruangan ini.</p>
+            </div>
+
+            <!-- Items Table -->
+            <div id="modalContent" class="hidden">
+                <div class="mb-4">
+                    <p class="text-sm text-gray-600">
+                        <span class="font-semibold text-gray-900" id="modalItemsCount">0</span> barang ditemukan
+                    </p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Kode Barang</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nama Barang</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Kategori</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nomor Seri</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tgl Distribusi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalItemsTable" class="divide-y divide-gray-200">
+                            <!-- Items will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Error State -->
+            <div id="modalError" class="hidden text-center py-8">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-4"></i>
+                <p class="text-gray-600">Terjadi kesalahan saat memuat data.</p>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+            <button onclick="closeRoomItemsModal()" class="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                <i class="fas fa-times mr-2"></i>Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if current_user.is_admin() %}
+<form id="deleteRoomForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+
+<script>
+function confirmDeleteRoom(button) {
+    const roomId = button.getAttribute('data-room-id');
+    const roomName = button.getAttribute('data-room-name');
+    if (confirm(`Apakah Anda yakin ingin menghapus ruangan "${roomName}"?`)) {
+        const form = document.getElementById('deleteRoomForm');
+        form.action = `/buildings/rooms/${roomId}/delete`;
+        form.submit();
+    }
+}
+
+// Function to view items in a room
+function viewRoomItems(roomId, roomName) {
+    const modal = document.getElementById('roomItemsModal');
+    const modalRoomName = document.getElementById('modalRoomName');
+    const modalBuildingName = document.getElementById('modalBuildingName');
+    const modalLoading = document.getElementById('modalLoading');
+    const modalEmpty = document.getElementById('modalEmpty');
+    const modalContent = document.getElementById('modalContent');
+    const modalError = document.getElementById('modalError');
+    const modalItemsTable = document.getElementById('modalItemsTable');
+    const modalItemsCount = document.getElementById('modalItemsCount');
+
+    // Reset modal state
+    modalLoading.classList.remove('hidden');
+    modalEmpty.classList.add('hidden');
+    modalContent.classList.add('hidden');
+    modalError.classList.add('hidden');
+
+    // Set room name in modal header
+    modalRoomName.textContent = `Barang di Ruangan: ${roomName}`;
+    modalBuildingName.textContent = `Gedung: {{ building.name }}`;
+
+    // Show modal
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    // Fetch items data
+    $.get(`/buildings/rooms/${roomId}/items`, function(data) {
+        modalLoading.classList.add('hidden');
+
+        if (data.success) {
+            if (data.items.length === 0) {
+                modalEmpty.classList.remove('hidden');
+            } else {
+                modalItemsCount.textContent = data.items_count;
+                modalItemsTable.innerHTML = '';
+
+                data.items.forEach(function(item) {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    row.innerHTML = `
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                ${item.item_code}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm font-medium text-gray-900">${item.item_name}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-gray-600">${item.category}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-gray-600 font-mono">${item.serial_number}</span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="text-sm text-gray-600">${item.distributed_date}</span>
+                        </td>
+                    `;
+                    modalItemsTable.appendChild(row);
+                });
+
+                modalContent.classList.remove('hidden');
+            }
+        } else {
+            modalError.classList.remove('hidden');
+        }
+    }).fail(function() {
+        modalLoading.classList.add('hidden');
+        modalError.classList.remove('hidden');
+    });
+}
+
+// Function to close modal
+function closeRoomItemsModal() {
+    const modal = document.getElementById('roomItemsModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeRoomItemsModal();
+    }
+});
+
+// Close modal when clicking outside
+document.getElementById('roomItemsModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeRoomItemsModal();
+    }
+});
+</script>
 {% endblock %}

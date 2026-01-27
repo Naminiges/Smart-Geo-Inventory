@@ -4,7 +4,6 @@ from app.views.dashboard import bp
 from app.views.installations import bp
 from app.views.stock import bp
 from app.views.items import bp
-from app.views.suppliers import bp
 from app.views.map import bp
 from app.views.procurement import bp
 from app.views.users import bp
@@ -17,6 +16,5 @@ from app.views.api_dashboard import bp
 from app.views.api_installations import bp
 from app.views.api_stock import bp
 from app.views.api_items import bp
-from app.views.api_suppliers import bp
 from app.views.api_map import bp
 from app.views.api_procurement import bp

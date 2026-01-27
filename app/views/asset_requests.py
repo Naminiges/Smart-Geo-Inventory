@@ -166,14 +166,21 @@ def create():
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     # GET request - prepare data
+    from app.models.facilities import UnitDetail
+    from app.models import Building
+
     items = Item.query.all()
-    unit_details = UnitDetail.query.filter_by(unit_id=user_unit.unit_id).all()
+
+    # Get all rooms from all buildings (not limited by user's unit)
+    all_rooms = UnitDetail.query.join(Building).order_by(Building.code, UnitDetail.room_name).all()
+
+    # Format: "GD.A - GD.A 0201"
+    unit_details_choices = [(room.id, f"{room.building.code} - {room.room_name}") for room in all_rooms]
 
     return render_template('asset_requests/create.html',
                          form=form,
                          items=items,
-                         unit_details=unit_details,
-                         unit=user_unit.unit)
+                         unit_details=unit_details_choices)
 
 
 @bp.route('/<int:id>')

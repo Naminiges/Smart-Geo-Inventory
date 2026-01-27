@@ -341,12 +341,17 @@ def create():
     form.field_staff_id.choices = [(u.id, u.name) for u in User.query.filter_by(role='field_staff').all()]
     form.unit_id.choices = [(u.id, u.name) for u in Unit.query.all()]
 
-    # Dynamically load unit details based on selected unit
-    selected_unit_id = request.args.get('unit_id', type=int)
-    if selected_unit_id:
-        form.unit_detail_id.choices = [(ud.id, ud.room_name) for ud in UnitDetail.query.filter_by(unit_id=selected_unit_id).all()]
-    else:
-        form.unit_detail_id.choices = []
+    # Load all room details from all buildings
+    from app.models.facilities import UnitDetail
+    from app.models import Building
+
+    all_rooms = UnitDetail.query.join(Building).order_by(Building.code, UnitDetail.room_name).all()
+
+    # Format: "GD.A - GD.A 0201"
+    form.unit_detail_id.choices = [(0, '-- Pilih Ruangan --')] + [
+        (room.id, f"{room.building.code} - {room.room_name}")
+        for room in all_rooms
+    ]
 
     if form.validate_on_submit():
         try:
@@ -552,7 +557,15 @@ def batch_detail(id):
     requires_verification = ref_distribution.draft_created_by is not None
 
     # Get distributions that have verification photos (received by unit)
-    verified_distributions = [dist for dist in batch_distributions if dist.verification_photo is not None]
+    # Check both individual distribution photos and distribution group photos
+    verified_distributions = []
+    for dist in batch_distributions:
+        # Check if distribution has individual verification photo
+        if dist.verification_photo is not None:
+            verified_distributions.append(dist)
+        # Check if distribution belongs to a group with verification photo
+        elif dist.distribution_group and dist.distribution_group.verification_photo is not None:
+            verified_distributions.append(dist)
 
     return render_template('installations/batch_detail.html',
                          ref_distribution=ref_distribution,
@@ -857,9 +870,18 @@ def create_general_distribution():
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     # GET request - show form
+    from app.models.facilities import UnitDetail
+    from app.models import Building
+
     warehouses = Warehouse.query.all() if current_user.is_admin() else []
     units = Unit.query.all()
     items = Item.query.all()
+
+    # Get all rooms from all buildings for unit_detail dropdown
+    all_rooms = UnitDetail.query.join(Building).order_by(Building.code, UnitDetail.room_name).all()
+
+    # Format: "GD.A - GD.A 0201"
+    unit_details_choices = [(room.id, f"{room.building.code} - {room.room_name}") for room in all_rooms]
 
     # Get warehouse_id for current user
     user_warehouse_id = get_user_warehouse_id(current_user)
@@ -868,6 +890,7 @@ def create_general_distribution():
                          warehouses=warehouses,
                          units=units,
                          items=items,
+                         unit_details=unit_details_choices,
                          user_warehouse_id=user_warehouse_id)
 
 
@@ -1032,14 +1055,17 @@ def api_available_items_general(warehouse_id, item_id):
 @bp.route('/api/unit/<int:unit_id>/details')
 @login_required
 def api_unit_details(unit_id):
-    """API endpoint to get unit details (rooms) for a unit"""
+    """API endpoint to get all rooms from all buildings"""
     try:
-        unit_details = UnitDetail.query.filter_by(unit_id=unit_id).all()
+        # Get all rooms from all buildings, ordered by building code then room name
+        from app.models import Building
+        unit_details = UnitDetail.query.join(Building).order_by(Building.code, UnitDetail.room_name).all()
 
         details_data = [{
             'id': ud.id,
-            'room_name': ud.room_name,
-            'floor': ud.floor
+            'room_name': f"{ud.building.code} - {ud.room_name}",  # Format: GD.A - GD.A 0201
+            'floor': ud.floor,
+            'building_code': ud.building.code
         } for ud in unit_details]
 
         return jsonify({

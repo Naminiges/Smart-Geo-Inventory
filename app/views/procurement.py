@@ -1,11 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Procurement, Supplier, Item, User, Warehouse, Category
+from app.models import Procurement, Item, User, Warehouse, Category
 from app.models.procurement import ProcurementItem
 from app.forms import (
     ProcurementRequestForm,
-    ProcurementApprovalForm,
     GoodsReceiptForm,
     ProcurementCompleteForm
 )
@@ -13,6 +12,32 @@ from app.utils.decorators import role_required
 from datetime import datetime
 
 bp = Blueprint('procurement', __name__, url_prefix='/procurement')
+
+
+def generate_item_code(category_id):
+    """Generate item code based on category code"""
+    category = Category.query.get(category_id)
+    if not category or not category.code:
+        # Fallback if category has no code
+        return f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    prefix = category.code.upper()
+
+    # Find the last item code with this prefix
+    last_item = Item.query.filter(Item.item_code.like(f'{prefix}-%')).order_by(Item.item_code.desc()).first()
+
+    if last_item and last_item.item_code:
+        # Extract the number from the last item code (e.g., JAR-001 -> 001)
+        try:
+            last_number = int(last_item.item_code.split('-')[1])
+            new_number = last_number + 1
+        except (IndexError, ValueError):
+            new_number = 1
+    else:
+        new_number = 1
+
+    # Format: PREFIX-001 (3 digits)
+    return f"{prefix}-{new_number:03d}"
 
 
 @bp.route('/')
@@ -101,22 +126,17 @@ def _create_procurement_request(is_admin=False):
             items_data = request.form.getlist('items')
             request_notes = form.request_notes.data
 
-            # For admin: Get supplier and warehouse
+            # For admin: Get warehouse
             if is_admin:
-                supplier_id = request.form.get('supplier_id', type=int)
                 warehouse_id = request.form.get('warehouse_id', type=int)
-
-                if not supplier_id:
-                    flash('Silakan pilih supplier!', 'danger')
-                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all(), warehouses=Warehouse.query.all(), is_admin=is_admin)
 
                 if not warehouse_id:
                     flash('Silakan pilih warehouse tujuan!', 'danger')
-                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all(), warehouses=Warehouse.query.all(), is_admin=is_admin)
+                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all(), is_admin=is_admin)
 
             if not items_data or len(items_data) == 0:
                 flash('Minimal harus ada satu barang yang diminta!', 'danger')
-                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
             # Validate and process items
             valid_items = []
@@ -129,16 +149,19 @@ def _create_procurement_request(is_admin=False):
                     # Barang baru - langsung buat item baru di tabel items
                     if not item_data.get('item_name'):
                         flash('Nama barang baru harus diisi!', 'danger')
-                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                     if not item_data.get('item_category_id') or item_data.get('item_category_id') == 0:
                         flash('Kategori barang harus dipilih!', 'danger')
-                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                     # Buat item baru langsung di tabel items
+                    # Generate item code based on category
+                    item_code = generate_item_code(item_data.get('item_category_id'))
+
                     new_item = Item(
                         name=item_data.get('item_name'),
-                        item_code=f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}-{len(valid_items)}",
+                        item_code=item_code,
                         category_id=item_data.get('item_category_id'),
                         unit=item_data.get('item_unit') or 'pcs'
                     )
@@ -154,7 +177,7 @@ def _create_procurement_request(is_admin=False):
                     # Barang existing
                     if not item_data.get('item_id') or item_data.get('item_id') == 0:
                         flash('Harap pilih barang dari daftar atau pilih "Lainnya"', 'danger')
-                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+                        return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                     valid_items.append({
                         'item_id': item_data.get('item_id'),
@@ -164,7 +187,7 @@ def _create_procurement_request(is_admin=False):
 
             if not valid_items:
                 flash('Tidak ada barang valid yang diminta!', 'danger')
-                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+                return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
             # Create procurement
             if is_admin:
@@ -174,14 +197,13 @@ def _create_procurement_request(is_admin=False):
                     status='approved',  # Directly approved
                     requested_by=current_user.id,
                     request_date=datetime.now(),
-                    supplier_id=supplier_id,
                     approved_by=current_user.id,
                     approval_date=datetime.now(),
                     warehouse_id=warehouse_id  # Set warehouse tujuan
                 )
                 procurement.save()
 
-                success_message = f'Pengadaan berhasil dibuat dan disetujui dengan {len(valid_items)} barang! Supplier: {procurement.supplier.name if procurement.supplier else "N/A"}'
+                success_message = f'Pengadaan berhasil dibuat dan disetujui dengan {len(valid_items)} barang!'
             else:
                 # Warehouse staff creates procurement - needs approval
                 # Get warehouse dari user yang login
@@ -190,7 +212,7 @@ def _create_procurement_request(is_admin=False):
 
                 if not user_warehouse:
                     flash('Anda belum terassign ke warehouse manapun. Hubungi admin.', 'danger')
-                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), suppliers=Supplier.query.all() if is_admin else [], warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
+                    return render_template('procurement/request.html', form=form, items=Item.query.all(), categories=Category.query.all(), warehouses=Warehouse.query.all() if is_admin else [], is_admin=is_admin)
 
                 procurement = Procurement(
                     request_notes=request_notes,
@@ -220,7 +242,6 @@ def _create_procurement_request(is_admin=False):
     # GET request - prepare data for template
     items = Item.query.all()
     categories = Category.query.all()
-    suppliers = Supplier.query.all() if is_admin else []
     warehouses = Warehouse.query.all() if is_admin else []
 
     # Use same template for both admin and warehouse staff
@@ -228,7 +249,6 @@ def _create_procurement_request(is_admin=False):
                          form=form,
                          items=items,
                          categories=categories,
-                         suppliers=suppliers,
                          warehouses=warehouses,
                          is_admin=is_admin)
 
@@ -246,36 +266,31 @@ def detail(id):
 @login_required
 @role_required('admin')
 def approve(id):
-    """Step 3: Admin approves and selects supplier"""
+    """Step 3: Admin approves procurement request"""
     procurement = Procurement.query.get_or_404(id)
 
     if procurement.status != 'pending':
         flash('Hanya permohonan dengan status pending yang bisa disetujui.', 'warning')
         return redirect(url_for('procurement.detail', id=id))
 
-    form = ProcurementApprovalForm()
-    form.supplier_id.choices = [(s.id, s.name) for s in Supplier.query.all()]
-
-    if form.validate_on_submit():
+    if request.method == 'POST':
         try:
-            success, message = procurement.approve(
-                user_id=current_user.id,
-                supplier_id=form.supplier_id.data
-            )
+            success, message = procurement.approve(user_id=current_user.id)
 
             if success:
-                if form.notes.data:
-                    procurement.notes = form.notes.data
+                notes = request.form.get('notes')
+                if notes:
+                    procurement.notes = notes
                 procurement.save()
 
-                flash(f'{message} Supplier telah dipilih.', 'success')
+                flash(message, 'success')
                 return redirect(url_for('procurement.detail', id=id))
             else:
                 flash(message, 'danger')
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('procurement/approve.html', procurement=procurement, form=form)
+    return render_template('procurement/approve.html', procurement=procurement)
 
 
 @bp.route('/<int:id>/reject', methods=['POST'])
@@ -404,7 +419,7 @@ def receive_goods(id):
             if success:
                 # Check if fully received
                 if procurement.is_fully_received:
-                    flash(f'{message} Semua barang sudah lengkap! Siap untuk diselesaikan.', 'success')
+                    flash(f'{message}', 'success')
                 else:
                     flash(f'{message} Anda bisa melakukan penerimaan lagi untuk sisa barang.', 'info')
                 return redirect(url_for('procurement.detail', id=id))

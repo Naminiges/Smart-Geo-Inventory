@@ -148,7 +148,16 @@ function loadMapData() {
 
 // Load Building Zones with Units info
 function loadBuildingZones() {
+    console.log('Loading building zones...');
     $.get('/api/map/buildings', function(data) {
+        console.log('Building zones data received:', data);
+        console.log('Number of features:', data.features.length);
+
+        if (data.features.length === 0) {
+            console.warn('No building zone features found!');
+            return;
+        }
+
         L.geoJSON(data, {
             style: function(feature) {
                 return {
@@ -160,6 +169,7 @@ function loadBuildingZones() {
             },
             onEachFeature: function (feature, layer) {
                 var props = feature.properties;
+                console.log('Processing building:', props.code, props.name);
 
                 // Add building location marker if coordinates exist
                 if (props.latitude && props.longitude) {
@@ -186,6 +196,7 @@ function loadBuildingZones() {
 
                     marker.bindPopup(popupContent);
                     marker.addTo(buildingZoneLayer);
+                    console.log('Building marker added for:', props.code);
                 }
 
                 // Bind popup to the zone polygon as well
@@ -206,10 +217,14 @@ function loadBuildingZones() {
                 popupContent += '</div>';
                 popupContent += '</div>';
                 layer.bindPopup(popupContent);
+                console.log('Zone polygon added for:', props.code);
             }
         }).addTo(buildingZoneLayer);
-    }).fail(function() {
-        console.log('Failed to load building zones');
+
+        console.log('Building zones loaded successfully!');
+    }).fail(function(xhr, status, error) {
+        console.error('Failed to load building zones:', status, error);
+        console.error('Response:', xhr.responseText);
     });
 }
 

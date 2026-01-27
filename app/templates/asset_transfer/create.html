@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block title %}Pindahkan Barang - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Pindahkan Barang{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="flex items-center gap-2 text-sm text-gray-600">
+        <a href="{{ url_for('asset_transfer.index') }}" class="hover:text-emerald-600">
+            <i class="fas fa-exchange-alt"></i> Pemindahan
+        </a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span>Form Pemindahan</span>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="mb-4 p-4 rounded-lg border {% if category == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800{% elif category == 'danger' %}bg-red-50 border-red-200 text-red-800{% elif category == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            <div class="flex items-center">
+                <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-times-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                <span>{{ message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- One form wrapping everything -->
+<form method="POST" action="{{ url_for('asset_transfer.create') }}" id="transferForm">
+    {{ form.hidden_tag() }}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- LEFT COLUMN - Source (Lokasi Saat Ini) -->
+        <div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center mb-6">
+                    <div class="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mr-3">
+                        <i class="fas fa-arrow-up text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Lokasi Saat Ini</h3>
+                        <p class="text-sm text-gray-500">Pilih lokasi asal barang</p>
+                    </div>
+                </div>
+
+                <!-- Source Unit -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Unit Asal <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.source_unit_id(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors", id="source_unit_id") }}
+                    {% if form.source_unit_id.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.source_unit_id.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Source Item -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Barang yang Dipindahkan <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.source_item_detail_id(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50", id="source_item_detail_id") }}
+                    <p class="mt-1 text-sm text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Pilih unit di atas untuk melihat daftar barang
+                    </p>
+                    {% if form.source_item_detail_id.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.source_item_detail_id.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Current Location Info -->
+                <div id="current_location_info" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <i class="fas fa-map-marker-alt text-blue-600 mt-0.5 mr-3"></i>
+                        <div>
+                            <p class="text-sm font-semibold text-blue-900">Lokasi Saat Ini:</p>
+                            <p class="text-sm text-blue-800" id="current_unit"></p>
+                            <p class="text-xs text-blue-600 mt-1" id="current_room"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN - Target (Lokasi Tujuan) -->
+        <div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center mb-6">
+                <div class="inline-flex items-center justify-center w-10 h-10 bg-emerald-100 rounded-lg mr-3">
+                    <i class="fas fa-arrow-down text-emerald-600"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Lokasi Tujuan</h3>
+                    <p class="text-sm text-gray-500">Pilih lokasi tujuan barang</p>
+                </div>
+            </div>
+
+            <!-- Same Unit Check -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Pindah ke Unit yang Sama <span class="text-red-500">*</span>
+                </label>
+                {{ form.target_same_unit(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors", id="target_same_unit") }}
+                <p class="mt-1 text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Pilih "Ya" jika hanya memindahkan ke ruangan berbeda dalam unit yang sama
+                </p>
+            </div>
+
+            <!-- Target Unit (Conditional) -->
+            <div class="mb-5" id="target_unit_container">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Unit Tujuan <span class="text-red-500">*</span>
+                </label>
+                {{ form.target_unit_id(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50", id="target_unit_id") }}
+                {% if form.target_unit_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.target_unit_id.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Target Room -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Ruangan Tujuan <span class="text-red-500">*</span>
+                </label>
+                {{ form.target_unit_detail_id(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50", id="target_unit_detail_id", readonly=false) }}
+                <p class="mt-1 text-sm text-gray-500" id="target_room_help">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Pilih barang di atas untuk melihat daftar ruangan
+                </p>
+                {% if form.target_unit_detail_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.target_unit_detail_id.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                {{ form.notes(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors", rows="3", placeholder="Tambahkan catatan jika diperlukan...") }}
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex gap-3 pt-4 border-t">
+                <button type="submit" class="flex-1 px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed" id="submitBtn" disabled>
+                    <i class="fas fa-exchange-alt mr-2"></i>
+                    Pindahkan Barang
+                </button>
+                <a href="{{ url_for('asset_transfer.index') }}" class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fas fa-times mr-2"></i>
+                    Batal
+                </a>
+            </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceUnitSelect = document.getElementById('source_unit_id');
+    const sourceItemSelect = document.getElementById('source_item_detail_id');
+    const targetSameUnitSelect = document.getElementById('target_same_unit');
+    const targetUnitSelect = document.getElementById('target_unit_id');
+    const targetRoomSelect = document.getElementById('target_unit_detail_id');
+    const targetUnitContainer = document.getElementById('target_unit_container');
+    const currentLocationInfo = document.getElementById('current_location_info');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Check if there are form errors (validation failed)
+    var hasErrors = {% if form.source_item_detail_id.errors or form.target_unit_detail_id.errors %}true{% else %}false{% endif %};
+    var previouslySelectedSourceItem = {% if form.source_item_detail_id.data %}{{ form.source_item_detail_id.data }}{% else %}null{% endif %};
+    var previouslySelectedTargetRoom = {% if form.target_unit_detail_id.data %}{{ form.target_unit_detail_id.data }}{% else %}null{% endif %};
+    var previouslySelectedSourceUnit = {% if form.source_unit_id.data %}{{ form.source_unit_id.data }}{% else %}null{% endif %};
+    var previouslySelectedSameUnit = {% if form.target_same_unit.data %}"{{ form.target_same_unit.data }}"{% else %}null{% endif %};
+
+    let selectedSourceItem = null;
+
+    // Initialize fields as disabled via JavaScript (not HTML attribute)
+    // This allows us to enable them programmatically before form submission
+    sourceItemSelect.disabled = true;
+    targetUnitSelect.disabled = true;
+    targetRoomSelect.disabled = true;
+
+    // Load items when source unit is selected
+    sourceUnitSelect.addEventListener('change', function() {
+        const unitId = this.value;
+        if (unitId) {
+            fetch(`/asset-transfer/api/unit/${unitId}/items`)
+                .then(response => response.json())
+                .then(data => {
+                    sourceItemSelect.innerHTML = '<option value="">-- Pilih Barang --</option>';
+                    sourceItemSelect.classList.remove('bg-gray-50');
+                    if (data.success && data.items.length > 0) {
+                        data.items.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = `${item.item_name} (${item.serial_number})`;
+                            option.dataset.currentRoom = item.current_room;
+                            option.dataset.unitDetailId = item.unit_detail_id;
+                            sourceItemSelect.appendChild(option);
+                        });
+                        sourceItemSelect.disabled = false;
+
+                        // Restore previously selected value if exists
+                        if (previouslySelectedSourceItem) {
+                            sourceItemSelect.value = previouslySelectedSourceItem;
+                            // Trigger change event to load rooms
+                            sourceItemSelect.dispatchEvent(new Event('change'));
+                        }
+                    } else {
+                        sourceItemSelect.innerHTML = '<option value="">-- Tidak ada barang --</option>';
+                        sourceItemSelect.disabled = true;
+                        sourceItemSelect.classList.add('bg-gray-50');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                    sourceItemSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                    sourceItemSelect.disabled = true;
+                    sourceItemSelect.classList.add('bg-gray-50');
+                });
+        } else {
+            sourceItemSelect.innerHTML = '<option value="">-- Pilih Unit Terlebih Dahulu --</option>';
+            sourceItemSelect.disabled = true;
+            sourceItemSelect.classList.add('bg-gray-50');
+        }
+        // Reset current location info
+        currentLocationInfo.classList.add('hidden');
+        submitBtn.disabled = true;
+    });
+
+    // Add event listener to target room select
+    targetRoomSelect.addEventListener('change', function() {
+        console.log('Target room changed to:', this.value);
+        // Value is automatically updated when select changes
+    });
+
+    // Show current location and load target rooms when item is selected
+    sourceItemSelect.addEventListener('change', function() {
+        console.log('Source item changed to:', this.value);
+
+        const selectedOption = this.options[this.selectedIndex];
+        selectedSourceItem = {
+            unitDetailId: selectedOption.dataset.unit_detail_id,
+            currentRoom: selectedOption.dataset.current_room,
+            unitId: sourceUnitSelect.value
+        };
+
+        if (this.value && selectedSourceItem.currentRoom) {
+            // Show current location
+            document.getElementById('current_unit').textContent = sourceUnitSelect.options[sourceUnitSelect.selectedIndex].text;
+            document.getElementById('current_room').textContent = selectedSourceItem.currentRoom;
+            currentLocationInfo.classList.remove('hidden');
+
+            // Load all rooms for target
+            loadTargetRooms();
+        } else {
+            currentLocationInfo.classList.add('hidden');
+            submitBtn.disabled = true;
+        }
+    });
+
+    // Handle "same unit" checkbox
+    targetSameUnitSelect.addEventListener('change', function() {
+        if (this.value === 'yes') {
+            // Same unit - copy source unit to target and disable target unit selection
+            targetUnitSelect.value = sourceUnitSelect.value;
+            targetUnitSelect.disabled = true;
+            targetUnitSelect.classList.add('bg-gray-50');
+            targetUnitContainer.style.display = 'none';
+        } else {
+            // Different unit - enable target unit selection
+            targetUnitSelect.disabled = false;
+            targetUnitSelect.classList.remove('bg-gray-50');
+            targetUnitContainer.style.display = 'block';
+        }
+        // Reload target rooms when this changes
+        if (selectedSourceItem) {
+            loadTargetRooms();
+        }
+    });
+
+    // Load target rooms when target unit changes
+    targetUnitSelect.addEventListener('change', function() {
+        if (selectedSourceItem) {
+            loadTargetRooms();
+        }
+    });
+
+    // Load target rooms
+    function loadTargetRooms() {
+        fetch('/asset-transfer/api/rooms')
+            .then(response => response.json())
+            .then(data => {
+                targetRoomSelect.innerHTML = '<option value="">-- Pilih Ruangan Tujuan --</option>';
+                targetRoomSelect.classList.remove('bg-gray-50');
+                targetRoomSelect.disabled = false; // Enable so value can be submitted
+                if (data.success && data.rooms.length > 0) {
+                    data.rooms.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = room.label;
+                        targetRoomSelect.appendChild(option);
+                    });
+
+                    // Restore previously selected value if exists
+                    if (previouslySelectedTargetRoom) {
+                        targetRoomSelect.value = previouslySelectedTargetRoom;
+                        submitBtn.disabled = false;
+                    }
+                } else {
+                    targetRoomSelect.innerHTML = '<option value="">-- Tidak ada ruangan --</option>';
+                    targetRoomSelect.classList.add('bg-gray-50');
+                }
+                submitBtn.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error loading rooms:', error);
+                targetRoomSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                targetRoomSelect.classList.add('bg-gray-50');
+                submitBtn.disabled = true;
+            });
+    }
+
+    // Add event listener to target room select
+    targetRoomSelect.addEventListener('change', function() {
+        // Value is automatically updated when select changes
+    });
+
+    // CRITICAL: Enable ALL disabled fields right before form submission
+    // This ensures disabled fields' values are included in the form submission
+    document.getElementById('transferForm').addEventListener('submit', function(e) {
+        console.log('=== FORM SUBMIT DEBUG ===');
+        console.log('BEFORE enable:');
+        console.log('sourceItemSelect.disabled:', sourceItemSelect.disabled);
+        console.log('sourceItemSelect.value:', sourceItemSelect.value);
+        console.log('targetUnitSelect.disabled:', targetUnitSelect.disabled);
+        console.log('targetUnitSelect.value:', targetUnitSelect.value);
+        console.log('targetRoomSelect.disabled:', targetRoomSelect.disabled);
+        console.log('targetRoomSelect.value:', targetRoomSelect.value);
+
+        // Enable ALL fields so their values are submitted
+        const wasDisabled = {
+            sourceItem: sourceItemSelect.disabled,
+            targetUnit: targetUnitSelect.disabled,
+            targetRoom: targetRoomSelect.disabled
+        };
+
+        sourceItemSelect.disabled = false;
+        targetUnitSelect.disabled = false;
+        targetRoomSelect.disabled = false;
+
+        console.log('AFTER enable:');
+        console.log('sourceItemSelect.disabled:', sourceItemSelect.disabled);
+        console.log('sourceItemSelect.value:', sourceItemSelect.value);
+        console.log('targetUnitSelect.disabled:', targetUnitSelect.disabled);
+        console.log('targetUnitSelect.value:', targetUnitSelect.value);
+        console.log('targetRoomSelect.disabled:', targetRoomSelect.disabled);
+        console.log('targetRoomSelect.value:', targetRoomSelect.value);
+        console.log('========================');
+
+        // Continue with form submission - fields are now enabled
+    });
+
+    // If form has errors, reload data on page load
+    if (hasErrors) {
+        if (previouslySelectedSourceUnit) {
+            // Trigger source unit change to load items
+            sourceUnitSelect.dispatchEvent(new Event('change'));
+        }
+
+        if (previouslySelectedSameUnit) {
+            targetSameUnitSelect.value = previouslySelectedSameUnit;
+            targetSameUnitSelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
+{% endblock %}

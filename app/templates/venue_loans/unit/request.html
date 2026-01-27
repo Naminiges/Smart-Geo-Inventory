@@ -8,7 +8,7 @@
 <div class="max-w-4xl mx-auto">
     <!-- Back Button -->
     <div class="mb-4">
-        <a href="{{ url_for('asset_loans.unit_index') }}" class="inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+        <a href="{{ url_for('asset_loans.unit_index') }}" class="inline-flex items-center px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
             <i class="fas fa-arrow-left mr-2"></i> Kembali
         </a>
     </div>
@@ -107,10 +107,10 @@
 
             <!-- Submit Button -->
             <div class="flex items-center justify-end gap-3">
-                <a href="{{ url_for('venue_loans.unit_index') }}" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+                <a href="{{ url_for('venue_loans.unit_index') }}" class="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
                     <i class="fas fa-times mr-2"></i>Batal
                 </a>
-                <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <button type="submit" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                     <i class="fas fa-paper-plane mr-2"></i>Ajukan Permohonan
                 </button>
             </div>
@@ -170,10 +170,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const end = endDatetime.value;
 
         if (unitDetailId && start && end) {
+            // Get CSRF token
+            const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
             fetch('/venue-loans/api/check-availability', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     unit_detail_id: unitDetailId,
@@ -181,7 +185,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     end_datetime: end
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.available) {
                     availabilityStatus.innerHTML = `<span class="text-green-600"><i class="fas fa-check-circle mr-1"></i>${data.message}</span>`;
@@ -190,7 +199,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                availabilityStatus.innerHTML = '<span class="text-gray-500">Gagal mengecek ketersediaan</span>';
+                console.error('Error checking availability:', error);
+                availabilityStatus.innerHTML = '<span class="text-red-600"><i class="fas fa-exclamation-triangle mr-1"></i>Ruangan sedang tidak tersedia atau tidak memenuhi. Silakan coba lagi.</span>';
             });
         }
     }

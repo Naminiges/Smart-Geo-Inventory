@@ -5,7 +5,6 @@
 {% block page_title %}Detail Peminjaman Tempat{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
     <!-- Back Button -->
     <div class="mb-4">
         <a href="{{ url_for('units.index') }}" class="inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
@@ -176,7 +175,6 @@
             {% endif %}
         </div>
     </div>
-</div>
 
 <!-- Reject Modal -->
 <div id="rejectModal" class="hidden fixed inset-0 backdrop-blur-sm bg-gray-900/40 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">

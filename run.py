@@ -21,7 +21,7 @@ def make_shell_context():
 @app.cli.command()
 def init_db():
     """Initialize the database with sample data"""
-    from app.models import User, Warehouse, Category, Item, Supplier
+    from app.models import User, Warehouse, Category, Item
 
     print("Creating database tables...")
     db.create_all()
@@ -97,16 +97,6 @@ def init_db():
         category_id=category1.id
     )
     item2.save()
-
-    # Create supplier
-    supplier = Supplier(
-        name='PT Teknologi Indonesia',
-        contact_person='Budi Santoso',
-        phone='08123456789',
-        email='sales@teknologi.co.id',
-        address='Jl. Teknologi No. 123, Jakarta'
-    )
-    supplier.save()
 
     print("Database initialized successfully!")
     print("Login credentials:")

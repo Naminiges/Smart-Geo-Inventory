@@ -3,12 +3,38 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import (
     UnitProcurement, UnitProcurementItem, Unit,
-    Supplier, Item, User, Warehouse
+    Item, User, Warehouse, Category
 )
 from app.utils.decorators import role_required
 from datetime import datetime
 
 bp = Blueprint('api_unit_procurement', __name__)
+
+
+def generate_item_code(category_id):
+    """Generate item code based on category code"""
+    category = Category.query.get(category_id)
+    if not category or not category.code:
+        # Fallback if category has no code
+        return f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    prefix = category.code.upper()
+
+    # Find the last item code with this prefix
+    last_item = Item.query.filter(Item.item_code.like(f'{prefix}-%')).order_by(Item.item_code.desc()).first()
+
+    if last_item and last_item.item_code:
+        # Extract the number from the last item code (e.g., JAR-001 -> 001)
+        try:
+            last_number = int(last_item.item_code.split('-')[1])
+            new_number = last_number + 1
+        except (IndexError, ValueError):
+            new_number = 1
+    else:
+        new_number = 1
+
+    # Format: PREFIX-001 (3 digits)
+    return f"{prefix}-{new_number:03d}"
 
 
 # ==================== UNIT STAFF API ====================
@@ -112,10 +138,22 @@ def create_request():
                 item_id = item_data['item_id']
             elif item_data.get('item_name'):
                 # Create new item
+                # Generate item code based on category
+                category_id = item_data.get('item_category_id')
+                if not category_id:
+                    # Rollback and return error
+                    unit_procurement.delete()
+                    return jsonify({
+                        'success': False,
+                        'message': 'Kategori barang harus dipilih untuk barang baru'
+                    }), 400
+
+                item_code = generate_item_code(category_id)
+
                 new_item = Item(
                     name=item_data['item_name'],
-                    item_code=f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}-{item_data.get('item_name', 'unknown')}",
-                    category_id=item_data.get('item_category_id'),
+                    item_code=item_code,
+                    category_id=category_id,
                     unit=item_data.get('item_unit', 'pcs')
                 )
                 new_item.save()
@@ -358,7 +396,7 @@ def approve_request(id):
 
         return jsonify({
             'success': True,
-            'message': f'{message} Supplier telah dipilih.',
+            'message': f'{message}',
             'data': procurement.to_dict()
         })
     else:

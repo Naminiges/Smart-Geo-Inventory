@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models import (
-    UnitProcurement, UnitProcurementItem, Unit, Supplier,
+    UnitProcurement, UnitProcurementItem, Unit,
     Item, User, Warehouse, Category, Procurement, ProcurementItem
 )
 from app.forms.unit_procurement_forms import (
@@ -15,6 +15,32 @@ from app.utils.decorators import role_required
 from datetime import datetime
 
 bp = Blueprint('unit_procurement', __name__, url_prefix='/unit-procurement')
+
+
+def generate_item_code(category_id):
+    """Generate item code based on category code"""
+    category = Category.query.get(category_id)
+    if not category or not category.code:
+        # Fallback if category has no code
+        return f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    prefix = category.code.upper()
+
+    # Find the last item code with this prefix
+    last_item = Item.query.filter(Item.item_code.like(f'{prefix}-%')).order_by(Item.item_code.desc()).first()
+
+    if last_item and last_item.item_code:
+        # Extract the number from the last item code (e.g., JAR-001 -> 001)
+        try:
+            last_number = int(last_item.item_code.split('-')[1])
+            new_number = last_number + 1
+        except (IndexError, ValueError):
+            new_number = 1
+    else:
+        new_number = 1
+
+    # Format: PREFIX-001 (3 digits)
+    return f"{prefix}-{new_number:03d}"
 
 
 # ==================== UNIT STAFF ROUTES ====================
@@ -108,9 +134,12 @@ def create_request():
                                              unit=user_unit)
 
                     # Buat item baru langsung di tabel items
+                    # Generate item code based on category
+                    item_code = generate_item_code(item_data.get('item_category_id'))
+
                     new_item = Item(
                         name=item_data.get('item_name'),
-                        item_code=f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}-{len(valid_items)}",
+                        item_code=item_code,
                         category_id=item_data.get('item_category_id'),
                         unit=item_data.get('item_unit') or 'pcs'
                     )

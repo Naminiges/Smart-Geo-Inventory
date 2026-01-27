@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Procurement, Supplier, Item, User, Warehouse, Category
+from app.models import Procurement, Item, User, Warehouse, Category
 from app.utils.decorators import role_required
 from datetime import datetime
 

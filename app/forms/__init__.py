@@ -1,12 +1,10 @@
 from app.forms.auth_forms import LoginForm, RegistrationForm
 from app.forms.item_forms import CategoryForm, ItemForm, ItemDetailForm
 from app.forms.stock_forms import StockForm, StockTransactionForm
-from app.forms.supplier_forms import SupplierForm
 from app.forms.installation_forms import DistributionForm, InstallationForm
-from app.forms.warehouse_forms import WarehouseForm, UnitForm, UnitDetailForm
+from app.forms.warehouse_forms import WarehouseForm, BuildingForm, UnitForm, UnitDetailForm
 from app.forms.procurement_forms import (
     ProcurementRequestForm,
-    ProcurementApprovalForm,
     GoodsReceiptForm,
     ProcurementCompleteForm
 )
@@ -22,16 +20,15 @@ from app.forms.asset_loan_forms import (
     AssetLoanItemReturnVerifyForm,
     AssetLoanItemUploadProofForm
 )
+from app.forms.asset_transfer_forms import AssetTransferForm
 
 __all__ = [
     'LoginForm', 'RegistrationForm',
     'CategoryForm', 'ItemForm', 'ItemDetailForm',
     'StockForm', 'StockTransactionForm',
-    'SupplierForm',
     'DistributionForm', 'InstallationForm',
-    'WarehouseForm', 'UnitForm', 'UnitDetailForm',
+    'WarehouseForm', 'BuildingForm', 'UnitForm', 'UnitDetailForm',
     'ProcurementRequestForm',
-    'ProcurementApprovalForm',
     'GoodsReceiptForm',
     'ProcurementCompleteForm',
     'UserForm',
@@ -45,5 +42,6 @@ __all__ = [
     'AssetLoanReturnRequestForm',
     'AssetLoanReturnApproveForm',
     'AssetLoanItemReturnVerifyForm',
-    'AssetLoanItemUploadProofForm'
+    'AssetLoanItemUploadProofForm',
+    'AssetTransferForm'
 ]

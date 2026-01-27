@@ -5,7 +5,7 @@ Centralizes common query patterns across the application
 
 from flask_login import current_user
 from app import db
-from app.models import Item, Category, Supplier, UserWarehouse, UserUnit
+from app.models import Item, Category, UserWarehouse, UserUnit
 
 
 def get_user_warehouse_query(model_class):
@@ -144,7 +144,7 @@ def invalidate_related_caches(model_instance):
     model_name = model_instance.__class__.__name__
 
     # Invalidate form choices cache
-    if model_name in ['Item', 'Category', 'Supplier']:
+    if model_name in ['Item', 'Category']:
         invalidate_form_choices()
 
     # Invalidate dashboard stats

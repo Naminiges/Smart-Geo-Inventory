@@ -12,6 +12,5 @@ class UnitForm(FlaskForm):
         ('in_use', 'In Use'),
         ('maintenance', 'Maintenance')
     ], validators=[DataRequired()])
-    building_id = SelectField('Gedung', coerce=int, validators=[Optional()])
     latitude = FloatField('Latitude', validators=[Optional(), NumberRange(min=-90, max=90)])
     longitude = FloatField('Longitude', validators=[Optional(), NumberRange(min=-180, max=180)])

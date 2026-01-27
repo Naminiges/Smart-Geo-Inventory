@@ -9,13 +9,6 @@ class ProcurementRequestForm(FlaskForm):
     submit = SubmitField('Ajukan Permohonan')
 
 
-class ProcurementApprovalForm(FlaskForm):
-    """Form for admin to approve and select supplier (Step 3)"""
-    supplier_id = SelectField('Pilih Supplier', coerce=int, validators=[DataRequired()])
-    notes = TextAreaField('Catatan Admin', validators=[Optional()])
-    submit = SubmitField('Setujui dan Pilih Supplier')
-
-
 class GoodsReceiptForm(FlaskForm):
     """Form for recording goods receipt with serial numbers (Step 4-5)"""
     receipt_number = StringField('Nomor Tanda Terima', validators=[DataRequired(), Length(min=3)])

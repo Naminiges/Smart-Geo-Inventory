@@ -206,9 +206,6 @@ def create_detail():
         from app.models import Warehouse
         form.warehouse_id.choices = [(w.id, w.name) for w in Warehouse.query.all()]
 
-    from app.models import Supplier
-    form.supplier_id.choices = [(0, 'Tanpa Supplier')] + [(s.id, s.name) for s in Supplier.query.all()]
-
     if form.validate_on_submit():
         try:
             item_detail = ItemDetail(

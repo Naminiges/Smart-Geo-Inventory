@@ -80,12 +80,11 @@ def get_form_choices():
     if cached_choices is not None:
         return cached_choices
 
-    from app.models import Item, Category, Supplier
+    from app.models import Item, Category
 
     choices = {
         'items': [(i.id, f"{i.item_code} - {i.name}") for i in Item.query.all()],
         'categories': [(c.id, c.name) for c in Category.query.all()],
-        'suppliers': [(s.id, s.name) for s in Supplier.query.all()],
     }
 
     cache.set(cache_key, choices, timeout=300)

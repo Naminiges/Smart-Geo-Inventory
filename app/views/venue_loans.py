@@ -304,11 +304,19 @@ def api_check_availability():
     end_datetime_str = request.json.get('end_datetime')
 
     if not all([unit_detail_id, start_datetime_str, end_datetime_str]):
-        return jsonify({'available': False, 'message': 'Missing parameters'})
+        return jsonify({'available': False, 'message': 'Parameter tidak lengkap'}), 400
 
     try:
+        # Parse datetime
         start_datetime = datetime.strptime(start_datetime_str, '%Y-%m-%dT%H:%M')
         end_datetime = datetime.strptime(end_datetime_str, '%Y-%m-%dT%H:%M')
+
+        # Validate datetime
+        if start_datetime >= end_datetime:
+            return jsonify({'available': False, 'message': 'Waktu selesai harus lebih besar dari waktu mulai'}), 400
+
+        if start_datetime < datetime.now():
+            return jsonify({'available': False, 'message': 'Waktu mulai tidak boleh di masa lalu'}), 400
 
         # Check for conflicting loans
         conflicting_loans = VenueLoan.query.filter(
@@ -326,5 +334,9 @@ def api_check_availability():
 
         return jsonify({'available': True, 'message': 'Ruangan tersedia'})
 
+    except ValueError as e:
+        return jsonify({'available': False, 'message': f'Format tanggal/waktu tidak valid: {str(e)}'}), 400
     except Exception as e:
-        return jsonify({'available': False, 'message': str(e)})
+        import traceback
+        traceback.print_exc()
+        return jsonify({'available': False, 'message': f'Terjadi kesalahan: {str(e)}'}), 500
