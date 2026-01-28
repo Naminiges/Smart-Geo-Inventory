@@ -1,240 +1,20 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="overflow-x-hidden">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Login - SAPA PSI</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
-
-    <style>
-        /* Animated background orbs */
-        .bg-orb {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(100px);
-            opacity: 0.4;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .orb-1 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, #10b981 0%, transparent 70%);
-            top: -100px;
-            right: -100px;
-            animation: float 20s ease-in-out infinite;
-        }
-
-        .orb-2 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, #14b8a6 0%, transparent 70%);
-            bottom: -150px;
-            left: -150px;
-            animation: float 25s ease-in-out infinite reverse;
-        }
-
-        .orb-3 {
-            width: 300px;
-            height: 300px;
-            background: radial-gradient(circle, #34d399 0%, transparent 70%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation: pulse 15s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translate(0, 0); }
-            50% { transform: translate(30px, 30px); }
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-            50% { opacity: 0.5; transform: translate(-50%, -50%) scale(1.2); }
-        }
-
-        /* Glass effect */
-        .glass {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-        }
-
-        /* Input styling */
-        .input-field {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            border: 2px solid #e5e7eb;
-            border-radius: 0.75rem;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background: #f9fafb;
-        }
-
-        .input-field:focus {
-            outline: none;
-            border-color: #10b981;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
-        }
-
-        /* Button styling */
-        .btn-primary {
-            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #047857 0%, #059669 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.4);
-        }
-
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-
-        /* Fade in animation */
-        .fade-in {
-            animation: fadeIn 0.8s ease forwards;
-        }
-
-        .fade-in-up {
-            animation: fadeInUp 0.8s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.2s; }
-        .delay-3 { animation-delay: 0.3s; }
-
-        /* Alert animation */
-        .alert {
-            animation: slideDown 0.5s ease forwards;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column !important;
-                overflow-y: auto;
-            }
-            .sidebar {
-                padding: 20px !important;
-                order: 1;
-                min-height: auto;
-                justify-content: flex-start;
-            }
-            .sidebar-content {
-                padding: 1rem 0;
-            }
-            .logo-section {
-                margin-bottom: 1rem !important;
-                gap: 0.75rem !important;
-            }
-            .logo-section .w-32 {
-                width: 6rem !important;
-                height: 2.5rem !important;
-            }
-            .logo-section h2 {
-                font-size: 1.125rem !important;
-            }
-            .login-card {
-                padding: 1.25rem !important;
-            }
-            .login-card h4 {
-                font-size: 1.125rem !important;
-            }
-        }
-
-        /* For small height screens */
-        @media (max-height: 768px) {
-            .sidebar {
-                padding: 1rem !important;
-                justify-content: flex-start;
-            }
-            .sidebar-content {
-                padding: 0.5rem 0;
-            }
-            .logo-section {
-                margin-bottom: 0.75rem !important;
-                gap: 0.5rem !important;
-            }
-            .logo-section .w-32 {
-                width: 5rem !important;
-                height: 2.25rem !important;
-            }
-            .logo-section h2 {
-                font-size: 1rem !important;
-            }
-            .login-card {
-                padding: 1rem !important;
-            }
-            .login-card h4 {
-                font-size: 1.125rem !important;
-                margin-bottom: 0.5rem !important;
-            }
-            .login-card > p {
-                margin-bottom: 0.75rem !important;
-            }
-            .space-y-4 > * + * {
-                margin-top: 0.5rem !important;
-            }
-            .input-field {
-                padding: 0.625rem 0.875rem !important;
-            }
-        }
-    </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900">
-    <!-- Animated Background Orbs -->
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
+<body class="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 overflow-x-hidden min-h-screen">
 
     <div class="main-container flex h-screen w-full overflow-y-auto overflow-x-hidden relative z-10">
         <!-- Login Section -->
         <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-6 md:p-8 lg:p-12 bg-gradient-to-br from-slate-900/90 to-emerald-950/90 backdrop-blur-xl min-h-full">
-            <div class="sidebar-content relative z-10 w-full max-w-md fade-in py-4">
+            <div class="sidebar-content relative z-10 w-full max-w-md py-4">
                 <!-- Logo Section -->
-                <div class="logo-section flex items-center justify-center gap-3 mb-6 fade-in-up">
+                <div class="logo-section flex items-center justify-center gap-3 mb-6">
                     <div class="flex items-center justify-center w-32 h-12 rounded-xl bg-white shadow-lg flex-shrink-0 px-2">
                         <img src="{{ url_for('static', filename='img/logo-panjang.png') }}" alt="Logo" class="w-full h-full object-contain">
                     </div>
@@ -247,7 +27,7 @@
                 </div>
 
                 <!-- Login Card -->
-                <div class="login-card glass-card rounded-3xl p-6 md:p-8 shadow-2xl fade-in-up delay-1">
+                <div class="login-card bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-2xl">
                     <h4 class="mb-4 text-center text-xl font-bold text-gray-800">
                         Selamat Datang
                     </h4>
@@ -278,19 +58,19 @@
 
                         <!-- Email Field -->
                         <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-1.5" for="email">
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="email">
                                 <i class="fas fa-envelope mr-2 text-emerald-500"></i>
                                 {{ form.email.label.text }}
                             </label>
                             <input
-                                class="input-field"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 text-gray-800 placeholder-gray-400"
                                 id="email"
                                 type="email"
                                 name="email"
                                 placeholder="Masukkan email"
                                 required>
                             {% if form.email.errors %}
-                                <div class="mt-1 text-red-500 text-xs flex items-center gap-1">
+                                <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
                                     <i class="fas fa-exclamation-circle"></i>
                                     {% for error in form.email.errors %}
                                         <span>{{ error }}</span>
@@ -301,13 +81,13 @@
 
                         <!-- Password Field -->
                         <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-1.5" for="password">
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">
                                 <i class="fas fa-lock mr-2 text-emerald-500"></i>
                                 {{ form.password.label.text }}
                             </label>
                             <div class="relative">
                                 <input
-                                    class="input-field pr-12"
+                                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 text-gray-800 placeholder-gray-400"
                                     id="password"
                                     type="password"
                                     name="password"
@@ -321,7 +101,7 @@
                                 </button>
                             </div>
                             {% if form.password.errors %}
-                                <div class="mt-1 text-red-500 text-xs flex items-center gap-1">
+                                <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
                                     <i class="fas fa-exclamation-circle"></i>
                                     {% for error in form.password.errors %}
                                         <span>{{ error }}</span>
@@ -333,7 +113,7 @@
                         <!-- Submit Button -->
                         <button
                             type="submit"
-                            class="btn-primary w-full text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 mt-4">
+                            class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 mt-6 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/30">
                             <i class="fas fa-sign-in-alt"></i>
                             Masuk
                         </button>
@@ -400,12 +180,7 @@
         setTimeout(function() {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function(alert) {
-                alert.style.transition = 'opacity 0.5s, transform 0.5s';
-                alert.style.opacity = '0';
-                alert.style.transform = 'translateY(-20px)';
-                setTimeout(function() {
-                    alert.remove();
-                }, 500);
+                alert.remove();
             });
         }, 5000);
     </script>
