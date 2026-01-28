@@ -1,22 +1,22 @@
 {% extends "base.html" %}
 
-{% block title %}Stok Unit {{ unit.name }} - Smart Geo Inventory{% endblock %}
+{% block title %}Barang Divisi {{ unit.name }} - Smart Geo Inventory{% endblock %}
 
-{% block page_title %}Stok Unit: {{ unit.name }}{% endblock %}
+{% block page_title %}Barang Divisi: {{ unit.name }}{% endblock %}
 
 {% block content %}
 <!-- Header -->
 <div class="mb-6">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800">Stok Barang di Unit</h1>
+            <h1 class="text-2xl font-bold text-gray-800">Barang di Divisi</h1>
             <p class="text-gray-600 mt-1">
-                Unit: {{ unit.name }}
+                Divisi: {{ unit.name }}
             </p>
         </div>
         <div class="flex space-x-2">
-            <a href="{{ url_for('stock.per_unit') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
-                <i class="fas fa-arrow-left mr-2"></i>Kembali ke Daftar Unit
+            <a href="{{ url_for('units.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>Kembali ke Daftar Divisi
             </a>
         </div>
     </div>
@@ -27,13 +27,13 @@
     <div class="p-6 border-b border-gray-200">
         <h3 class="text-lg font-semibold text-gray-800">
             <i class="fas fa-building mr-2 text-purple-600"></i>
-            Informasi Unit
+            Informasi Divisi
         </h3>
     </div>
     <div class="p-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="bg-gray-50 rounded-lg p-4">
-                <h4 class="text-sm font-semibold text-gray-600 mb-2">Nama Unit</h4>
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Nama Divisi</h4>
                 <p class="text-base font-semibold text-gray-800">{{ unit.name }}</p>
             </div>
             <div class="bg-gray-50 rounded-lg p-4">
@@ -57,7 +57,7 @@
 </div>
 
 <!-- Stats Overview -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
     <div class="bg-blue-600 text-white rounded-xl shadow-md p-6">
         <div class="flex items-center justify-between">
             <div>
@@ -75,16 +75,6 @@
                 <div class="text-sm opacity-90">Total Barang</div>
             </div>
             <i class="fas fa-boxes text-4xl opacity-50"></i>
-        </div>
-    </div>
-
-    <div class="bg-orange-500 text-white rounded-xl shadow-md p-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <div class="text-3xl font-bold">{{ in_unit_count }}</div>
-                <div class="text-sm opacity-90">Di Unit</div>
-            </div>
-            <i class="fas fa-building text-4xl opacity-50"></i>
         </div>
     </div>
 
@@ -171,77 +161,83 @@
 
 <!-- Detail Modals -->
 {% for item_group in items %}
-<div id="detailModal-{{ loop.index }}" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
-        <div class="p-6 border-b border-gray-200 bg-purple-50">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center">
-                    <i class="fas fa-box text-purple-600 text-xl mr-3"></i>
+<div id="detailModal-{{ loop.index }}" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-4xl bg-white rounded-lg shadow-xl">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-box text-white"></i>
+                    </div>
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-800">{{ item_group.item.name }}</h3>
-                        <small class="text-gray-500">{{ item_group.item.item_code }}</small>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ item_group.item.name }}</h3>
+                        <p class="text-sm text-gray-500">{{ item_group.item.item_code }}</p>
                     </div>
                 </div>
-                <button data-modal-index="{{ loop.index }}" class="close-modal-btn text-gray-400 hover:text-gray-600">
-                    <i class="fas fa-times text-xl"></i>
+                <button data-modal-index="{{ loop.index }}" class="close-modal-btn w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600"></i>
                 </button>
             </div>
-        </div>
-        <div class="p-6 overflow-y-auto max-h-[60vh]">
-            <table class="w-full">
-                <thead>
-                    <tr class="border-b border-gray-200">
-                        <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Serial Number</th>
-                        <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Lokasi</th>
-                        <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Status</th>
-                        <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Tanggal Distribusi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for detail in item_group.details %}
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-2 px-3 text-sm text-gray-800 font-mono">{{ detail.serial_number }}</td>
-                        <td class="py-2 px-3 text-sm text-gray-600">{{ detail.location }}</td>
-                        <td class="py-2 px-3 text-sm">
-                            {% if detail.status == 'in_unit' %}
-                            <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold">
-                                <i class="fas fa-check mr-1"></i>Di Unit
-                            </span>
-                            {% elif detail.status == 'used' %}
-                            <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
-                                <i class="fas fa-tools mr-1"></i>Terpakai
-                            </span>
-                            {% elif detail.status == 'loaned' %}
-                            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
-                                <i class="fas fa-hand-holding mr-1"></i>Dipinjam
-                            </span>
-                            {% elif detail.status == 'broken' %}
-                            <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-semibold">
-                                <i class="fas fa-wrench mr-1"></i>Rusak
-                            </span>
-                            {% else %}
-                            <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
-                                {{ detail.status|replace('_', ' ')|title }}
-                            </span>
-                            {% endif %}
-                        </td>
-                        <td class="py-2 px-3 text-sm text-gray-600">
-                            {% if detail.distribution_date %}
-                            {{ detail.distribution_date.strftime('%d/%m/%Y') }}
-                            {% else %}
-                            -
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="p-4 border-t border-gray-200 bg-gray-50">
-            <div class="flex justify-between items-center">
+
+            <!-- Modal Body -->
+            <div class="px-6 py-5 overflow-y-auto max-h-[60vh]">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Serial Number</th>
+                            <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Lokasi</th>
+                            <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Status</th>
+                            <th class="text-left py-2 px-3 font-semibold text-gray-700 text-sm">Tanggal Distribusi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in item_group.details %}
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="py-2 px-3 text-sm text-gray-800 font-mono">{{ detail.serial_number }}</td>
+                            <td class="py-2 px-3 text-sm text-gray-600">{{ detail.location }}</td>
+                            <td class="py-2 px-3 text-sm">
+                                {% if detail.status == 'in_unit' %}
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                                    <i class="fas fa-check mr-1"></i>Di Unit
+                                </span>
+                                {% elif detail.status == 'used' %}
+                                <span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                                    <i class="fas fa-tools mr-1"></i>Terpakai
+                                </span>
+                                {% elif detail.status == 'loaned' %}
+                                <span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
+                                    <i class="fas fa-hand-holding mr-1"></i>Dipinjam
+                                </span>
+                                {% elif detail.status == 'broken' %}
+                                <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs font-semibold">
+                                    <i class="fas fa-wrench mr-1"></i>Rusak
+                                </span>
+                                {% else %}
+                                <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
+                                    {{ detail.status|replace('_', ' ')|title }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-2 px-3 text-sm text-gray-600">
+                                {% if detail.distribution_date %}
+                                {{ detail.distribution_date.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-between items-center px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
                 <span class="text-sm text-gray-600">Total: <strong>{{ item_group.total_quantity }}</strong> barang</span>
-                <button data-modal-index="{{ loop.index }}" class="close-modal-btn px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-semibold">
-                    Tutup
+                <button data-modal-index="{{ loop.index }}" class="close-modal-btn px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>Tutup</span>
                 </button>
             </div>
         </div>
@@ -257,8 +253,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const index = this.getAttribute('data-modal-index');
             const modal = document.getElementById('detailModal-' + index);
             modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.body.style.overflow = 'hidden';
         });
     });
 
@@ -268,22 +262,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const index = this.getAttribute('data-modal-index');
             const modal = document.getElementById('detailModal-' + index);
             modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.body.style.overflow = 'auto';
         });
     });
 
     // Close modal when clicking outside
-    document.addEventListener('click', function(event) {
-        if (event.target.classList.contains('fixed')) {
-            const modals = document.querySelectorAll('[id^="detailModal-"]');
-            modals.forEach(modal => {
+    document.querySelectorAll('[id^="detailModal-"]').forEach(modal => {
+        modal.addEventListener('click', function(event) {
+            if (event.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+    });
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('[id^="detailModal-"]').forEach(modal => {
                 if (!modal.classList.contains('hidden')) {
                     modal.classList.add('hidden');
-                    modal.classList.remove('flex');
                 }
             });
-            document.body.style.overflow = 'auto';
         }
     });
 });

@@ -232,7 +232,7 @@
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">No. Batch</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Unit Asal</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Divisi Asal</th>
                     <th class="text-left py-3 px-4 font-semibold text-gray-700">Gudang Tujuan</th>
                 </tr>
             </thead>
@@ -251,7 +251,7 @@
                             <small class="text-gray-500">{{ item.item_detail.item.item_code if item.item_detail and item.item_detail.item else '' }}</small>
                         </td>
                         <td class="py-3 px-4 text-gray-600">{{ item.item_detail.serial_unit if item.item_detail else '' }}</td>
-                        <td class="py-3 px-4 text-gray-600">{{ batch.unit.name if batch.unit else '-' }}</td>
+                        <td class="py-3 px-4 text-gray-600">{{ item.unit.name if item.unit else '-' }}</td>
                         <td class="py-3 px-4 text-gray-600">{{ batch.warehouse.name if batch.warehouse else '-' }}</td>
                         {% set item_no.value = item_no.value + 1 %}
                     </tr>
@@ -478,7 +478,7 @@
                     <th style="border: 1px solid #000; padding: 6px; text-align: center; width: 12%;">No. Batch</th>
                     <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 25%;">Nama Barang</th>
                     <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Serial Number</th>
-                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Unit Asal</th>
+                    <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 15%;">Divisi Asal</th>
                     <th style="border: 1px solid #000; padding: 6px; text-align: left; width: 17%;">Gudang Tujuan</th>
                 </tr>
             </thead>
@@ -495,7 +495,7 @@
                             <br><small style="font-size: 8pt;">{{ item.item_detail.item.item_code if item.item_detail and item.item_detail.item else '' }}</small>
                         </td>
                         <td style="border: 1px solid #000; padding: 5px;">{{ item.item_detail.serial_unit if item.item_detail else '' }}</td>
-                        <td style="border: 1px solid #000; padding: 5px;">{{ batch.unit.name if batch.unit else '-' }}</td>
+                        <td style="border: 1px solid #000; padding: 5px;">{{ item.unit.name if item.unit else '-' }}</td>
                         <td style="border: 1px solid #000; padding: 5px;">{{ batch.warehouse.name if batch.warehouse else '-' }}</td>
                         {% set item_no.value = item_no.value + 1 %}
                     </tr>

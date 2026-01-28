@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Edit Unit - {{ unit.name }} - Smart Geo Inventory{% endblock %}
+{% block title %}Edit Divisi - {{ unit.name }} - Smart Geo Inventory{% endblock %}
 
-{% block page_title %}Edit Unit{% endblock %}
+{% block page_title %}Edit Divisi{% endblock %}
 
 {% block content %}
 <!-- Back Button -->
 <div class="mb-4">
     <a href="{{ url_for('units.detail', id=unit.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
         <i class="fas fa-arrow-left mr-2"></i>
-        Kembali ke Detail Unit
+        Kembali ke Detail Divisi
     </a>
 </div>
 
@@ -20,9 +20,9 @@
             <div>
                 <h3 class="text-lg font-semibold text-gray-800">
                     <i class="fas fa-edit mr-2 text-orange-600"></i>
-                    Edit Unit
+                    Edit Divisi
                 </h3>
-                <p class="text-sm text-gray-600 mt-1">Update data unit "{{ unit.name }}"</p>
+                <p class="text-sm text-gray-600 mt-1">Update data divisi "{{ unit.name }}"</p>
             </div>
         </div>
     </div>
@@ -32,13 +32,13 @@
 
         <!-- Unit Information -->
         <div class="mb-6">
-            <h4 class="text-md font-semibold text-gray-800 mb-4">Informasi Unit</h4>
+            <h4 class="text-md font-semibold text-gray-800 mb-4">Informasi Divisi</h4>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Name -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Nama Unit/Gedung <span class="text-red-500">*</span>
+                        Nama Divisi <span class="text-red-500">*</span>
                     </label>
                     {{ form.name(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent") }}
                     {% if form.name.errors %}

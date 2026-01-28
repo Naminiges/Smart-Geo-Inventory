@@ -90,7 +90,7 @@ def detail(id):
     available_details = ItemDetail.query.filter_by(warehouse_id=id, status='available').count()
     used_details = ItemDetail.query.filter_by(warehouse_id=id, status='used').count()
     in_unit_details = ItemDetail.query.filter_by(warehouse_id=id, status='in_unit').count()
-    maintenance_details = ItemDetail.query.filter_by(warehouse_id=id, status='maintenance').count()
+    returned_details = ItemDetail.query.filter_by(warehouse_id=id, status='returned').count()
 
     return render_template('warehouses/detail.html',
                          warehouse=warehouse,
@@ -102,7 +102,7 @@ def detail(id):
                          available_details=available_details,
                          used_details=used_details,
                          in_unit_details=in_unit_details,
-                         maintenance_details=maintenance_details)
+                         returned_details=returned_details)
 
 
 @bp.route('/<int:id>/edit', methods=['GET', 'POST'])

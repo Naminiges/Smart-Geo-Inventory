@@ -9,7 +9,7 @@
 <div class="mb-4">
     <a href="{{ url_for('units.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
         <i class="fas fa-arrow-left mr-2"></i>
-        Kembali ke Daftar Unit
+        Kembali ke Daftar Divisi
     </a>
 </div>
 
@@ -24,18 +24,17 @@
                 </div>
                 <div>
                     <h3 class="text-xl font-semibold text-gray-800">{{ unit.name }}</h3>
-                    <p class="text-sm text-gray-600">ID: {{ unit.id }}</p>
                 </div>
             </div>
 
             <!-- Action Button -->
             <a href="{{ url_for('units.edit', id=unit.id) }}" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-semibold text-sm inline-flex items-center self-start">
-                <i class="fas fa-edit mr-1"></i> Edit Unit
+                <i class="fas fa-edit mr-1"></i> Edit Divisi
             </a>
         </div>
 
         <!-- Info Grid - All in One -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             <!-- Status -->
             <div class="text-center p-4 bg-gray-50 rounded-lg">
                 <p class="text-xs text-gray-600 mb-1">Status</p>
@@ -67,15 +66,6 @@
                 </p>
             </a>
 
-            <!-- Assigned Staff Count -->
-            <div class="text-center p-4 bg-indigo-50 rounded-lg">
-                <p class="text-xs text-gray-600 mb-1">Staff Ditugaskan</p>
-                {% set assigned_staff = [] %}
-                {% for uu in unit.user_units %}
-                    {% set _ = assigned_staff.append(uu.user) %}
-                {% endfor %}
-                <p class="text-2xl font-bold text-indigo-700">{{ assigned_staff|length }}</p>
-            </div>
 
             <!-- Asset Requests Count -->
             <div class="text-center p-4 bg-emerald-50 rounded-lg">

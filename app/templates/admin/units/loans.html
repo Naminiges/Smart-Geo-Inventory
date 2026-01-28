@@ -2,7 +2,7 @@
 
 {% block title %}Peminjaman Tempat - Smart Geo Inventory{% endblock %}
 {% block page_title %}Peminjaman Tempat{% endblock %}
-{% set page_icon = 'fas fa-building' %}
+{% set page_icon = 'fas fa-door-open' %}
 {% set page_description = 'Kelola jadwal peminjaman ruangan' %}
 {% block page_header_actions %}
 <a href="{{ url_for('units.create_loan') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
@@ -91,7 +91,6 @@
     <table class="w-full paginated-table">
       <thead class="bg-gray-50">
         <tr>
-          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Peminjam</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tempat</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acara</th>
@@ -103,21 +102,12 @@
       <tbody class="divide-y divide-gray-200">
         {% for loan in venue_loans %}
         <tr class="hover:bg-gray-50">
-          <td class="px-6 py-4">
-            <div class="flex items-center">
-              <div class="bg-blue-100 rounded-lg p-2 mr-3">
-                <i class="fas fa-hashtag text-blue-600"></i>
-              </div>
-              <strong class="text-gray-900">#{{ loan.id }}</strong>
-            </div>
-          </td>
           <td class="px-6 py-4 text-gray-600">
-            {{ loan.borrower_unit.name if loan.borrower_unit else 'Unknown' }}
+           Divisi {{ loan.borrower_unit.name if loan.borrower_unit else 'Unknown' }}
             <br><small class="text-gray-400">{{ loan.borrower_user.name if loan.borrower_user else '' }}</small>
           </td>
           <td class="px-6 py-4 text-gray-600">
-            {{ loan.unit_detail.unit.name if loan.unit_detail and loan.unit_detail.unit else '' }}
-            <br><small class="text-gray-400">{{ loan.unit_detail.room_name if loan.unit_detail else '' }}</small>
+            {{ loan.unit_detail.room_name if loan.unit_detail else '' }}
           </td>
           <td class="px-6 py-4 text-gray-800 font-semibold">{{ loan.event_name }}</td>
           <td class="px-6 py-4 text-gray-600 text-sm">

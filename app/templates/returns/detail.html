@@ -9,7 +9,7 @@
 <div class="flex items-center justify-between mb-6">
     <div>
         <h2 class="text-2xl font-bold text-gray-800">{{ return_batch.batch_code }}</h2>
-        <p class="text-sm text-gray-600 mt-1">Detail batch retur barang dari unit ke warehouse</p>
+        <p class="text-sm text-gray-600 mt-1">Detail batch retur barang dari divisi ke warehouse</p>
     </div>
     <a href="{{ url_for('returns.index') }}"
        class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-semibold inline-flex items-center shadow-sm">
@@ -162,7 +162,7 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barang</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Asal</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Divisi Asal</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kondisi</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alasan Retur</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>

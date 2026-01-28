@@ -323,15 +323,20 @@ def notification_counts():
                     warehouse_id=user_warehouse.warehouse_id,
                     is_draft=True
                 ).count()
+
+                # 2. Procurement: Status 'approved' (siap diterima)
+                approved_procurements = Procurement.query.filter_by(status='approved').count()
+                counts['pending_procurement_count'] = approved_procurements
+                print(f"DEBUG Warehouse Staff {current_user.name}: approved_procurement_count={approved_procurements}")
             else:
                 # If no warehouse assigned, no notifications
                 counts['draft_distribution_count'] = 0
+                counts['pending_procurement_count'] = 0
 
             # Warehouse staff tidak butuh notifikasi lain
             counts['pending_request_count'] = 0
             counts['verified_request_count'] = 0
             counts['pending_distribution_count'] = 0
-            counts['pending_procurement_count'] = 0
 
         elif current_user.is_unit_staff():
             # UNIT STAFF NOTIFICATIONS

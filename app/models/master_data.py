@@ -105,6 +105,13 @@ class ItemDetail(BaseModel):
     warehouse = db.relationship('Warehouse', back_populates='item_details')
     distribution = db.relationship('Distribution', uselist=False, back_populates='item_detail')
 
+    @property
+    def unit_name(self):
+        """Get unit name from distribution if status is in_unit or used"""
+        if self.status in ['in_unit', 'used'] and self.distribution and self.distribution.unit:
+            return self.distribution.unit.name
+        return None
+
     def __repr__(self):
         return f'<ItemDetail {self.serial_number}>'
 

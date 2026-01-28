@@ -182,7 +182,7 @@
               class="fas fa-plus-circle w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'procurement' in request.endpoint else 'text-gray-400' }}"
             ></i>
             <span class="font-medium">Pengadaan Baru</span>
-            {% if current_user.is_admin() and pending_procurement_count > 0 %}
+            {% if (current_user.is_admin() or current_user.is_warehouse_staff()) and pending_procurement_count > 0 %}
             <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
               {{ pending_procurement_count }}
             </span>
@@ -247,22 +247,22 @@
           <!-- Unit (Admin Only) -->
           {% if current_user.is_admin() %}
           <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'units' in request.endpoint and 'loans' not in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if ('units' in request.endpoint and 'loans' not in request.endpoint) or '/stock/per-unit' in request.path else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('units.index') }}"
           >
             <i
-              class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'units' in request.endpoint and 'loans' not in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if ('units' in request.endpoint and 'loans' not in request.endpoint) or '/stock/per-unit' in request.path else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Daftar Unit</span>
+            <span class="font-medium">Daftar Divisi</span>
           </a>
 
           <!-- Daftar Peminjaman Tempat (Admin Only) -->
           <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'units.loans' or request.endpoint == 'units.create_loan' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'units.loans' or request.endpoint == 'units.create_loan' or 'venue_loans.admin' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('units.loans') }}"
           >
             <i
-              class="fas fa-door-open w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'units.loans' or request.endpoint == 'units.create_loan' else 'text-gray-400' }}"
+              class="fas fa-door-open w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'units.loans' or request.endpoint == 'units.create_loan' or 'venue_loans.admin' in request.endpoint else 'text-gray-400' }}"
             ></i>
             <span class="font-medium">Daftar Peminjaman Tempat</span>
           </a>
@@ -287,7 +287,7 @@
             {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
           ></i>
 
-          <span class="font-medium">Permintaan dari Unit</span>
+          <span class="font-medium">Permintaan dari Divisi</span>
 
           {% if current_user.is_admin() and pending_request_count > 0 %}
             <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
@@ -345,11 +345,11 @@
           <!-- Stok (All Users) -->
           {% if current_user.is_admin() %}
           <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'stock' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if ('stock' in request.endpoint and '/per-unit' not in request.path) else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('stock.index') }}"
           >
             <i
-              class="fas fa-history w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'stock' in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-history w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if ('stock' in request.endpoint and '/per-unit' not in request.path) else 'text-gray-400' }}"
             ></i>
             <span class="font-medium">Riwayat Keluar Masuk</span>
           </a>

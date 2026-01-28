@@ -296,6 +296,7 @@ def room_items(room_id):
                 'item_name': dist.item_detail.item.name,
                 'item_code': dist.item_detail.item.item_code,
                 'category': dist.item_detail.item.category.name if dist.item_detail.item.category else '-',
+                'unit_name': dist.unit.name if dist.unit else '-',
                 'distributed_date': dist_date
             })
 

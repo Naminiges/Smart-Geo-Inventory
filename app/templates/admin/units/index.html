@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Daftar Unit - Smart Geo Inventory{% endblock %}
-{% block page_title %}Daftar Unit{% endblock %}
+{% block title %}Daftar Divisi - Smart Geo Inventory{% endblock %}
+{% block page_title %}Daftar Divisi{% endblock %}
 {% set page_icon = 'fas fa-building' %}
-{% set page_description = 'Kelola data unit dan ruangan di lingkungan PSI' %}
+{% set page_description = 'Kelola data divisi dan ruangan di lingkungan PSI' %}
 {% block page_header_actions %}
 <a href="{{ url_for('units.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
-  <i class="fas fa-plus mr-2"></i>Tambah Unit
+  <i class="fas fa-plus mr-2"></i>Tambah Divisi
 </a>
 {% endblock %}
 {% block content %}
@@ -19,7 +19,7 @@
       </div>
       <div class="ml-3">
         <div class="text-2xl font-bold text-gray-800">{{ stats.total }}</div>
-        <div class="text-xs text-gray-500">Total Unit</div>
+        <div class="text-xs text-gray-500">Total Divisi</div>
       </div>
     </div>
   </div>
@@ -67,7 +67,7 @@
     <table class="w-full paginated-table">
       <thead class="bg-gray-50">
         <tr>
-          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Unit</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Divisi</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Item</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
           <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
@@ -110,8 +110,12 @@
           </td>
           <td class="px-6 py-4 text-center">
             <div class="flex items-center justify-center space-x-2">
-              <a href="{{ url_for('units.detail', id=unit.id) }}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Lihat Detail">
-                <i class="fas fa-eye"></i>
+              <a href="{{ url_for('stock.per_unit_detail', unit_id=unit.id) }}" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium inline-flex items-center" title="Lihat Barang">
+                <i class="fas fa-box mr-1.5"></i>
+                <span>Lihat Barang</span>
+              </a>
+              <a href="{{ url_for('units.detail', id=unit.id) }}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Lihat Detail Divisi">
+                <i class="fas fa-info-circle"></i>
               </a>
               {% if current_user.is_admin() %}
               <a href="{{ url_for('units.edit', id=unit.id) }}" class="p-2 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
@@ -149,7 +153,7 @@
 function confirmDeleteUnit(button) {
   const unitId = button.getAttribute('data-unit-id');
   const unitName = button.getAttribute('data-unit-name');
-  if (confirm(`Apakah Anda yakin ingin menghapus unit "${unitName}"?`)) {
+  if (confirm(`Apakah Anda yakin ingin menghapus divisi "${unitName}"?`)) {
     const form = document.getElementById('deleteUnitForm');
     form.action = `/admin/units/${unitId}/delete`;
     form.submit();

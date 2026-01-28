@@ -928,55 +928,6 @@ def recap_pdf():
     return response
 
 
-@bp.route('/per-unit')
-@login_required
-@role_required('admin')
-def per_unit():
-    """Show list of all units with their stock summary"""
-    from app.models import Unit
-    from app.models.distribution import Distribution
-    from app.models.master_data import ItemDetail
-
-    # Get all active units
-    units = Unit.query.filter_by(status='active').all()
-
-    unit_summary = []
-    for unit in units:
-        # Get all distributions to this unit that are not rejected/returned
-        distributions = Distribution.query.filter(
-            Distribution.unit_id == unit.id,
-            Distribution.status != 'rejected'
-        ).all()
-
-        # Get item details for this unit (excluding returned items)
-        item_detail_ids = [d.item_detail_id for d in distributions if d.item_detail_id]
-
-        if item_detail_ids:
-            # Get item details and exclude returned ones
-            item_details = ItemDetail.query.filter(
-                ItemDetail.id.in_(item_detail_ids),
-                ItemDetail.status != 'returned'
-            ).all()
-
-            # Count by item_detail status
-            total_items = len(item_details)
-            loaned_count = len([d for d in item_details if d.status == 'loaned'])
-            used_count = len([d for d in item_details if d.status == 'used'])
-        else:
-            total_items = 0
-            loaned_count = 0
-            used_count = 0
-
-        unit_summary.append({
-            'unit': unit,
-            'total_items': total_items,
-            'loaned_count': loaned_count,
-            'used_count': used_count
-        })
-
-    return render_template('stock/per_unit.html', unit_summary=unit_summary)
-
-
 @bp.route('/per-unit/<int:unit_id>')
 @login_required
 @role_required('admin')

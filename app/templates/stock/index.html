@@ -5,7 +5,11 @@
 {% block page_title %}Riwayat Keluar Masuk{% endblock %}
 {% set page_icon = 'fas fa-history' %}
 {% set page_description = 'Catatan barang yang masuk dan keluar dari gudang' %}
-
+{% block page_header_actions %}
+<a href="{{ url_for('stock.recap') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-arrow-right mr-2"></i>Laporan tahunan
+</a>
+{% endblock %}
 {% block content %}
 
 <!-- Stock Transactions (Barang Masuk/Keluar dari Gudang) -->

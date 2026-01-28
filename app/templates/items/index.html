@@ -2,32 +2,17 @@
 
 {% block title %}Daftar Barang - Smart Geo Inventory{% endblock %}
 {% block page_title %}Daftar Barang{% endblock %}
-{% set page_icon = 'fas fa-box' %}
+{% set page_icon = 'fas fa-tags' %}
 {% set page_description = 'Daftar barang di lingkungan PSI' %}
 {% block content %}
-
-<!-- Quick Action Card -->
-<div class="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
-  <a href="{{ url_for('stock.per_unit') }}" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-md hover:shadow-lg transition-all p-6 block">
-    <div class="flex items-center justify-between">
-      <div>
-        <h5 class="text-lg font-semibold mb-1"><i class="fas fa-building mr-2"></i>Barang di Unit</h5>
-        <p class="text-sm opacity-90">Lihat stok barang di setiap unit</p>
-      </div>
-      <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-        <i class="fas fa-arrow-right text-xl"></i>
-      </div>
-    </div>
-  </a>
-</div>
 
 <!-- Filter Section -->
 <div class="bg-white rounded-xl shadow-md mb-6 p-4">
   <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <div>
-      <label class="block text-sm font-semibold text-gray-700 mb-1">Kategori</label>
+      <label class="block text-sm font-semibold text-gray-700 mb-1">Kategori barang</label>
       <select name="category_id" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
-        <option value="">Semua Kategori</option>
+        <option value="">Semua Kategori Barang</option>
         {% for category in categories %}
         <option value="{{ category.id }}" {{ 'selected' if current_filter == category.id else '' }}>{{ category.name }}</option>
         {% endfor %}
@@ -56,7 +41,7 @@
       <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Barang</th>
-          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kategori</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kategori Barang</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jumlah</th>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
           <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>

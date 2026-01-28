@@ -138,15 +138,6 @@
                 <li><i class="fas fa-check-circle mr-2 text-green-600"></i>Serial Unit sudah di-generate untuk {{ procurement.total_quantity }} unit barang</li>
                 <li><i class="fas fa-check-circle mr-2 text-green-600"></i>ItemDetail sudah dibuat dengan serial number & serial unit</li>
             </ul>
-            <p class="text-sm text-amber-800 mt-3">
-                Setelah konfirmasi, sistem akan:
-            </p>
-            <ul class="text-sm text-amber-800 mt-2 space-y-1">
-                <li><i class="fas fa-arrow-right mr-2"></i>Menambahkan <strong>{{ procurement.total_quantity }} unit</strong> ke stok gudang <strong>{{ warehouse.name }}</strong></li>
-                <li><i class="fas fa-arrow-right mr-2"></i>Assign gudang ke setiap ItemDetail (warehouse_id)</li>
-                <li><i class="fas fa-arrow-right mr-2"></i>Mencatat transaksi stok masuk</li>
-                <li><i class="fas fa-arrow-right mr-2"></i>Mengubah status pengadaan menjadi <strong>Completed</strong></li>
-            </ul>
         </div>
     </div>
 </div>
@@ -191,10 +182,6 @@
                 <div class="flex">
                     <span class="w-40 text-gray-600">No. Invoice:</span>
                     <span class="font-medium text-gray-800">{{ procurement.receipt_number or 'N/A' }}</span>
-                </div>
-                <div class="flex">
-                    <span class="w-40 text-gray-600">Supplier:</span>
-                    <span class="font-medium text-gray-800">{{ procurement.supplier.name if procurement.supplier else 'N/A' }}</span>
                 </div>
             </div>
 

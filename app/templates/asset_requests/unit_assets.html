@@ -1,33 +1,15 @@
 {% extends "base.html" %}
 
 {% block title %}Aset di Unit - Smart Geo Inventory{% endblock %}
-
 {% block page_title %}Aset di Unit{% endblock %}
-
+{% set page_icon = 'fas fa-box-open' %}
+{% set page_description = 'Daftar aset di unit' %}
+{% block page_header_actions %}
+<a href="{{ url_for('asset_requests.index') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Permohonan Aset
+</a>
+{% endblock %}
 {% block content %}
-<!-- Header -->
-<div class="mb-6">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-800">Daftar Aset di Unit</h1>
-            <p class="text-gray-600 mt-1">
-                {% if units|length == 1 %}
-                Unit: {{ units[0].name }}
-                {% else %}
-                Menampilkan aset dari {{ units|length }} unit
-                {% endif %}
-            </p>
-        </div>
-        <div class="flex space-x-2">
-            <a href="{{ url_for('asset_requests.index') }}" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                <i class="fas fa-list mr-2"></i>Permohonan Saya
-            </a>
-            <a href="{{ url_for('dashboard.unit_index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-semibold">
-                <i class="fas fa-home mr-2"></i>Dashboard
-            </a>
-        </div>
-    </div>
-</div>
 
 <!-- Units Information -->
 {% if units|length == 1 %}

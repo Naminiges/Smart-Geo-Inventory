@@ -253,58 +253,89 @@
 </template>
 
 <!-- Confirmation Modal -->
-<div id="confirmModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-xl p-6 max-w-2xl w-32 mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="flex items-center mb-4">
-            <div class="{% if is_admin %}bg-emerald-100{% else %}bg-blue-100{% endif %} rounded-full p-3 mr-4">
-                <i class="fas {% if is_admin %}fa-clipboard-check text-emerald-600{% else %}fa-clipboard-list text-blue-600{% endif %} text-xl"></i>
+<div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-xl animate-fade-in">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="{% if is_admin %}w-10 h-10 bg-emerald-500{% else %}w-10 h-10 bg-blue-500{% endif %} rounded-lg flex items-center justify-center">
+                        <i class="fas {% if is_admin %}fa-clipboard-check{% else %}fa-clipboard-list{% endif %} text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Konfirmasi {% if is_admin %}Pengadaan{% else %}Permohonan{% endif %}</h3>
+                        <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
+                    </div>
+                </div>
+                <button onclick="closeConfirmModal()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600 text-sm"></i>
+                </button>
             </div>
-            <div>
-                <h5 class="text-lg font-semibold text-gray-800 mb-1">Konfirmasi {% if is_admin %}Pengadaan{% else %}Permohonan{% endif %}</h5>
-                <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
-            </div>
-        </div>
 
-        <p class="text-gray-700 mb-4">Apakah data {% if is_admin %}pengadaan{% else %}permohonan{% endif %} berikut sudah benar?</p>
+            <!-- Modal Body -->
+            <div class="px-6 py-5">
+                <p class="text-gray-700 mb-4">Apakah data {% if is_admin %}pengadaan{% else %}permohonan{% endif %} berikut sudah benar?</p>
 
-        <!-- Summary -->
-        <div class="bg-gray-50 rounded-lg p-4 mb-4">
-            <h6 class="font-semibold text-gray-800 mb-3">Ringkasan Data:</h6>
+                <!-- Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h6 class="font-semibold text-gray-800 mb-3">Ringkasan Data:</h6>
 
-            {% if is_admin %}
-            <div class="space-y-2 text-sm">
-                <div class="flex">
-                    <span class="w-32 text-gray-600">Warehouse:</span>
-                    <span class="font-medium text-gray-800" id="summaryWarehouse">-</span>
+                    {% if is_admin %}
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="w-32 text-gray-600">Warehouse:</span>
+                            <span class="font-medium text-gray-800" id="summaryWarehouse">-</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        <span class="text-sm text-gray-600">Barang yang diajukan:</span>
+                        <div id="summaryItems" class="mt-2 space-y-1 text-sm">
+                            <!-- Items will be listed here -->
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <div class="flex">
+                            <span class="w-32 text-gray-600">Catatan:</span>
+                            <span class="font-medium text-gray-800" id="summaryNotes">-</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            {% endif %}
 
-            <div class="mt-3">
-                <span class="text-sm text-gray-600">Barang yang diajukan:</span>
-                <div id="summaryItems" class="mt-2 space-y-1 text-sm">
-                    <!-- Items will be listed here -->
-                </div>
+            <!-- Modal Footer -->
+            <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>Batal</span>
+                </button>
+                <button onclick="submitForm()" class="px-4 py-2 {% if is_admin %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-blue-600 hover:bg-blue-700{% endif %} text-white rounded-lg transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-check"></i>
+                    <span>Ya, Ajukan</span>
+                </button>
             </div>
-
-            <div class="mt-3 pt-3 border-t border-gray-200">
-                <div class="flex">
-                    <span class="w-32 text-gray-600">Catatan:</span>
-                    <span class="font-medium text-gray-800" id="summaryNotes">-</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="flex gap-3 justify-end">
-            <button type="button" onclick="closeConfirmModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                <i class="fas fa-times mr-1"></i> Batal
-            </button>
-            <button type="button" onclick="submitForm()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors">
-                <i class="fas fa-check mr-1"></i> Ya, Ajukan
-            </button>
         </div>
     </div>
 </div>
+
+<style>
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -483,12 +514,10 @@ function showConfirmModal() {
 
     // Show modal
     document.getElementById('confirmModal').classList.remove('hidden');
-    document.getElementById('confirmModal').classList.add('flex');
 }
 
 function closeConfirmModal() {
     document.getElementById('confirmModal').classList.add('hidden');
-    document.getElementById('confirmModal').classList.remove('flex');
 }
 
 function submitForm() {

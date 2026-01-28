@@ -1,22 +1,15 @@
 {% extends "base.html" %}
 
 {% block title %}Terima Distribusi - Smart Geo Inventory{% endblock %}
-
 {% block page_title %}Terima Distribusi{% endblock %}
-
+{% set page_icon = 'fas fa-plus-circle' %}
+{% set page_description = 'Terima barang menuju unit Anda' %}
+{% block page_header_actions %}
+<a href="{{ url_for('distributions.receive_history') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-history mr-2"></i>Riwayat Terima
+</a>
+{% endblock %}
 {% block content %}
-<!-- Header with History Button -->
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Terima Distribusi</h2>
-        <p class="text-sm text-gray-600 mt-1">Konfirmasi penerimaan batch distribusi menuju unit Anda</p>
-    </div>
-    <a href="{{ url_for('distributions.receive_history') }}"
-       class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold inline-flex items-center shadow-sm">
-        <i class="fas fa-history mr-2"></i>
-        Riwayat Terima
-    </a>
-</div>
 
 <!-- Info Banner -->
 <div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">

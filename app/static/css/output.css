@@ -442,6 +442,9 @@
   .mr-1 {
     margin-right: calc(var(--spacing) * 1);
   }
+  .mr-1\.5 {
+    margin-right: calc(var(--spacing) * 1.5);
+  }
   .mr-2 {
     margin-right: calc(var(--spacing) * 2);
   }
@@ -609,9 +612,6 @@
   }
   .max-h-\[90vh\] {
     max-height: 90vh;
-  }
-  .max-h-\[calc\(90vh-140px\)\] {
-    max-height: calc(90vh - 140px);
   }
   .min-h-full {
     min-height: 100%;
@@ -2308,13 +2308,6 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-blue-800);
-      }
-    }
-  }
-  .hover\:text-emerald-200 {
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-emerald-200);
       }
     }
   }

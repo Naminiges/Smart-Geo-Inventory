@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from datetime import datetime
 from app import db
-from app.models import VenueLoan, Unit, UnitDetail, User, Distribution, ItemDetail
+from app.models import VenueLoan, Unit, UnitDetail, User, Distribution, ItemDetail, Building
 from app.utils.decorators import role_required
 
 bp = Blueprint('venue_loans', __name__, url_prefix='/venue-loans')
@@ -83,9 +83,10 @@ def admin_complete(id):
 @bp.route('/api/unit-details/<int:unit_id>')
 @login_required
 def api_unit_details(unit_id):
-    """Get unit details for a specific unit (AJAX)"""
-    unit_details = UnitDetail.query.filter_by(unit_id=unit_id).order_by(
-        UnitDetail.room_name
+    """Get all unit details (rooms) - shows all rooms regardless of unit selection"""
+    # Get all unit details ordered by building and room name
+    unit_details = UnitDetail.query.join(Building).order_by(
+        Building.code, UnitDetail.room_name
     ).all()
 
     result = []
@@ -99,7 +100,7 @@ def api_unit_details(unit_id):
             'floor': ud.floor or '',
             'description': ud.description or '',
             'items_count': items_count,
-            'unit_name': ud.unit.name if ud.unit else ''
+            'building_code': ud.building.code if ud.building else ''
         })
 
     return jsonify(result)

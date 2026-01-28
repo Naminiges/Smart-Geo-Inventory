@@ -7,7 +7,7 @@
 {% block content %}
     <!-- Back Button -->
     <div class="mb-4">
-        <a href="{{ url_for('units.index') }}" class="inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
+        <a href="{{ url_for('units.loans') }}" class="inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors">
             <i class="fas fa-arrow-left mr-2"></i> Kembali
         </a>
     </div>
@@ -20,7 +20,7 @@
                     <i class="fas fa-door-open text-blue-600 text-2xl mr-3"></i>
                     <div>
                         <h5 class="text-lg font-semibold mb-0">Peminjaman Tempat #{{ venue_loan.id }}</h5>
-                        <small class="text-gray-500">{{ venue_loan.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                        <small class="text-gray-500">{{ venue_loan.created_at|format_wib_datetime }}</small>
                     </div>
                 </div>
                 <span class="px-4 py-2 {{ venue_loan.status_badge_class }} rounded-full text-sm font-semibold">
@@ -56,12 +56,8 @@
                     </h6>
                     <table class="w-full">
                         <tr class="border-b border-gray-100">
-                            <td class="text-gray-500 py-2" width="40%">Unit:</td>
+                            <td class="text-gray-500 py-2" width="40%">Divisi:</td>
                             <td class="py-2 font-semibold">{{ venue_loan.borrower_unit.name if venue_loan.borrower_unit else '-' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-gray-500 py-2">Pemohon:</td>
-                            <td class="py-2">{{ venue_loan.borrower_user.name if venue_loan.borrower_user else '-' }}</td>
                         </tr>
                     </table>
                 </div>
@@ -73,8 +69,12 @@
                 </h6>
                 <table class="w-full">
                     <tr class="border-b border-gray-100">
-                        <td class="text-gray-500 py-2" width="40%">Unit/Gedung:</td>
-                        <td class="py-2 font-semibold">{{ venue_loan.unit_detail.unit.name if venue_loan.unit_detail and venue_loan.unit_detail.unit else '-' }}</td>
+                        <td class="text-gray-500 py-2" width="40%">Gedung:</td>
+                        <td class="py-2 font-semibold">{{ venue_loan.unit_detail.building.name if venue_loan.unit_detail and venue_loan.unit_detail.building else '-' }}</td>
+                    </tr>
+                    <tr class="border-b border-gray-100">
+                        <td class="text-gray-500 py-2">Kode Gedung:</td>
+                        <td class="py-2">{{ venue_loan.unit_detail.building.code if venue_loan.unit_detail and venue_loan.unit_detail.building else '-' }}</td>
                     </tr>
                     <tr class="border-b border-gray-100">
                         <td class="text-gray-500 py-2">Ruangan:</td>

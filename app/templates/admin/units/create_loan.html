@@ -34,9 +34,9 @@
                 <!-- Unit Peminjam -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-building mr-1"></i> Unit Peminjam <span class="text-red-500">*</span>
+                        <i class="fas fa-building mr-1"></i> Divisi Peminjam <span class="text-red-500">*</span>
                     </label>
-                    {{ form.borrower_unit_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", placeholder="Pilih unit yang akan meminjam") }}
+                    {{ form.borrower_unit_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", placeholder="Pilih divisi yang akan meminjam") }}
                     {% if form.borrower_unit_id.errors %}
                         {% for error in form.borrower_unit_id.errors %}
                             <p class="mt-1 text-sm text-red-600">{{ error }}</p>
@@ -50,11 +50,10 @@
                         <i class="fas fa-door-open mr-1"></i> Ruangan/Tempat <span class="text-red-500">*</span>
                     </label>
                     <select id="unit_detail_id" name="unit_detail_id"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            disabled>
-                        <option value="0">-- Pilih Unit Terlebih Dahulu --</option>
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">-- Pilih Ruangan --</option>
                     </select>
-                    <p class="mt-1 text-sm text-gray-500">Pilih unit peminjam terlebih dahulu untuk melihat ruangan yang tersedia</p>
+                    <p class="mt-1 text-sm text-gray-500">Semua ruangan tersedia untuk dipinjam</p>
                     {% if form.unit_detail_id.errors %}
                         {% for error in form.unit_detail_id.errors %}
                             <p class="mt-1 text-sm text-red-600">{{ error }}</p>
@@ -136,38 +135,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const borrowerUnitSelect = document.getElementById('borrower_unit_id');
     const unitDetailSelect = document.getElementById('unit_detail_id');
 
-    borrowerUnitSelect.addEventListener('change', function() {
-        const unitId = this.value;
+    // Load all rooms on page load
+    fetch(`/venue-loans/api/unit-details/0`)
+        .then(response => response.json())
+        .then(data => {
+            // Clear existing options
+            unitDetailSelect.innerHTML = '<option value="">-- Pilih Ruangan --</option>';
 
-        if (unitId && unitId !== '0') {
-            // Fetch unit details for the selected unit
-            fetch(`/venue-loans/api/unit-details/${unitId}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Clear existing options
-                    unitDetailSelect.innerHTML = '<option value="">-- Pilih Ruangan --</option>';
-
-                    // Add new options
-                    data.forEach(unitDetail => {
-                        const option = document.createElement('option');
-                        option.value = unitDetail.id;
-                        option.textContent = `${unitDetail.room_name} (Lantai ${unitDetail.floor || 'N/A'}) - ${unitDetail.items_count} barang`;
-                        unitDetailSelect.appendChild(option);
-                    });
-
-                    // Enable the select
-                    unitDetailSelect.disabled = false;
-                })
-                .catch(error => {
-                    console.error('Error fetching unit details:', error);
-                    unitDetailSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
-                });
-        } else {
-            // Reset and disable
-            unitDetailSelect.innerHTML = '<option value="0">-- Pilih Unit Terlebih Dahulu --</option>';
-            unitDetailSelect.disabled = true;
-        }
-    });
+            // Add new options
+            data.forEach(unitDetail => {
+                const option = document.createElement('option');
+                option.value = unitDetail.id;
+                option.textContent = `${unitDetail.building_code} - ${unitDetail.room_name} (Lantai ${unitDetail.floor || 'N/A'}) - ${unitDetail.items_count} barang`;
+                unitDetailSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching unit details:', error);
+            unitDetailSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+        });
 
     // Availability check
     let checkTimeout;

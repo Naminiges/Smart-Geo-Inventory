@@ -89,103 +89,23 @@
         </div>
 
         <!-- Status Summary -->
-        <div class="grid grid-cols-4 gap-4 mt-4">
+        <div class="grid grid-cols-3 gap-4 mt-4">
             <div class="bg-green-50 rounded-lg p-3 text-center border border-green-200">
                 <p class="text-xs text-green-600">Tersedia</p>
                 <p class="text-lg font-bold text-green-900">{{ available_details }}</p>
             </div>
-            <div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
-                <p class="text-xs text-blue-600">Di Unit</p>
-                <p class="text-lg font-bold text-blue-900">{{ in_unit_details }}</p>
-            </div>
-            <div class="bg-amber-50 rounded-lg p-3 text-center border border-amber-200">
-                <p class="text-xs text-amber-600">Maintenance</p>
-                <p class="text-lg font-bold text-amber-900">{{ maintenance_details }}</p>
-            </div>
             <div class="bg-purple-50 rounded-lg p-3 text-center border border-purple-200">
                 <p class="text-xs text-purple-600">Digunakan</p>
-                <p class="text-lg font-bold text-purple-900">{{ used_details }}</p>
+                <p class="text-lg font-bold text-purple-900">{{ used_details + in_unit_details }}</p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-3 text-center border border-gray-300">
+                <p class="text-xs text-gray-600">Dikembalikan</p>
+                <p class="text-lg font-bold text-gray-900">{{ returned_details }}</p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Stock by Item -->
-<div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="p-6 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <i class="fas fa-boxes text-emerald-500 mr-3"></i>
-                <h5 class="font-semibold mb-0">Stok Barang per Kategori</h5>
-            </div>
-        </div>
-    </div>
-    <div class="p-6">
-        {% if stocks and stocks|length > 0 %}
-        {% set grouped_stocks = {} %}
-        {% for stock in stocks %}
-            {% set category = stock.item.category.name if stock.item.category else 'Uncategorized' %}
-            {% if category not in grouped_stocks %}
-                {% set _ = grouped_stocks.update({category: []}) %}
-            {% endif %}
-            {% set _ = grouped_stocks[category].append(stock) %}
-        {% endfor %}
-
-        <div class="space-y-6">
-            {% for category, category_stocks in grouped_stocks.items()|sort %}
-            <div class="bg-gray-50 rounded-xl overflow-hidden">
-                <!-- Category Header -->
-                <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center">
-                            <i class="fas fa-folder text-black mr-2"></i>
-                            <h6 class="text-lg font-semibold text-black">{{ category }}</h6>
-                            <span class="ml-3 px-2 py-1 bg-white/20 text-white rounded-full text-xs">
-                                {{ category_stocks|length }} jenis barang
-                            </span>
-                        </div>
-                        <span class="text-white/90 text-sm">
-                            Total: {{ category_stocks|sum(attribute='quantity') }} unit
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Category Items - Scrollable -->
-                <div class="p-4 max-h-80 overflow-y-auto custom-scrollbar">
-                    <div class="space-y-2">
-                        {% for stock in category_stocks %}
-                        <div class="bg-white rounded-lg p-3 border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all">
-                            <div class="flex items-center justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center">
-                                        <span class="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-mono mr-2">
-                                            {{ stock.item.item_code }}
-                                        </span>
-                                        <span class="font-medium text-gray-800">{{ stock.item.name }}</span>
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-1">Satuan: {{ stock.item.unit }}</p>
-                                </div>
-                                <div class="text-right ml-4">
-                                    <span class="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg font-bold">
-                                        {{ stock.quantity }} {{ stock.item.unit }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center text-gray-500 py-12">
-            <i class="fas fa-boxes text-5xl mb-3 text-gray-300"></i>
-            <p class="mb-0">Belum ada stok barang di gudang ini</p>
-        </div>
-        {% endif %}
-    </div>
-</div>
 
 <!-- Item Details by Category -->
 <div class="bg-white rounded-xl shadow-md">
@@ -212,11 +132,11 @@
             {% for category, category_details in grouped_details.items()|sort %}
             <div class="bg-gray-50 rounded-xl overflow-hidden">
                 <!-- Category Header -->
-                <div class="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3">
+                <div class="bg-emerald-600 px-4 py-3">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center">
-                            <i class="fas fa-layer-group text-black mr-2"></i>
-                            <h6 class="text-lg font-semibold text-black">{{ category }}</h6>
+                            <i class="fas fa-layer-group text-white mr-2"></i>
+                            <h6 class="text-lg font-semibold text-white">{{ category }}</h6>
                             <span class="ml-3 px-2 py-1 bg-white/20 text-white rounded-full text-xs">
                                 {{ category_details|length }} item
                             </span>
@@ -240,8 +160,8 @@
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-semibold text-gray-800 truncate">{{ detail.item.name if detail.item else 'Unknown' }}</p>
                                     <p class="text-xs text-gray-500 font-mono truncate">{{ detail.serial_number }}</p>
-                                    {% if detail.serial_unit %}
-                                    <p class="text-xs text-gray-500 font-mono truncate">Unit: {{ detail.serial_unit }}</p>
+                                    {% if detail.unit_name %}
+                                    <p class="text-xs text-gray-500 truncate">Divisi: {{ detail.unit_name }}</p>
                                     {% endif %}
                                 </div>
                                 <span class="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2
