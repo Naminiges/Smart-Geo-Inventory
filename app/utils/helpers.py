@@ -269,6 +269,68 @@ def get_unit_dashboard_stats(unit_ids):
     return stats
 
 
+def get_admin_division_stats():
+    """Get division statistics for admin dashboard
+
+    Returns stats for the 4 main divisions: Jaringan, Server, Sistem Informasi, Perlengkapan Umum
+
+    Returns:
+        list: List of dicts containing unit info and item counts
+    """
+    from app.models import Unit, Item, ItemDetail, Distribution
+    from app import db
+
+    # Define the 4 main divisions to track
+    # These will match by name keywords in Unit.name
+    divisions = [
+        {'name': 'Jaringan', 'keywords': ['jaringan', 'network'], 'icon': 'fa-network-wired', 'color': 'from-blue-500 to-blue-600'},
+        {'name': 'Server', 'keywords': ['server'], 'icon': 'fa-server', 'color': 'from-purple-500 to-purple-600'},
+        {'name': 'Sistem Informasi', 'keywords': ['sistem', 'informasi', 'si', 'ti'], 'icon': 'fa-laptop-code', 'color': 'from-emerald-500 to-emerald-600'},
+        {'name': 'Perlengkapan Umum', 'keywords': ['perlengkapan', 'umum', 'general'], 'icon': 'fa-boxes', 'color': 'from-amber-500 to-amber-600'}
+    ]
+
+    result = []
+
+    for division in divisions:
+        # Find units that match the division keywords
+        keyword_filters = [
+            func.lower(Unit.name).like(f'%{kw}%')
+            for kw in division['keywords']
+        ]
+        units = Unit.query.filter(db.or_(*keyword_filters)).all()
+
+        if not units:
+            # No units found for this division, skip
+            continue
+
+        unit_ids = [u.id for u in units]
+
+        # Count items distributed to these units (excluding returned)
+        # Count from Distribution where item_detail is not returned
+        item_count = db.session.query(
+            func.count(Distribution.id)
+        ).join(
+            ItemDetail, Distribution.item_detail_id == ItemDetail.id
+        ).filter(
+            Distribution.unit_id.in_(unit_ids),
+            ItemDetail.status != 'returned'
+        ).scalar() or 0
+
+        # Use first unit for link (or could show all)
+        primary_unit = units[0]
+
+        result.append({
+            'name': division['name'],
+            'unit_id': primary_unit.id,
+            'icon': division['icon'],
+            'color': division['color'],
+            'count': item_count,
+            'units': units  # List of all units in this division
+        })
+
+    return result
+
+
 def notification_counts():
     """Context processor to provide notification counts to templates"""
     if not current_user.is_authenticated:

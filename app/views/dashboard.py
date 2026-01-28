@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, jsonify, request
 from flask_login import login_required, current_user
 from app.utils.decorators import role_required
-from app.utils.helpers import get_dashboard_stats, get_user_warehouse_id
+from app.utils.helpers import get_dashboard_stats, get_user_warehouse_id, get_admin_division_stats
 from sqlalchemy import func, extract
 from datetime import datetime
 
@@ -59,12 +59,14 @@ def admin_index():
     from app.models import AssetRequest, UserUnit
 
     stats = get_dashboard_stats()
+    division_stats = get_admin_division_stats()
 
     # Jangan override pending_request_count, biarkan pakai context processor
     # Context processor sudah menghitung AssetRequest dengan status 'pending'
 
     return render_template('dashboard/admin_index.html',
                          stats=stats,
+                         division_stats=division_stats,
                          user=current_user)
 
 
