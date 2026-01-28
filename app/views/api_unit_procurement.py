@@ -387,11 +387,6 @@ def approve_request(id):
         if data.get('admin_notes'):
             procurement.admin_notes = data['admin_notes']
 
-        # Set supplier to the linked warehouse procurement
-        if data.get('supplier_id') and procurement.procurement:
-            procurement.procurement.supplier_id = data['supplier_id']
-            procurement.procurement.save()
-
         procurement.save()
 
         return jsonify({

@@ -20,21 +20,21 @@ def upgrade():
     with app.app_context():
         # Drop supplier_id column from item_details
         try:
-            db.engine.execute(db.text('ALTER TABLE item_details DROP COLUMN IF EXISTS supplier_id'))
+            db.session.execute(db.text('ALTER TABLE item_details DROP COLUMN IF EXISTS supplier_id'))
             logger.info("Dropped supplier_id column from item_details table")
         except Exception as e:
             logger.warning(f"Could not drop supplier_id from item_details: {e}")
 
         # Drop supplier_id column from procurements
         try:
-            db.engine.execute(db.text('ALTER TABLE procurements DROP COLUMN IF EXISTS supplier_id'))
+            db.session.execute(db.text('ALTER TABLE procurements DROP COLUMN IF EXISTS supplier_id'))
             logger.info("Dropped supplier_id column from procurements table")
         except Exception as e:
             logger.warning(f"Could not drop supplier_id from procurements: {e}")
 
         # Drop suppliers table
         try:
-            db.engine.execute(db.text('DROP TABLE IF EXISTS suppliers CASCADE'))
+            db.session.execute(db.text('DROP TABLE IF EXISTS suppliers CASCADE'))
             logger.info("Dropped suppliers table")
         except Exception as e:
             logger.warning(f"Could not drop suppliers table: {e}")
@@ -50,7 +50,7 @@ def downgrade():
     with app.app_context():
         # Recreate suppliers table
         try:
-            db.engine.execute(db.text('''
+            db.session.execute(db.text('''
                 CREATE TABLE IF NOT EXISTS suppliers (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(200) NOT NULL,
@@ -68,14 +68,14 @@ def downgrade():
 
         # Add supplier_id column to item_details
         try:
-            db.engine.execute(db.text('ALTER TABLE item_details ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id)'))
+            db.session.execute(db.text('ALTER TABLE item_details ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id)'))
             logger.info("Added supplier_id column to item_details table")
         except Exception as e:
             logger.warning(f"Could not add supplier_id to item_details: {e}")
 
         # Add supplier_id column to procurements
         try:
-            db.engine.execute(db.text('ALTER TABLE procurements ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id)'))
+            db.session.execute(db.text('ALTER TABLE procurements ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES suppliers(id)'))
             logger.info("Added supplier_id column to procurements table")
         except Exception as e:
             logger.warning(f"Could not add supplier_id to procurements: {e}")

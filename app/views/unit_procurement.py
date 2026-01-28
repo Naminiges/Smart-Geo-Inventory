@@ -354,7 +354,6 @@ def approve(id):
         return redirect(url_for('unit_procurement.admin_detail', id=id))
 
     form = UnitProcurementApproveForm()
-    form.supplier_id.choices = [(s.id, s.name) for s in Supplier.query.all()]
 
     if form.validate_on_submit():
         try:
@@ -365,14 +364,9 @@ def approve(id):
                 if form.admin_notes.data:
                     procurement.admin_notes = form.admin_notes.data
 
-                # Set supplier to the linked warehouse procurement
-                if procurement.procurement:
-                    procurement.procurement.supplier_id = form.supplier_id.data
-                    procurement.procurement.save()
-
                 procurement.save()
 
-                flash(f'{message} Supplier telah dipilih.', 'success')
+                flash(f'{message}', 'success')
                 return redirect(url_for('unit_procurement.admin_detail', id=id))
             else:
                 flash(message, 'danger')

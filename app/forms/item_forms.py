@@ -24,7 +24,6 @@ class ItemDetailForm(FlaskForm):
     """Form for creating/editing item details"""
     serial_number = StringField('Nomor Seri', validators=[DataRequired(), Length(min=2, max=100)])
     item_id = SelectField('Barang', coerce=int, validators=[DataRequired()])
-    supplier_id = SelectField('Supplier', coerce=int, validators=[Optional()])
     warehouse_id = SelectField('Gudang', coerce=int, validators=[DataRequired()])
     status = SelectField('Status', choices=[
         ('available', 'Tersedia'),

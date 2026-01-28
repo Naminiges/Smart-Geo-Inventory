@@ -216,9 +216,6 @@ def create_detail():
                 specification_notes=form.specification_notes.data
             )
 
-            if form.supplier_id.data != 0:
-                item_detail.supplier_id = form.supplier_id.data
-
             item_detail.save()
 
             # Update stock

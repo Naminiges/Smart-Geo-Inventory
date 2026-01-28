@@ -17,7 +17,6 @@ class UnitProcurementVerifyForm(FlaskForm):
 
 class UnitProcurementApproveForm(FlaskForm):
     """Form for admin to approve verified request and create warehouse procurement"""
-    supplier_id = SelectField('Pilih Supplier', coerce=int, validators=[DataRequired()])
     admin_notes = TextAreaField('Catatan Admin', validators=[Optional()])
     submit = SubmitField('Setujui dan Buat Pengadaan')
 

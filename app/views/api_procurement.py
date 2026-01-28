@@ -140,7 +140,7 @@ def create_request():
 @login_required
 @role_required('admin')
 def approve_request(id):
-    """Step 3: Admin approves and selects supplier"""
+    """Step 3: Admin approves procurement request"""
     procurement = Procurement.query.get_or_404(id)
     data = request.get_json()
 
@@ -150,16 +150,9 @@ def approve_request(id):
             'message': 'Hanya permohonan dengan status pending yang bisa disetujui'
         }), 400
 
-    if 'supplier_id' not in data:
-        return jsonify({
-            'success': False,
-            'message': 'supplier_id is required'
-        }), 400
-
     try:
         success, message = procurement.approve(
-            user_id=current_user.id,
-            supplier_id=data['supplier_id']
+            user_id=current_user.id
         )
 
         if success:
@@ -171,7 +164,7 @@ def approve_request(id):
 
             return jsonify({
                 'success': True,
-                'message': f'{message}. Supplier telah dipilih',
+                'message': f'{message}',
                 'data': procurement.to_dict()
             })
         else:
