@@ -70,10 +70,11 @@ def create_app(config_name='default'):
         return data
 
     # Register blueprints
-    from app.views import auth, dashboard, installations, stock, items, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans, warehouses, buildings, asset_transfer
+    from app.views import main, auth, dashboard, installations, stock, items, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans, warehouses, buildings, asset_transfer
     from app.views.admin import buildings as admin_buildings
     from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_map, api_procurement, api_units, api_unit_procurement
 
+    app.register_blueprint(main.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(installations.bp)
@@ -106,11 +107,6 @@ def create_app(config_name='default'):
     app.register_blueprint(api_procurement.bp, url_prefix='/api')
     app.register_blueprint(api_units.bp)
     app.register_blueprint(api_unit_procurement.bp, url_prefix='/api')
-
-    # Root route - redirect to login or dashboard
-    @app.route('/')
-    def index():
-        return redirect(url_for('auth.login'))
 
     # Create tables
     with app.app_context():
