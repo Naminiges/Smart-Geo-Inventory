@@ -14,6 +14,8 @@ class User(UserMixin, BaseModel):
     role = db.Column(db.String(50), nullable=False)  # admin | warehouse_staff | field_staff | unit_staff
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'))  # ONLY for warehouse_staff
     is_active = db.Column(db.Boolean, default=True, nullable=False)  # For activation/deactivation
+    phone = db.Column(db.String(20))  # Phone number for WhatsApp notifications
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable email notifications
 
     # Relationships
     warehouse = db.relationship('Warehouse', back_populates='users')
@@ -82,6 +84,13 @@ class User(UserMixin, BaseModel):
 
         # Check if unit is in user's assignments
         return any(uu.unit_id == unit_id for uu in self.user_units.all())
+
+    def should_receive_email_notifications(self):
+        """Check if user should receive email notifications.
+        Returns False if user is inactive, regardless of email_notifications setting.
+        This ensures inactive users never receive emails.
+        """
+        return self.is_active and self.email_notifications
 
     def __repr__(self):
         return f'<User {self.email} - {self.role}>'

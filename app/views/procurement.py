@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import login_required, current_user
 from app import db
 from app.models import Procurement, Item, User, Warehouse, Category
@@ -6,12 +6,35 @@ from app.models.procurement import ProcurementItem
 from app.forms import (
     ProcurementRequestForm,
     GoodsReceiptForm,
-    ProcurementCompleteForm
+    ProcurementCompleteForm,
+    ProcurementApproveForm,
+    ProcurementRejectForm
 )
 from app.utils.decorators import role_required
+from app.services.notifications import (
+    notify_procurement_created,
+    notify_procurement_approved,
+    notify_procurement_rejected,
+    notify_procurement_goods_received,
+    notify_procurement_completed
+)
 from datetime import datetime
+import secrets
 
 bp = Blueprint('procurement', __name__, url_prefix='/procurement')
+
+
+def generate_form_token():
+    """Generate a unique token for form submission to prevent double submission"""
+    token = secrets.token_hex(16)
+    session['procurement_form_token'] = token
+    return token
+
+
+def validate_form_token(token):
+    """Validate form token and consume it (one-time use)"""
+    stored_token = session.pop('procurement_form_token', None)
+    return stored_token and stored_token == token
 
 
 def generate_item_code(category_id):
@@ -122,6 +145,12 @@ def _create_procurement_request(is_admin=False):
 
     if request.method == 'POST':
         try:
+            # Validate form token to prevent double submission
+            form_token = request.form.get('form_token')
+            if not form_token or not validate_form_token(form_token):
+                flash('Form sudah dikirim. Silakan refresh halaman.', 'warning')
+                return redirect(url_for('procurement.index'))
+
             # Get items data from form
             items_data = request.form.getlist('items')
             request_notes = form.request_notes.data
@@ -234,6 +263,10 @@ def _create_procurement_request(is_admin=False):
                 )
                 procurement_item.save()
 
+            # Send email notification for pending procurements (warehouse staff created)
+            if procurement.status == 'pending':
+                notify_procurement_created(procurement)
+
             flash(success_message, 'success')
             return redirect(url_for('procurement.index'))
         except Exception as e:
@@ -244,13 +277,17 @@ def _create_procurement_request(is_admin=False):
     categories = Category.query.all()
     warehouses = Warehouse.query.all() if is_admin else []
 
+    # Generate form token for this session
+    form_token = generate_form_token()
+
     # Use same template for both admin and warehouse staff
     return render_template('procurement/request.html',
                          form=form,
                          items=items,
                          categories=categories,
                          warehouses=warehouses,
-                         is_admin=is_admin)
+                         is_admin=is_admin,
+                         form_token=form_token)
 
 
 @bp.route('/<int:id>')
@@ -273,15 +310,19 @@ def approve(id):
         flash('Hanya permohonan dengan status pending yang bisa disetujui.', 'warning')
         return redirect(url_for('procurement.detail', id=id))
 
-    if request.method == 'POST':
+    form = ProcurementApproveForm()
+
+    if form.validate_on_submit():
         try:
             success, message = procurement.approve(user_id=current_user.id)
 
             if success:
-                notes = request.form.get('notes')
-                if notes:
-                    procurement.notes = notes
+                if form.notes.data:
+                    procurement.notes = form.notes.data
                 procurement.save()
+
+                # Send email notification
+                notify_procurement_approved(procurement)
 
                 flash(message, 'success')
                 return redirect(url_for('procurement.detail', id=id))
@@ -290,7 +331,7 @@ def approve(id):
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('procurement/approve.html', procurement=procurement)
+    return render_template('procurement/approve.html', procurement=procurement, form=form, reject_form=ProcurementRejectForm())
 
 
 @bp.route('/<int:id>/reject', methods=['POST'])
@@ -299,16 +340,26 @@ def approve(id):
 def reject(id):
     """Reject procurement request"""
     procurement = Procurement.query.get_or_404(id)
-    rejection_reason = request.form.get('rejection_reason', '')
+    form = ProcurementRejectForm()
 
-    try:
-        success, message = procurement.reject(current_user.id, rejection_reason)
-        if success:
-            flash(message, 'success')
-        else:
-            flash(message, 'danger')
-    except Exception as e:
-        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+    if form.validate_on_submit():
+        rejection_reason = form.rejection_reason.data
+
+        try:
+            success, message = procurement.reject(current_user.id, rejection_reason)
+            if success:
+                # Send email notification
+                notify_procurement_rejected(procurement, rejection_reason)
+
+                flash(message, 'success')
+            else:
+                flash(message, 'danger')
+        except Exception as e:
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f'{error}', 'danger')
 
     return redirect(url_for('procurement.detail', id=id))
 
@@ -417,6 +468,9 @@ def receive_goods(id):
             )
 
             if success:
+                # Send email notification for goods received
+                notify_procurement_goods_received(procurement)
+
                 # Check if fully received
                 if procurement.is_fully_received:
                     flash(f'{message}', 'success')
@@ -466,6 +520,9 @@ def complete(id):
             )
 
             if success:
+                # Send email notification
+                notify_procurement_completed(procurement)
+
                 flash(message, 'success')
                 return redirect(url_for('procurement.detail', id=id))
             else:
@@ -482,9 +539,10 @@ def complete(id):
 @login_required
 @role_required('admin')
 def delete(id):
-    """Delete procurement request"""
+    """Delete procurement request - Only admin can delete"""
     procurement = Procurement.query.get_or_404(id)
 
+    # Can only delete pending or rejected procurements
     if procurement.status not in ['pending', 'rejected']:
         flash('Hanya permohonan dengan status pending atau rejected yang bisa dihapus.', 'warning')
         return redirect(url_for('procurement.detail', id=id))

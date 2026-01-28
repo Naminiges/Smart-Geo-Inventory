@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Barang Diterima - {{ distribution.distribution_code }}{% endblock %}
+
+{% block content %}
+<h2>Barang Telah Diterima</h2>
+
+<p>Halo Admin,</p>
+
+<p>Barang distribusi telah diterima oleh unit:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Distribusi:</span> {{ distribution.distribution_code }}</p>
+    <p><span class="info-label">Unit:</span> {{ distribution.unit.name if distribution.unit else '-' }}</p>
+    <p><span class="info-label">Diterima pada:</span> {{ distribution.installed_at.strftime('%d/%m/%Y %H:%M') if distribution.installed_at else '-' }}</p>
+</div>
+
+<div class="alert alert-success">
+    Distribusi telah selesai. Barang telah diterima dan terpasang di unit tujuan.
+</div>
+
+<a href="{{ url_for('installations.index', _external=True) }}" class="btn">Lihat Detail</a>
+
+{% endblock %}

@@ -48,6 +48,11 @@
                 <i class="fas fa-times mr-1"></i>Tolak
             </button>
             {% endif %}
+            {% if asset_request.status in ['pending', 'rejected'] and current_user.is_unit_staff() %}
+            <button type="button" onclick="toggleDeleteModal()" class="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm">
+                <i class="fas fa-trash mr-1"></i>Hapus
+            </button>
+            {% endif %}
             {% if asset_request.status == 'verified' and (current_user.is_warehouse_staff() or current_user.is_admin()) %}
             <a href="{{ url_for('asset_requests.distribute', id=asset_request.id) }}" class="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
                 <i class="fas fa-truck mr-1"></i>Proses Distribusi
@@ -217,19 +222,6 @@
         </h4>
         <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
             <p class="text-sm text-gray-700">{{ asset_request.verification_notes }}</p>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Additional Notes -->
-    {% if asset_request.notes %}
-    <div class="mb-0">
-        <h4 class="text-sm font-semibold text-gray-700 mb-2">
-            <i class="fas fa-sticky-note text-blue-600 mr-1"></i>
-            Catatan Tambahan
-        </h4>
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p class="text-sm text-gray-700">{{ asset_request.notes }}</p>
         </div>
     </div>
     {% endif %}
@@ -473,8 +465,45 @@
                 <button type="button" onclick="toggleRejectModal()" class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
                     Batal
                 </button>
-                <button type="submit" class="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
-                    <i class="fas fa-times mr-2"></i>Tolak Permohonan
+                <button type="submit" id="rejectSubmitBtn" class="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:bg-red-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-times mr-2"></i><span id="rejectBtnText">Tolak Permohonan</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Modal -->
+{% if current_user.is_unit_staff() and asset_request.status in ['pending', 'rejected'] %}
+<div id="deleteModal" class="fixed inset-0 hidden items-center justify-center z-50 backdrop-blur-sm bg-gray-900/40">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+        <form id="deleteForm" method="POST" action="{{ url_for('asset_requests.delete', id=asset_request.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Hapus Permohonan</h3>
+            </div>
+            <div class="p-6">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-700">
+                            Apakah Anda yakin ingin menghapus permohonan ini?
+                        </p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Tindakan ini tidak dapat dibatalkan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="toggleDeleteModal()" class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
+                    Batal
+                </button>
+                <button type="submit" id="deleteSubmitBtn" class="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:bg-red-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-trash mr-2"></i><span id="deleteBtnText">Hapus</span>
                 </button>
             </div>
         </form>
@@ -493,6 +522,47 @@ function toggleRejectModal() {
         modal.classList.remove('flex');
     }
 }
+
+function toggleDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+// Add loading state for reject form
+{% if current_user.is_admin() and asset_request.status == 'pending' %}
+document.addEventListener('DOMContentLoaded', function() {
+    const rejectForm = document.querySelector('#rejectModal form');
+    if (rejectForm) {
+        rejectForm.addEventListener('submit', function() {
+            const btn = document.getElementById('rejectSubmitBtn');
+            const btnText = document.getElementById('rejectBtnText');
+            btn.disabled = true;
+            btnText.textContent = 'Memproses...';
+        });
+    }
+});
+{% endif %}
+
+// Add loading state for delete form
+{% if current_user.is_unit_staff() and asset_request.status in ['pending', 'rejected'] %}
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.getElementById('deleteForm');
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function() {
+            const btn = document.getElementById('deleteSubmitBtn');
+            const btnText = document.getElementById('deleteBtnText');
+            btn.disabled = true;
+            btnText.textContent = 'Menghapus...';
+        });
+    }
+});
+{% endif %}
 
 function toggleProofPhoto() {
     const container = document.getElementById('proofPhotoContainer');

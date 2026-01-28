@@ -7,6 +7,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_mail import Mail
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
 from app.utils.status_helper import translate_status, get_status_color, get_status_icon
@@ -23,6 +24,7 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
+mail = Mail()
 
 
 def create_app(config_name='default'):
@@ -39,6 +41,7 @@ def create_app(config_name='default'):
     csrf.init_app(app)
     cache.init_app(app)
     limiter.init_app(app)
+    mail.init_app(app)
 
     # Register rate limit error handler
     from app.utils.rate_limit_helpers import register_rate_limit_error_handler
@@ -61,7 +64,10 @@ def create_app(config_name='default'):
     # Make helpers available in all templates
     @app.context_processor
     def utility_helpers():
-        return notification_counts()
+        from flask_wtf.csrf import generate_csrf
+        data = notification_counts()
+        data['csrf_token'] = generate_csrf
+        return data
 
     # Register blueprints
     from app.views import auth, dashboard, installations, stock, items, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans, warehouses, buildings, asset_transfer

@@ -7,6 +7,12 @@ from app.forms import DistributionForm, InstallationForm
 from app.utils.decorators import role_required, warehouse_access_required
 from app.utils.datetime_helper import get_wib_now
 from app.utils.helpers import get_user_warehouse_id
+from app.services.notifications import (
+    notify_distribution_created,
+    notify_distribution_sent,
+    notify_distribution_received,
+    notify_distribution_rejected
+)
 
 bp = Blueprint('installations', __name__, url_prefix='/installations')
 
@@ -442,6 +448,9 @@ def verify(id):
             note='Installation verified and completed'
         )
 
+        # Send email notification to admin
+        notify_distribution_received(distribution)
+
         flash('Instalasi berhasil diverifikasi!', 'success')
     except Exception as e:
         flash(f'Terjadi kesalahan: {str(e)}', 'danger')
@@ -855,10 +864,17 @@ def create_general_distribution():
             if current_user.is_admin():
                 success, message = distribution_group.approve(current_user.id)
                 if success:
+                    # Send email notification to unit staff
+                    for dist in distribution_group.distributions:
+                        notify_distribution_sent(dist)
+
                     flash(f'{len(distributions_created)} distribusi berhasil dibuat dan disetujui.', 'success')
                 else:
                     flash(message, 'danger')
             else:
+                # Send email notification to admin about new draft distribution
+                notify_distribution_created(distributions_created[0] if distributions_created else None)
+
                 flash(f'{len(distributions_created)} draft distribusi berhasil dibuat. Menunggu verifikasi admin.', 'success')
 
             return redirect(url_for('installations.index'))
@@ -962,6 +978,10 @@ def approve_general_distribution(id):
         success, message = distribution_group.approve(current_user.id)
 
         if success:
+            # Send email notification to unit staff for each distribution
+            for dist in distribution_group.distributions:
+                notify_distribution_sent(dist)
+
             flash(message, 'success')
         else:
             flash(message, 'danger')
@@ -999,6 +1019,11 @@ def reject_general_distribution(id):
         success, message = distribution_group.reject(current_user.id, reason)
 
         if success:
+            # Send email notification to warehouse staff who created the draft
+            for dist in distribution_group.distributions:
+                if dist.draft_created_by:
+                    notify_distribution_rejected(dist, reason)
+
             flash(message, 'success')
         else:
             flash(message, 'danger')

@@ -307,3 +307,47 @@ def room_items(room_id):
         'items_count': len(items),
         'items': items
     })
+
+
+@bp.route('/rooms/<int:room_id>/view')
+def public_room_view(room_id):
+    """Public view of items in a room - accessible via QR Code without login"""
+    from app.models.facilities import UnitDetail
+    from app.models import Distribution
+
+    room = UnitDetail.query.get_or_404(room_id)
+    building = room.building
+
+    # Get all distributions in this room with status 'installed'
+    distributions = Distribution.query.filter_by(
+        unit_detail_id=room_id,
+        status='installed'
+    ).all()
+
+    items = []
+    for dist in distributions:
+        if dist.item_detail and dist.item_detail.item:
+            # Use installed_at or created_at as distribution date
+            dist_date = None
+            if dist.installed_at:
+                dist_date = dist.installed_at.strftime('%d/%m/%Y')
+            elif dist.created_at:
+                dist_date = dist.created_at.strftime('%d/%m/%Y')
+            else:
+                dist_date = '-'
+
+            items.append({
+                'serial_number': dist.item_detail.serial_number,
+                'item_name': dist.item_detail.item.name,
+                'item_code': dist.item_detail.item.item_code,
+                'category': dist.item_detail.item.category.name if dist.item_detail.item.category else '-',
+                'unit_name': dist.unit.name if dist.unit else '-',
+                'distributed_date': dist_date
+            })
+
+    return render_template(
+        'buildings/public_room_items.html',
+        room=room,
+        building=building,
+        items=items
+    )

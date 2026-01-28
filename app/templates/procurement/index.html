@@ -194,6 +194,14 @@
                 <i class="fas fa-check-double"></i>
               </a>
               {% endif %}
+
+              {% if procurement.status in ['pending', 'rejected'] and current_user.is_admin() %}
+              <button onclick="showDeleteModal({{ procurement.id }}, '{{ procurement.procurement_code }}')"
+                      class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Hapus">
+                <i class="fas fa-trash"></i>
+              </button>
+              {% endif %}
             </div>
           </td>
         </tr>
@@ -213,4 +221,125 @@
     {% endif %}
   </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+  <div class="min-h-full flex items-center justify-center p-4">
+    <div class="relative w-full max-w-md bg-white rounded-lg shadow-xl animate-fade-in">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+            <i class="fas fa-trash text-white text-sm"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">Hapus Pengadaan</h3>
+            <p class="text-sm text-gray-500">Konfirmasi penghapusan</p>
+          </div>
+        </div>
+        <button onclick="closeDeleteModal()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+          <i class="fas fa-times text-gray-600 text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-5">
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+          <div class="flex items-start gap-3">
+            <i class="fas fa-exclamation-triangle text-red-600 mt-0.5"></i>
+            <div>
+              <p class="text-sm text-red-800 font-medium">Perhatian!</p>
+              <p class="text-sm text-red-700 mt-1">Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="text-gray-700 mb-2">Anda yakin ingin menghapus pengadaan ini?</p>
+
+        <div class="bg-gray-50 rounded-lg p-3 mt-3">
+          <p class="text-sm text-gray-600">
+            <span class="font-medium">Kode Pengadaan:</span>
+            <span id="deleteProcurementCode" class="font-mono text-gray-900"></span>
+          </p>
+        </div>
+
+        <p class="text-sm text-gray-600 mt-3">
+          Pengadaan yang dihapus:
+        </p>
+        <ul class="text-sm text-gray-600 mt-1 ml-4 list-disc">
+          <li>Salah input data</li>
+          <li>Sudah tidak berlaku</li>
+          <li>Permohonan dibatalkan</li>
+        </ul>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm inline-flex items-center gap-2">
+          <i class="fas fa-times"></i>
+          <span>Batal</span>
+        </button>
+        <form id="deleteForm" method="POST" class="inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm inline-flex items-center gap-2">
+            <i class="fas fa-trash"></i>
+            <span>Ya, Hapus</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+</style>
+
+<script>
+let procurementToDelete = null;
+
+function showDeleteModal(procurementId, procurementCode) {
+  procurementToDelete = procurementId;
+  document.getElementById('deleteProcurementCode').textContent = procurementCode;
+
+  // Set form action
+  const form = document.getElementById('deleteForm');
+  form.action = `/procurement/${procurementId}/delete`;
+
+  // Show modal
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.add('hidden');
+  procurementToDelete = null;
+}
+
+// Close modal on outside click
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeDeleteModal();
+  }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeDeleteModal();
+  }
+});
+</script>
 {% endblock %}

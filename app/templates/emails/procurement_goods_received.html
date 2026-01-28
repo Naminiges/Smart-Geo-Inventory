@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Barang Diterima - {{ procurement.procurement_code }}{% endblock %}
+
+{% block content %}
+<h2>Barang Pengadaan Diterima</h2>
+
+<p>Halo Admin,</p>
+
+<p>Barang untuk pengadaan telah diterima oleh Warehouse Staff:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Pengadaan:</span> {{ procurement.procurement_code }}</p>
+    <p><span class="info-label">Penerima:</span> {{ procurement.received_by_user.name if procurement.received_by_user else '-' }}</p>
+    <p><span class="info-label">Tanggal Penerimaan:</span> {{ procurement.receipt_date.strftime('%d/%m/%Y %H:%M') if procurement.receipt_date else '-' }}</p>
+    <p><span class="info-label">No. Tanda Terima:</span> {{ procurement.receipt_number or '-' }}</p>
+    <p><span class="info-label">Status:</span> {{ procurement.status|replace('_', ' ')|title }}</p>
+</div>
+
+<p>Barang telah diterima dan siap untuk diproses lebih lanjut.</p>
+
+<a href="{{ base_url }}/procurement/{{ procurement.id }}" class="btn">Lihat Detail Pengadaan</a>
+
+{% endblock %}

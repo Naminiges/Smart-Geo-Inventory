@@ -1,0 +1,35 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Distribusi Ditolak - {{ distribution.distribution_group.batch_code if distribution.distribution_group else distribution.distribution_code }}{% endblock %}
+
+{% block content %}
+<h2>Distribusi Ditolak</h2>
+
+<p>Mohon maaf,</p>
+
+<p>Permohonan distribusi yang Anda ajukan telah ditolak oleh Admin:</p>
+
+<div class="alert alert-danger">
+    <strong><i class="fas fa-times-circle"></i> Status:</strong> Rejected
+</div>
+
+<div class="info-box">
+    {% if distribution.distribution_group %}
+    <p><span class="info-label">No. Batch:</span> {{ distribution.distribution_group.batch_code }}</p>
+    {% endif %}
+    <p><span class="info-label">Unit Tujuan:</span> {{ distribution.unit.name if distribution.unit else '-' }}</p>
+    <p><span class="info-label">Tanggal Penolakan:</span> {{ distribution.distribution_group.rejection_date.strftime('%d/%m/%Y %H:%M') if distribution.distribution_group and distribution.distribution_group.rejection_date else '-' }}</p>
+</div>
+
+{% if rejection_reason %}
+<div class="alert alert-warning">
+    <strong><i class="fas fa-exclamation-triangle"></i> Alasan Penolakan:</strong><br>
+    {{ rejection_reason }}
+</div>
+{% endif %}
+
+<p>Silakan periksa kembali permohonan Anda atau hubungi admin untuk informasi lebih lanjut.</p>
+
+<a href="{{ base_url }}/installations/" class="btn">Lihat Draft Distribusi</a>
+
+{% endblock %}

@@ -161,8 +161,8 @@
                     Batal
                 </a>
                 <button type="submit" id="submitBtn" class="submit-btn px-6 py-3 bg-gray-400 text-gray-600 rounded-lg font-semibold cursor-not-allowed" disabled>
-                    <i class="fas fa-check mr-2"></i>
-                    Proses Permohonan
+                    <i class="fas fa-check mr-2 submit-icon"></i>
+                    <span class="submit-text">Proses Permohonan</span>
                 </button>
             </div>
         </form>
@@ -190,6 +190,9 @@
 
 <script>
 const warehouseId = {{ warehouse_id }};
+const submitBtn = document.getElementById('submitBtn');
+const submitIcon = submitBtn.querySelector('.submit-icon');
+const submitText = submitBtn.querySelector('.submit-text');
 const itemsData = [
     {% for item in asset_request.items %}
     {
@@ -411,6 +414,13 @@ document.addEventListener('DOMContentLoaded', function() {
     itemsData.forEach(item => {
         fetchAvailableSerials(item.item_id, item.quantity, item.id);
     });
+});
+
+// Add loading state for form submission
+document.querySelector('form').addEventListener('submit', function() {
+    submitBtn.disabled = true;
+    submitIcon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+    submitText.textContent = 'Memproses...';
 });
 </script>
 {% endblock %}

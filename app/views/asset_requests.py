@@ -4,6 +4,14 @@ from app import db
 from app.models import AssetRequest, AssetRequestItem, Item, Unit, UnitDetail, User
 from app.forms import AssetRequestForm, AssetVerificationForm
 from app.utils.decorators import role_required
+from app.services.notifications import (
+    notify_asset_request_created,
+    notify_asset_request_verified,
+    notify_asset_request_verified_to_warehouse,
+    notify_asset_request_rejected,
+    notify_asset_request_distributing,
+    notify_asset_request_completed
+)
 from datetime import datetime
 
 bp = Blueprint('asset_requests', __name__, url_prefix='/asset-requests')
@@ -161,6 +169,9 @@ def create():
             item_count = len(valid_items)
             flash(f'Permohonan aset berhasil dibuat dengan {item_count} aset! Menunggu verifikasi admin.', 'success')
 
+            # Send email notification to admin
+            notify_asset_request_created(asset_request)
+
             return redirect(url_for('asset_requests.index'))
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
@@ -180,7 +191,8 @@ def create():
     return render_template('asset_requests/create.html',
                          form=form,
                          items=items,
-                         unit_details=unit_details_choices)
+                         unit_details=unit_details_choices,
+                         unit=user_unit.unit)
 
 
 @bp.route('/<int:id>')
@@ -312,6 +324,12 @@ def verify(id):
                     asset_request.notes = f"{asset_request.notes}\nwarehouse_id:{selected_warehouse_id}"
                 asset_request.save()
 
+                # Send email notification to unit staff
+                notify_asset_request_verified(asset_request)
+
+                # Send email notification to all warehouse staff
+                notify_asset_request_verified_to_warehouse(asset_request)
+
                 if stock_warnings:
                     warning_msg = "Peringatan Stok: " + ", ".join(stock_warnings)
                     flash(f'{message} {warning_msg}', 'warning')
@@ -351,6 +369,8 @@ def reject(id):
         )
 
         if success:
+            # Send email notification to unit staff
+            notify_asset_request_rejected(asset_request)
             flash(message, 'success')
         else:
             flash(message, 'danger')
@@ -476,6 +496,9 @@ def distribute(id):
             asset_request.distributed_at = datetime.utcnow()
             asset_request.distributed_by = current_user.id
             asset_request.save()
+
+            # Send email notification to unit staff
+            notify_asset_request_distributing(asset_request)
 
             flash(f'Berhasil memproses {len(distributions_created)} distribusi. Barang sedang dipersiapkan untuk dikirim ke unit.', 'success')
             return redirect(url_for('asset_requests.detail', id=id))
@@ -624,6 +647,8 @@ def confirm_receipt(id):
             )
 
             if success:
+                # Send email notification to admin and warehouse staff
+                notify_asset_request_completed(asset_request, asset_request.distributed_by)
                 flash(f'{message} (Foto: {compressed_size_kb:.1f}KB)', 'success')
             else:
                 flash(message, 'danger')
@@ -710,6 +735,8 @@ def complete(id):
         )
 
         if success:
+            # Send email notification to admin and warehouse staff
+            notify_asset_request_completed(asset_request, asset_request.distributed_by)
             flash(message, 'success')
         else:
             flash(message, 'danger')
@@ -717,6 +744,41 @@ def complete(id):
         flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     return redirect(url_for('asset_requests.detail', id=id))
+
+
+@bp.route('/<int:id>/delete', methods=['POST'])
+@login_required
+@role_required('unit_staff')
+def delete(id):
+    """Delete asset request - Only unit staff can delete their own pending/rejected requests"""
+    asset_request = AssetRequest.query.get_or_404(id)
+
+    # Check permission
+    from app.models import UserUnit
+    user_units = UserUnit.query.filter_by(user_id=current_user.id).all()
+    unit_ids = [uu.unit_id for uu in user_units]
+    if asset_request.unit_id not in unit_ids:
+        flash('Anda tidak memiliki izin untuk menghapus permohonan ini.', 'danger')
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    # Only allow deletion of pending or rejected requests
+    if asset_request.status not in ['pending', 'rejected']:
+        flash('Hanya permohonan dengan status pending atau rejected yang bisa dihapus.', 'warning')
+        return redirect(url_for('asset_requests.detail', id=id))
+
+    try:
+        # Delete all related items first
+        for item in asset_request.items:
+            db.session.delete(item)
+        # Delete the asset request
+        db.session.delete(asset_request)
+        db.session.commit()
+        flash('Permohonan berhasil dihapus.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return redirect(url_for('asset_requests.index'))
 
 
 @bp.route('/unit-assets')

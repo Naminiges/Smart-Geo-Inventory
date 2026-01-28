@@ -6,7 +6,9 @@ from app.forms.warehouse_forms import WarehouseForm, BuildingForm, UnitForm, Uni
 from app.forms.procurement_forms import (
     ProcurementRequestForm,
     GoodsReceiptForm,
-    ProcurementCompleteForm
+    ProcurementCompleteForm,
+    ProcurementApproveForm,
+    ProcurementRejectForm
 )
 from app.forms.user_forms import UserForm, UserWarehouseAssignmentForm
 from app.forms.asset_request_forms import AssetRequestForm, AssetVerificationForm
@@ -32,6 +34,8 @@ __all__ = [
     'ProcurementRequestForm',
     'GoodsReceiptForm',
     'ProcurementCompleteForm',
+    'ProcurementApproveForm',
+    'ProcurementRejectForm',
     'UserForm',
     'UserWarehouseAssignmentForm',
     'AssetRequestForm',

@@ -404,6 +404,16 @@ class Procurement(BaseModel):
     completer = db.relationship('User', foreign_keys=[completed_by], backref='completed_procurements')
 
     @property
+    def procurement_code(self):
+        """Generate procurement code like PC-000001"""
+        return f"PC-{self.id:06d}"
+
+    @property
+    def created_by_user(self):
+        """Get the user who created this procurement (alias for requester)"""
+        return self.requester
+
+    @property
     def total_quantity(self):
         """Get total quantity of all items in this procurement"""
         return sum(item.quantity for item in self.items) if self.items else 0
@@ -644,6 +654,21 @@ class Procurement(BaseModel):
             print(f"ERROR in complete(): {str(e)}")
             print(traceback.format_exc())
             return False, f'Error menyelesaikan pengadaan: {str(e)}'
+
+    def delete(self):
+        """Delete procurement and all related items"""
+        try:
+            # Delete all procurement items first (cascade manually)
+            for item in self.items:
+                db.session.delete(item)
+
+            # Then delete the procurement
+            db.session.delete(self)
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     def __repr__(self):
         return f'<Procurement #{self.id} Items:{len(self.items) if self.items else 0}>'

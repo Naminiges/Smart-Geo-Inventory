@@ -3,6 +3,12 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Distribution, UserUnit, Unit
 from app.utils.decorators import role_required
+from app.services.notifications import (
+    notify_distribution_created,
+    notify_distribution_sent,
+    notify_distribution_received,
+    notify_distribution_rejected
+)
 from datetime import datetime
 from io import BytesIO
 from PIL import Image
@@ -218,6 +224,10 @@ def receive_detail(id):
             distribution_group.verification_received_at = datetime.utcnow()
             distribution_group.verification_notes = f'Bukti penerimaan batch {distribution_group.batch_code} dari {current_user.name}'
             distribution_group.save()
+
+            # Send email notification for each distribution in the batch
+            for dist in batch_distributions:
+                notify_distribution_received(dist)
 
             item_count = len(batch_distributions)
             flash(f'Berhasil mengonfirmasi penerimaan batch {distribution_group.batch_code} dengan {item_count} barang. (Foto: {compressed_size_kb:.1f}KB)', 'success')

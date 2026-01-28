@@ -225,7 +225,10 @@
                 <i class="fas fa-times mr-2"></i>
                 Batal
             </a>
-            {{ form.submit(class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold") }}
+            <button type="submit" id="verifySubmitBtn" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-green-400 disabled:cursor-not-allowed">
+                <i class="fas fa-check mr-2 verify-icon"></i>
+                <span class="verify-text">Verifikasi Permohonan</span>
+            </button>
         </div>
     </form>
 </div>
@@ -273,9 +276,9 @@
                 <button type="button" onclick="toggleRejectModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                     Batal
                 </button>
-                <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                <button type="submit" id="rejectSubmitBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed">
                     <i class="fas fa-times mr-2"></i>
-                    Tolak Permohonan
+                    <span id="rejectBtnText">Tolak Permohonan</span>
                 </button>
             </div>
         </form>
@@ -323,5 +326,29 @@ document.addEventListener('DOMContentLoaded', function() {
         checkStockAvailability();
     }
 });
+
+// Add loading state for reject modal form
+const rejectModalForm = document.querySelector('#rejectModal form');
+if (rejectModalForm) {
+    rejectModalForm.addEventListener('submit', function() {
+        const btn = document.getElementById('rejectSubmitBtn');
+        const btnText = document.getElementById('rejectBtnText');
+        btn.disabled = true;
+        btnText.textContent = 'Memproses...';
+    });
+}
+
+// Add loading state for verify form
+const verifyForm = document.querySelector('form[action*="/verify"]');
+if (verifyForm) {
+    verifyForm.addEventListener('submit', function() {
+        const btn = document.getElementById('verifySubmitBtn');
+        const verifyIcon = btn.querySelector('.verify-icon');
+        const verifyText = btn.querySelector('.verify-text');
+        btn.disabled = true;
+        verifyIcon.className = 'fas fa-spinner fa-spin mr-2 verify-icon';
+        verifyText.textContent = 'Memverifikasi...';
+    });
+}
 </script>
 {% endblock %}

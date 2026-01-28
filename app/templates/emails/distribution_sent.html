@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Barang Ditujukan - {{ distribution.distribution_code }}{% endblock %}
+
+{% block content %}
+<h2>Barang Ditujukan ke Unit Anda</h2>
+
+<p>Halo,</p>
+
+<p>Barang baru saja ditujukan ke unit Anda. Silakan lakukan penerimaan barang:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Distribusi:</span> {{ distribution.distribution_code }}</p>
+    <p><span class="info-label">Unit:</span> {{ distribution.unit.name if distribution.unit else '-' }}</p>
+    <p><span class="info-label">Tanggal:</span> {{ distribution.created_at.strftime('%d/%m/%Y') if distribution.created_at else '-' }}</p>
+</div>
+
+<div class="alert alert-success">
+    Barang telah ditujukan. Silakan login untuk melihat detail dan menerima barang.
+</div>
+
+<a href="{{ url_for('distributions.receive_index', _external=True) }}" class="btn">Terima Barang</a>
+
+{% endblock %}

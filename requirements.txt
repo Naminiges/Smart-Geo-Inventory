@@ -4,6 +4,7 @@ Flask-Login>=0.6.3
 Flask-WTF>=1.2.1
 Flask-Migrate>=4.0.5
 Flask-CORS>=4.0.0
+Flask-Mail>=0.9.1
 SQLAlchemy>=2.0.36
 GeoAlchemy2>=0.14.2
 psycopg2-binary>=2.9.9

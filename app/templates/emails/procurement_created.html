@@ -1,0 +1,23 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Pengadaan Baru - {{ procurement.procurement_code }}{% endblock %}
+
+{% block content %}
+<h2>Pengadaan Baru Diajukan</h2>
+
+<p>Halo Admin,</p>
+
+<p>Pengadaan baru telah diajukan oleh Warehouse Staff dan memerlukan verifikasi Anda:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Pengadaan:</span> {{ procurement.procurement_code }}</p>
+    <p><span class="info-label">Diajukan oleh:</span> {{ procurement.created_by_user.name if procurement.created_by_user else '-' }}</p>
+    <p><span class="info-label">Tanggal:</span> {{ procurement.created_at.strftime('%d/%m/%Y') if procurement.created_at else '-' }}</p>
+    <p><span class="info-label">Status:</span> {{ procurement.status|replace('_', ' ')|title }}</p>
+</div>
+
+<p>Silakan login ke sistem untuk memverifikasi dan menyetujui pengadaan ini.</p>
+
+<a href="{{ base_url }}/procurement/" class="btn">Lihat Detail Pengadaan</a>
+
+{% endblock %}

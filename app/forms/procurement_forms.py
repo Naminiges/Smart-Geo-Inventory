@@ -19,3 +19,15 @@ class ProcurementCompleteForm(FlaskForm):
     """Form for completing procurement and adding to stock (Step 6)"""
     warehouse_id = SelectField('Gudang Tujuan', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Konfirmasi dan Masukkan ke Stok')
+
+
+class ProcurementApproveForm(FlaskForm):
+    """Form for admin to approve procurement"""
+    notes = TextAreaField('Catatan Admin', validators=[Optional()])
+    submit = SubmitField('Setujui Permohonan')
+
+
+class ProcurementRejectForm(FlaskForm):
+    """Form for admin to reject procurement"""
+    rejection_reason = TextAreaField('Alasan Penolakan', validators=[DataRequired(), Length(min=5)])
+    submit = SubmitField('Tolak Permohonan')

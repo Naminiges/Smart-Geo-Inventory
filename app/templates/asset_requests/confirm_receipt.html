@@ -141,8 +141,8 @@
                     Batal
                 </a>
                 <button type="submit" id="submitBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
-                    <i class="fas fa-check mr-2"></i>
-                    Konfirmasi Penerimaan
+                    <i class="fas fa-check mr-2 submit-icon"></i>
+                    <span class="submit-text">Konfirmasi Penerimaan</span>
                 </button>
             </div>
         </form>
@@ -165,6 +165,8 @@ const photoPreview = document.getElementById('photoPreview');
 const fileName = document.getElementById('fileName');
 const removePhoto = document.getElementById('removePhoto');
 const submitBtn = document.getElementById('submitBtn');
+const submitIcon = submitBtn.querySelector('.submit-icon');
+const submitText = submitBtn.querySelector('.submit-text');
 
 // Click to upload
 dropZone.addEventListener('click', function(e) {
@@ -246,5 +248,12 @@ function formatFileSize(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
+
+// Add loading state for form submission
+document.querySelector('form').addEventListener('submit', function() {
+    submitBtn.disabled = true;
+    submitIcon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+    submitText.textContent = 'Memproses...';
+});
 </script>
 {% endblock %}

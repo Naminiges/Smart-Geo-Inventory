@@ -109,7 +109,7 @@
                 <i class="fas fa-times mr-2"></i>
                 Batal
             </a>
-            <button type="submit" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            <button type="submit" id="submitBtn" class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
                 <i class="fas fa-paper-plane mr-2"></i>
                 Ajukan Permohonan
             </button>
@@ -186,12 +186,79 @@
     </div>
 </template>
 
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white rounded-lg shadow-xl animate-fade-in">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-paper-plane text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Ajukan Permohonan</h3>
+                        <p class="text-sm text-gray-500">Konfirmasi pengajuan</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600 text-sm"></i>
+                </button>
+            </div>
+
+            <div class="px-6 py-5">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm text-blue-800 font-medium">Ringkasan Permohonan</p>
+                            <p class="text-sm text-blue-700 mt-1">Pastikan data yang Anda masukkan sudah benar.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                    <p class="text-sm text-gray-600">
+                        <span class="font-medium">Unit:</span> <span class="text-gray-900">{{ unit.name if unit else '-' }}</span>
+                    </p>
+                    <p class="text-sm text-gray-600 mt-1">
+                        <span class="font-medium">Jumlah Aset:</span> <span id="itemCountDisplay" class="text-gray-900 font-semibold">-</span>
+                    </p>
+                </div>
+
+                <p class="text-sm text-gray-600">Setelah diajukan, permohonan akan diproses oleh admin untuk verifikasi.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>Batal</span>
+                </button>
+                <button type="button" onclick="confirmSubmit()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-check"></i>
+                    <span>Ya, Ajukan</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fade-in {
+    from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-fade-in { animation: fade-in 0.2s ease-out; }
+</style>
+
 <script>
+let isSubmitting = false;
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('assetRequestForm');
     const itemsContainer = document.getElementById('itemsContainer');
     const addItemBtn = document.getElementById('addItemBtn');
     const itemTemplate = document.getElementById('itemTemplate');
+    const submitBtn = document.getElementById('submitBtn');
     let itemCount = 0;
 
     // Add first item by default
@@ -200,19 +267,61 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add item button click handler
     addItemBtn.addEventListener('click', addItem);
 
+    // Submit button click - show modal
+    submitBtn.addEventListener('click', function(e) {
+        if (isSubmitting) return;
+
+        e.preventDefault();
+
+        // Validate form
+        const itemCards = itemsContainer.querySelectorAll('.item-card');
+        if (itemCards.length === 0) {
+            alert('Minimal harus ada satu aset!');
+            return;
+        }
+
+        let isValid = true;
+        let totalItems = 0;
+
+        for (let card of itemCards) {
+            const itemSelect = card.querySelector('.item-select');
+            const itemQuantity = card.querySelector('.item-quantity');
+
+            if (!itemSelect.value || itemSelect.value === '0') {
+                isValid = false;
+                itemSelect.focus();
+                break;
+            }
+
+            if (!itemQuantity.value || parseInt(itemQuantity.value) <= 0) {
+                isValid = false;
+                itemQuantity.focus();
+                break;
+            }
+
+            totalItems += parseInt(itemQuantity.value);
+        }
+
+        if (!isValid) {
+            alert('Harap lengkapi semua data aset!');
+            return;
+        }
+
+        // Show modal
+        document.getElementById('itemCountDisplay').textContent = totalItems + ' unit';
+        document.getElementById('confirmModal').classList.remove('hidden');
+    });
+
     function addItem() {
         const template = itemTemplate.content.cloneNode(true);
         const itemCard = template.querySelector('.item-card');
 
-        // Set unique index
         itemCard.dataset.itemIndex = itemCount;
         itemCard.querySelector('.item-number').textContent = itemCount + 1;
 
-        // Add event listeners for this item
         const itemSelect = itemCard.querySelector('.item-select');
         const removeBtn = itemCard.querySelector('.remove-item-btn');
 
-        // Check for duplicate items when selection changes
         itemSelect.addEventListener('change', function() {
             const allItemSelects = itemsContainer.querySelectorAll('.item-select');
             let duplicateFound = false;
@@ -226,13 +335,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (duplicateFound) {
-                alert(`Aset "${duplicateName}" sudah dipilih!\n\nSilakan pilih aset yang lain atau hapus salah satu dari daftar.`);
+                alert(`Aset "${duplicateName}" sudah dipilih!\n\nSilakan pilih aset yang lain.`);
                 itemSelect.value = '';
-                return;
             }
         });
 
-        // Remove item button
         removeBtn.addEventListener('click', function() {
             if (itemsContainer.children.length > 1) {
                 itemCard.remove();
@@ -255,8 +362,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Form submission
     form.addEventListener('submit', function(e) {
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+
+        isSubmitting = true;
+
         const itemCards = itemsContainer.querySelectorAll('.item-card');
         const itemsData = [];
+
+        // Remove existing hidden fields
+        const existingFields = form.querySelectorAll('input[type="hidden"][name="items"]');
+        existingFields.forEach(field => field.remove());
 
         for (let card of itemCards) {
             const itemSelect = card.querySelector('.item-select');
@@ -267,22 +385,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemId = parseInt(itemSelect.value);
             const quantity = parseInt(itemQuantity.value);
 
-            // Validation
-            if (!itemId || itemId === 0) {
-                e.preventDefault();
-                alert('Harap pilih aset dari daftar!');
-                itemSelect.focus();
-                return false;
-            }
-
-            if (!quantity || quantity <= 0) {
-                e.preventDefault();
-                alert('Harap isi jumlah aset dengan benar!');
-                itemQuantity.focus();
-                return false;
-            }
-
-            // Collect item data
             const itemData = {
                 item_id: itemId,
                 quantity: quantity,
@@ -293,7 +395,6 @@ document.addEventListener('DOMContentLoaded', function() {
             itemsData.push(itemData);
         }
 
-        // Add items data as hidden fields
         for (let itemData of itemsData) {
             const hiddenField = document.createElement('input');
             hiddenField.type = 'hidden';
@@ -301,7 +402,27 @@ document.addEventListener('DOMContentLoaded', function() {
             hiddenField.value = JSON.stringify(itemData);
             form.appendChild(hiddenField);
         }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
     });
+});
+
+function closeModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function confirmSubmit() {
+    closeModal();
+    document.getElementById('assetRequestForm').dispatchEvent(new Event('submit'));
+}
+
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeModal();
 });
 </script>
 {% endblock %}

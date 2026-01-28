@@ -271,7 +271,9 @@ def get_unit_dashboard_stats(unit_ids):
 
 def notification_counts():
     """Context processor to provide notification counts to templates"""
-    if not current_user.is_authenticated:
+    from flask_login import current_user
+    # Check if current_user exists and is authenticated
+    if not current_user or not current_user.is_authenticated:
         return {
             'pending_request_count': 0,
             'verified_request_count': 0,

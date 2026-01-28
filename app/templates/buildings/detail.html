@@ -92,6 +92,7 @@
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Lantai</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Deskripsi</th>
                     <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Barang Terdistribusi</th>
+                    <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">QR Code</th>
                     <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Aksi</th>
                 </tr>
             </thead>
@@ -117,6 +118,12 @@
                         </button>
                     </td>
                     <td class="px-6 py-4 text-center">
+                        <button onclick="showQRCode('{{ room.id }}', '{{ room.room_name }}')"
+                                class="inline-flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-qrcode"></i>
+                        </button>
+                    </td>
+                    <td class="px-6 py-4 text-center">
                         {% if current_user.is_admin() %}
                         <div class="flex items-center justify-center gap-2">
                             <a href="{{ url_for('buildings.edit_room', room_id=room.id) }}"
@@ -138,7 +145,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
                         <i class="fas fa-door-open text-4xl mb-3 text-gray-300"></i>
                         <p class="text-sm">Belum ada ruangan di gedung ini.</p>
                         {% if current_user.is_admin() %}
@@ -224,6 +231,47 @@
             <!-- Modal Footer -->
             <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
                 <button onclick="closeRoomItemsModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>Tutup</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: QR Code Ruangan -->
+<div id="qrCodeModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-sm bg-white rounded-lg shadow-xl">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-qrcode text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">QR Code Ruangan</h3>
+                        <p class="text-sm text-gray-500" id="qrRoomName"></p>
+                    </div>
+                </div>
+                <button onclick="closeQRCodeModal()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-6 flex flex-col items-center">
+                <div id="qrcode" class="mb-4"></div>
+                <p class="text-sm text-gray-600 text-center" id="qrRoomInfo"></p>
+                <button onclick="downloadQRCode()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-download"></i>
+                    <span>Download QR Code</span>
+                </button>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <button onclick="closeQRCodeModal()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm inline-flex items-center gap-2">
                     <i class="fas fa-times"></i>
                     <span>Tutup</span>
                 </button>
@@ -327,18 +375,82 @@ function closeRoomItemsModal() {
     modal.classList.add('hidden');
 }
 
-// Close modal on escape key
-document.addEventListener('keydown', function(event) {
-    if (event.key === 'Escape') {
-        closeRoomItemsModal();
-    }
-});
-
 // Close modal when clicking outside
 document.getElementById('roomItemsModal').addEventListener('click', function(event) {
     if (event.target === this) {
         closeRoomItemsModal();
     }
 });
+
+// QR Code Modal Functions
+let qrcodeInstance = null;
+
+function showQRCode(roomId, roomName) {
+    const modal = document.getElementById('qrCodeModal');
+    const qrRoomName = document.getElementById('qrRoomName');
+    const qrRoomInfo = document.getElementById('qrRoomInfo');
+    const qrcodeContainer = document.getElementById('qrcode');
+
+    // Clear previous QR code
+    qrcodeContainer.innerHTML = '';
+
+    // Set room name
+    qrRoomName.textContent = roomName;
+    qrRoomInfo.textContent = `Gedung: {{ building.name }}`;
+
+    // Get current URL and replace path with public room view route
+    const currentUrl = new URL(window.location.href);
+    const publicUrl = `${currentUrl.origin}/buildings/rooms/${roomId}/view`;
+
+    // Generate QR Code with public URL (no login required)
+    qrcodeInstance = new QRCode(qrcodeContainer, {
+        text: publicUrl,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    // Show modal
+    modal.classList.remove('hidden');
+}
+
+function closeQRCodeModal() {
+    const modal = document.getElementById('qrCodeModal');
+    modal.classList.add('hidden');
+}
+
+function downloadQRCode() {
+    const qrcodeContainer = document.getElementById('qrcode');
+    const img = qrcodeContainer.querySelector('img');
+
+    if (img && img.src) {
+        const link = document.createElement('a');
+        link.href = img.src;
+        link.download = `qrcode-${document.getElementById('qrRoomName').textContent}.png`;
+        link.click();
+    }
+}
+
+// Close QR modal when clicking outside
+document.getElementById('qrCodeModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeQRCodeModal();
+    }
+});
+
+// Close all modals on escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeRoomItemsModal();
+        closeQRCodeModal();
+    }
+});
 </script>
+
+<!-- QR Code Library -->
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+{% endblock %}
 {% endblock %}

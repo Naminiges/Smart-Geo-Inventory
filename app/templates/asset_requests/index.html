@@ -8,6 +8,20 @@
 
 {% block content %}
 
+<!-- Header with Create Button -->
+{% if current_user.is_unit_staff() %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Daftar Permintaan Aset</h2>
+        <p class="text-gray-600">Kelola dan pantau permintaan barang untuk unit Anda</p>
+    </div>
+    <a href="{{ url_for('asset_requests.create') }}" class="px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold inline-flex items-center">
+        <i class="fas fa-plus mr-2"></i>
+        Buat Permintaan Baru
+    </a>
+</div>
+{% endif %}
+
 <!-- Statistics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
     <!-- Total -->
@@ -135,6 +149,11 @@
                                 <i class="fas fa-check-circle"></i>
                             </a>
                             {% endif %}
+                            {% if current_user.is_unit_staff() and req.status in ['pending', 'rejected'] %}
+                            <button type="button" onclick="openDeleteModal({{ req.id }})" class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -160,4 +179,67 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="fixed inset-0 hidden items-center justify-center z-50 backdrop-blur-sm bg-gray-900/40">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+        <form id="deleteForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Hapus Permohonan</h3>
+            </div>
+            <div class="p-6">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm text-gray-700">
+                            Apakah Anda yakin ingin menghapus permohonan ini?
+                        </p>
+                        <p class="text-sm text-gray-500 mt-2">
+                            Tindakan ini tidak dapat dibatalkan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="closeDeleteModal()" class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
+                    Batal
+                </button>
+                <button type="submit" id="deleteSubmitBtn" class="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:bg-red-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-trash mr-2"></i><span id="deleteBtnText">Hapus</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openDeleteModal(id) {
+    const form = document.getElementById('deleteForm');
+    form.action = '/asset-requests/' + id + '/delete';
+    const modal = document.getElementById('deleteModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
+document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+
+// Add loading state for delete form
+document.getElementById('deleteForm').addEventListener('submit', function() {
+    const btn = document.getElementById('deleteSubmitBtn');
+    const btnText = document.getElementById('deleteBtnText');
+    btn.disabled = true;
+    btnText.textContent = 'Menghapus...';
+});
+</script>
 {% endblock %}

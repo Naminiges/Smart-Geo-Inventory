@@ -58,6 +58,7 @@
 
     <form method="POST" id="procurementForm" class="p-6">
         {{ form.hidden_tag() }}
+        <input type="hidden" name="form_token" value="{{ form_token }}">
 
         {% if not is_admin %}
         <!-- Step Indicator for Warehouse Staff -->
@@ -526,6 +527,10 @@ function submitForm() {
     const itemCards = itemsContainer.querySelectorAll('.item-card');
     const itemsData = [];
 
+    // Remove any existing hidden 'items' fields from previous submissions
+    const existingHiddenFields = form.querySelectorAll('input[type="hidden"][name="items"]');
+    existingHiddenFields.forEach(field => field.remove());
+
     // Collect items data before submission
     for (let card of itemCards) {
         const itemSelect = card.querySelector('.item-select');
@@ -559,6 +564,13 @@ function submitForm() {
         hiddenField.name = 'items';
         hiddenField.value = JSON.stringify(itemData);
         form.appendChild(hiddenField);
+    }
+
+    // Disable submit button to prevent double submission
+    const submitBtn = document.querySelector('button[onclick="submitForm()"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
     }
 
     // Submit the form

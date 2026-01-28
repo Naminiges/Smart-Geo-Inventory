@@ -79,6 +79,12 @@ def process_venue_loans():
 
 def init_scheduler(app):
     """Initialize and start the scheduler"""
+    import os
+    # Skip if scheduler is disabled (for testing)
+    if os.environ.get('DISABLE_SCHEDULER') == '1':
+        logger.info('Scheduler disabled - skipping initialization')
+        return
+
     global scheduler
 
     # Store app reference for context
@@ -93,9 +99,12 @@ def init_scheduler(app):
         replace_existing=True
     )
 
-    # Start the scheduler
-    scheduler.start()
-    logger.info('Scheduler started - Venue loans will be processed every 1 minute')
+    # Start the scheduler (only if not already running)
+    if not scheduler.running:
+        scheduler.start()
+        logger.info('Scheduler started - Venue loans will be processed every 1 minute')
+    else:
+        logger.info('Scheduler already running - skipping start')
 
 
 def shutdown_scheduler():
