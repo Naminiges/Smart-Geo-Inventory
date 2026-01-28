@@ -32,7 +32,7 @@ def create():
     units = Unit.query.all()
     form.source_unit_id.choices = [(0, '-- Pilih Unit Asal --')] + [(u.id, u.name) for u in units]
     form.target_unit_id.choices = [(0, '-- Pilih Unit Tujuan --')] + [(u.id, u.name) for u in units]
-    form.target_same_unit.data = 'no'  # Default: beda unit
+    form.transfer_type.data = 'room'  # Default: pindah ruangan
 
     # ALWAYS populate source_item_detail_id choices with ALL possible items (for WTForms validation)
     # We need to include ALL installed items from ALL units so validation works
@@ -59,7 +59,7 @@ def create():
         print(f"Request form data: {dict(request.form)}")
         print(f"source_unit_id.data: {form.source_unit_id.data} (type: {type(form.source_unit_id.data)})")
         print(f"source_item_detail_id.data: {form.source_item_detail_id.data} (type: {type(form.source_item_detail_id.data)})")
-        print(f"target_same_unit.data: {form.target_same_unit.data} (type: {type(form.target_same_unit.data)})")
+        print(f"transfer_type.data: {form.transfer_type.data} (type: {type(form.transfer_type.data)})")
         print(f"target_unit_id.data: {form.target_unit_id.data} (type: {type(form.target_unit_id.data)})")
         print(f"target_unit_detail_id.data: {form.target_unit_detail_id.data} (type: {type(form.target_unit_detail_id.data)})")
         print(f"Form errors: {form.errors}")
@@ -80,73 +80,172 @@ def create():
 
             form.source_item_detail_id.choices = source_item_choices
 
+    print(f"\n=== REQUEST INFO ===")
+    print(f"Method: {request.method}")
+    print(f"Form validate on submit: {form.validate_on_submit()}")
+    if request.method == 'POST':
+        print(f"Form data: {dict(request.form)}")
+        print(f"Form data.raw: {list(request.form.items())}")
+    if not form.validate_on_submit() and request.method == 'POST':
+        print(f"Form errors: {form.errors}")
+        print(f"CSRF token: {request.form.get('csrf_token')}")
+    print(f"===================\n")
+
     if request.method == 'POST' and form.validate_on_submit():
         try:
             # DEBUGGING: Log form data
             print("\n=== FORM SUBMISSION DEBUG ===")
             print(f"Request form data: {dict(request.form)}")
-            print(f"source_unit_id.data: {form.source_unit_id.data} (type: {type(form.source_unit_id.data)})")
-            print(f"source_item_detail_id.data: {form.source_item_detail_id.data} (type: {type(form.source_item_detail_id.data)})")
-            print(f"target_same_unit.data: {form.target_same_unit.data} (type: {type(form.target_same_unit.data)})")
-            print(f"target_unit_id.data: {form.target_unit_id.data} (type: {type(form.target_unit_id.data)})")
-            print(f"target_unit_detail_id.data: {form.target_unit_detail_id.data} (type: {type(form.target_unit_detail_id.data)})")
-            print(f"Form errors: {form.errors}")
+            print(f"source_unit_id.data: {form.source_unit_id.data}")
+            print(f"transfer_type.data: {form.transfer_type.data}")
+            print(f"target_unit_id.data: {form.target_unit_id.data}")
+            print(f"target_unit_detail_id.data: {form.target_unit_detail_id.data}")
             print("============================\n")
 
             # Ambil data dari form
             source_unit_id = form.source_unit_id.data
-            source_item_detail_id = form.source_item_detail_id.data
-            target_same_unit = form.target_same_unit.data
-            target_unit_id = form.target_unit_id.data if target_same_unit == 'no' else source_unit_id
-            target_unit_detail_id = form.target_unit_detail_id.data
+            # Baca transfer_type dari request.form karena hidden input lebih reliable
+            transfer_type = request.form.get('transfer_type', 'room')
+            print(f"Using transfer_type from request.form: {transfer_type}")
 
-            # Validasi nilai 0 (placeholder)
-            if source_unit_id == 0 or source_item_detail_id == 0 or target_unit_detail_id == 0:
-                flash('Silakan lengkapi semua field yang diperlukan', 'warning')
+            # Get selected items from hidden input
+            selected_items_str = request.form.get('selected_items', '')
+            if not selected_items_str:
+                flash('Silakan pilih minimal satu barang untuk dipindahkan', 'warning')
                 return redirect(url_for('asset_transfer.create'))
 
-            # Get distribution yang akan dipindahkan
-            distribution = Distribution.query.filter_by(
-                item_detail_id=source_item_detail_id,
-                unit_id=source_unit_id,
-                status='installed'
-            ).first()
+            selected_item_ids = [int(id.strip()) for id in selected_items_str.split(',') if id.strip()]
+            print(f"Selected item IDs: {selected_item_ids}")
 
-            if not distribution:
-                flash('Barang tidak ditemukan atau status tidak valid untuk dipindahkan', 'danger')
+            if not selected_item_ids:
+                flash('Tidak ada barang yang valid dipilih', 'danger')
                 return redirect(url_for('asset_transfer.create'))
 
-            # Validasi - cek apakah pindah ke lokasi yang sama
-            if (distribution.unit_id == target_unit_id and
-                distribution.unit_detail_id == target_unit_detail_id):
-                flash('Tidak bisa memindahkan ke lokasi yang sama!', 'warning')
+            # Tentukan target unit dan room berdasarkan transfer_type
+            target_unit_id = None
+            target_unit_detail_id = None
+
+            # DEBUG: Log semua form data
+            print(f"\n=== FORM SUBMISSION DEBUG ===")
+            print(f"Transfer Type: {transfer_type}")
+            print(f"All form keys: {list(request.form.keys())}")
+            print(f"All form values: {dict(request.form)}")
+
+            if transfer_type == 'room':
+                # Pindah ruangan saja - tetap di unit yang sama
+                target_unit_id = source_unit_id
+                # Baca dari field khusus tab room
+                target_unit_detail_id = request.form.get('target_unit_detail_id_room', type=int)
+                print(f"[ROOM TRANSFER] target_unit_detail_id_room: {target_unit_detail_id}")
+            elif transfer_type == 'unit':
+                # Pindah unit saja - hanya unit_id yang berubah, unit_detail_id TETAP
+                target_unit_id = request.form.get('target_unit_id_unit', type=int)
+                # unit_detail_id akan tetap sama untuk semua barang (tidak berubah)
+                print(f"[UNIT TRANSFER] target_unit_id_unit: {target_unit_id}")
+            else:  # both
+                # Pindah lengkap - unit dan ruangan baru
+                # Baca dari field khusus tab both
+                target_unit_id = request.form.get('target_unit_id_both', type=int)
+                target_unit_detail_id = request.form.get('target_unit_detail_id_both', type=int)
+                print(f"[BOTH TRANSFER] target_unit_id_both: {target_unit_id}, target_unit_detail_id_both: {target_unit_detail_id}")
+
+            print(f"FINAL VALUES - transfer_type: {transfer_type}, target_unit_id: {target_unit_id}, target_unit_detail_id: {target_unit_detail_id}")
+            print(f"===================================\n")
+
+            # Validasi nilai 0 (placeholder) dan None
+            if source_unit_id == 0:
+                flash('Silakan pilih unit asal', 'warning')
                 return redirect(url_for('asset_transfer.create'))
 
-            # Simpan lokasi asal untuk history
-            from_unit_id = distribution.unit_id
-            from_unit_detail_id = distribution.unit_detail_id
+            # Validasi berdasarkan transfer_type
+            if transfer_type == 'room':
+                if not target_unit_detail_id or target_unit_detail_id == 0:
+                    flash('Silakan pilih ruangan tujuan', 'warning')
+                    return redirect(url_for('asset_transfer.create'))
+            elif transfer_type == 'unit':
+                if not target_unit_id or target_unit_id == 0:
+                    flash('Silakan pilih unit tujuan', 'warning')
+                    return redirect(url_for('asset_transfer.create'))
+            else:  # both
+                if not target_unit_id or target_unit_id == 0:
+                    flash('Silakan pilih unit tujuan', 'warning')
+                    return redirect(url_for('asset_transfer.create'))
+                if not target_unit_detail_id or target_unit_detail_id == 0:
+                    flash('Silakan pilih ruangan tujuan', 'warning')
+                    return redirect(url_for('asset_transfer.create'))
 
-            # UPDATE distribution ke lokasi baru (tetap status 'installed')
-            distribution.unit_id = target_unit_id
-            distribution.unit_detail_id = target_unit_detail_id
-            distribution.updated_at = datetime.utcnow()
+            # Process each selected item
+            transferred_count = 0
+            failed_items = []
 
-            # CATAT di asset_transfer (history/log saja)
-            transfer = AssetTransfer(
-                item_detail_id=source_item_detail_id,
-                from_unit_id=from_unit_id,
-                from_unit_detail_id=from_unit_detail_id,
-                to_unit_id=target_unit_id,
-                to_unit_detail_id=target_unit_detail_id,
-                notes=form.notes.data,
-                transfer_date=datetime.utcnow(),
-                transferred_by=current_user.id
-            )
+            for item_detail_id in selected_item_ids:
+                # Get distribution yang akan dipindahkan
+                distribution = Distribution.query.filter_by(
+                    item_detail_id=item_detail_id,
+                    unit_id=source_unit_id,
+                    status='installed'
+                ).first()
 
-            db.session.add(transfer)
+                if not distribution:
+                    failed_items.append(f"Item ID {item_detail_id} tidak ditemukan")
+                    continue
+
+                # Tentukan target berdasarkan transfer_type
+                if transfer_type == 'room':
+                    # Pindah ruangan: hanya unit_detail_id yang berubah
+                    final_target_unit_id = source_unit_id  # Tetap di unit yang sama
+                    final_target_unit_detail_id = target_unit_detail_id
+                elif transfer_type == 'unit':
+                    # Pindah unit: hanya unit_id yang berubah, unit_detail_id TETAP
+                    final_target_unit_id = target_unit_id
+                    final_target_unit_detail_id = distribution.unit_detail_id  # TETAP sama
+                else:  # both
+                    # Pindah lengkap: keduanya berubah
+                    final_target_unit_id = target_unit_id
+                    final_target_unit_detail_id = target_unit_detail_id
+
+                # Validasi - cek apakah pindah ke lokasi yang sama
+                if (distribution.unit_id == final_target_unit_id and
+                    distribution.unit_detail_id == final_target_unit_detail_id):
+                    failed_items.append(f"{distribution.item_detail.serial_number} sudah di lokasi tujuan")
+                    continue
+
+                # Simpan lokasi asal untuk history
+                from_unit_id = distribution.unit_id
+                from_unit_detail_id = distribution.unit_detail_id
+
+                # UPDATE distribution ke lokasi baru (tetap status 'installed')
+                distribution.unit_id = final_target_unit_id
+                distribution.unit_detail_id = final_target_unit_detail_id
+                distribution.updated_at = datetime.utcnow()
+
+                # CATAT di asset_transfer (history/log saja)
+                transfer = AssetTransfer(
+                    item_detail_id=item_detail_id,
+                    from_unit_id=from_unit_id,
+                    from_unit_detail_id=from_unit_detail_id,
+                    to_unit_id=final_target_unit_id,
+                    to_unit_detail_id=final_target_unit_detail_id,
+                    notes=form.notes.data,
+                    transfer_date=datetime.utcnow(),
+                    transferred_by=current_user.id
+                )
+
+                db.session.add(transfer)
+                transferred_count += 1
+
+            # Commit semua perubahan
             db.session.commit()
 
-            flash(f'Barang {distribution.item_detail.serial_number} berhasil dipindahkan!', 'success')
+            # Show success/error message
+            if failed_items:
+                if transferred_count > 0:
+                    flash(f'{transferred_count} barang berhasil dipindahkan. Namun {len(failed_items)} gagal: {", ".join(failed_items[:3])}', 'warning')
+                else:
+                    flash(f'Gagal memindahkan barang: {", ".join(failed_items[:3])}', 'danger')
+            else:
+                flash(f'{transferred_count} barang berhasil dipindahkan!', 'success')
+
             return redirect(url_for('asset_transfer.index'))
 
         except Exception as e:
@@ -193,6 +292,48 @@ def api_all_rooms():
 
         rooms_data = []
         for r in rooms:
+            rooms_data.append({
+                'id': r.id,
+                'unit_detail_id': r.id,
+                'label': f"{r.building.code} - {r.room_name}",
+                'building_code': r.building.code,
+                'room_name': r.room_name
+            })
+
+        return jsonify({'success': True, 'rooms': rooms_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/units')
+@login_required
+def api_all_units():
+    """Get all units (for dropdown)"""
+    try:
+        units = Unit.query.order_by(Unit.name).all()
+
+        units_data = []
+        for u in units:
+            units_data.append({
+                'id': u.id,
+                'name': u.name
+            })
+
+        return jsonify({'success': True, 'units': units_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@bp.route('/api/unit/<int:unit_id>/rooms')
+@login_required
+def api_unit_rooms(unit_id):
+    """Get all rooms for a specific unit"""
+    try:
+        # Get unit details for this unit
+        unit_details = UnitDetail.query.filter_by(unit_id=unit_id).join(Building).order_by(Building.code, UnitDetail.room_name).all()
+
+        rooms_data = []
+        for r in unit_details:
             rooms_data.append({
                 'id': r.id,
                 'unit_detail_id': r.id,

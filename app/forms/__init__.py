@@ -18,7 +18,8 @@ from app.forms.asset_loan_forms import (
     AssetLoanReturnRequestForm,
     AssetLoanReturnApproveForm,
     AssetLoanItemReturnVerifyForm,
-    AssetLoanItemUploadProofForm
+    AssetLoanItemUploadProofForm,
+    VenueLoanForm
 )
 from app.forms.asset_transfer_forms import AssetTransferForm
 
@@ -43,5 +44,6 @@ __all__ = [
     'AssetLoanReturnApproveForm',
     'AssetLoanItemReturnVerifyForm',
     'AssetLoanItemUploadProofForm',
+    'VenueLoanForm',
     'AssetTransferForm'
 ]

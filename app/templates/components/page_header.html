@@ -1,0 +1,97 @@
+{#
+  Consistent Page Header Component
+  Usage:
+    {% include 'components/page_header.html' with context %}
+
+  Required variables in your template:
+    - page_title: The main title (h1)
+    - page_description: The subtitle/description (optional)
+    - show_back_button: Set to true to show back button (optional, default false)
+    - back_button_url: URL for back button (optional, defaults to javascript:history.back())
+    - action_button_html: HTML for action button on the right side (optional)
+#}
+
+<!-- Page Header -->
+<div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl shadow-sm border border-emerald-100 mb-6 overflow-hidden">
+    <div class="relative">
+        <!-- Decorative background pattern -->
+        <div class="absolute top-0 right-0 w-64 h-64 opacity-5">
+            <svg viewBox="0 0 200 200" class="w-full h-full">
+                <path fill="currentColor" d="M44.7,-76.4C58.9,-69.2,71.8,-59.1,79.6,-46.9C87.4,-34.7,90.1,-20.4,86.8,-7.3C83.5,5.8,74.2,17.7,65.8,28.8C57.4,39.9,49.9,50.2,40.4,58.6C30.9,67,19.4,73.5,6.8,75.8C-5.8,78.1,-19.5,76.2,-31.7,70.5C-43.9,64.8,-54.6,55.3,-63.4,44.2C-72.2,33.1,-79.1,20.4,-80.9,7.2C-82.7,-6,-79.4,-19.7,-71.5,-31.2C-63.6,-42.7,-51.1,-52,-38.8,-59.6C-26.5,-67.2,-14.4,-73.1,-0.6,-72.1C13.2,-71.1,26.4,-63.2,30.5,-83.6L44.7,-76.4Z" transform="translate(100 100)" />
+            </svg>
+        </div>
+
+        <div class="relative p-6 md:p-8">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <!-- Left side: Title and description -->
+                <div class="flex items-center gap-4 flex-1">
+                    {% if show_back_button %}
+                    <a href="{{ back_button_url or 'javascript:history.back()' }}"
+                       class="flex-shrink-0 w-10 h-10 rounded-xl bg-white shadow-sm hover:shadow-md border border-gray-200 flex items-center justify-center transition-all duration-200 group">
+                        <i class="fas fa-arrow-left text-gray-600 group-hover:text-emerald-600 transition-colors"></i>
+                    </a>
+                    {% endif %}
+
+                    <div class="{% if show_back_button %}flex-1{% endif %}">
+                        {% if page_icon %}
+                        <div class="flex items-center gap-3 mb-1">
+                            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md flex items-center justify-center">
+                                <i class="{{ page_icon }} text-white text-xl"></i>
+                            </div>
+                            <div>
+                        {% endif %}
+                        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-1 {% if page_icon %}ml-0{% else %}ml-0{% endif %}">
+                            {{ page_title }}
+                        </h1>
+                        {% if page_description %}
+                        <p class="text-sm text-gray-600 {{ 'ml-0' if not page_icon else 'ml-0' }}">
+                            {{ page_description }}
+                        </p>
+                        {% endif %}
+                        {% if page_icon %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Right side: Action buttons -->
+                {% if action_button_html %}
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    {{ action_button_html|safe }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Breadcrumb (optional) -->
+            {% if show_breadcrumb %}
+            <div class="mt-4 pt-4 border-t border-emerald-200">
+                <nav class="flex" aria-label="Breadcrumb">
+                    <ol class="flex items-center space-x-2 text-sm">
+                        <li>
+                            <a href="{{ url_for('dashboard.index') }}" class="text-gray-500 hover:text-emerald-600 transition-colors">
+                                <i class="fas fa-home mr-1"></i>Beranda
+                            </a>
+                        </li>
+                        {% for breadcrumb in breadcrumbs %}
+                        <li class="flex items-center">
+                            <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
+                            {% if breadcrumb.url %}
+                            <a href="{{ breadcrumb.url }}" class="ml-2 text-gray-500 hover:text-emerald-600 transition-colors">
+                                {{ breadcrumb.title }}
+                            </a>
+                            {% else %}
+                            <span class="ml-2 text-gray-700 font-medium">{{ breadcrumb.title }}</span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Bottom accent line -->
+        <div class="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
+    </div>
+</div>

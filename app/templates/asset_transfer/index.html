@@ -1,99 +1,356 @@
-{% extends "base.html" %}
-
-{% block title %}Riwayat Pemindahan Barang - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Riwayat Pemindahan Barang{% endblock %}
-
-{% block content %}
-<div class="mb-4">
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm text-gray-600">
-            <span class="text-gray-400">
-                <i class="fas fa-exchange-alt"></i> Pemindahan
-            </span>
-        </div>
-        <a href="{{ url_for('asset_transfer.create') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-semibold inline-flex items-center">
-            <i class="fas fa-plus mr-2"></i>
-            Pindahkan Barang
-        </a>
-    </div>
-</div>
-
-{% if transfers %}
-<div class="bg-white rounded-xl shadow-sm border border-gray-200">
-    <div class="overflow-x-auto">
-        <table class="w-full">
-            <thead class="bg-gray-50 border-b border-gray-200">
-                <tr>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tanggal</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Barang</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dari</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ke</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Catatan</th>
-                    <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dipindahkan Oleh</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                {% for transfer in transfers %}
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">{{ transfer.transfer_date|format_wib_datetime }}</div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm font-medium text-gray-900">{{ transfer.item_detail.item.name }}</div>
-                        <div class="text-sm text-gray-500">Serial: {{ transfer.item_detail.serial_number }}</div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm font-medium text-gray-900">{{ transfer.from_unit.name }}</div>
-                        <div class="text-sm text-gray-500">
-                            {% if transfer.from_unit_detail %}
-                                {{ transfer.from_unit_detail.building.code }} - {{ transfer.from_unit_detail.room_name }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm font-medium text-emerald-600">{{ transfer.to_unit.name }}</div>
-                        <div class="text-sm text-gray-500">
-                            {% if transfer.to_unit_detail %}
-                                {{ transfer.to_unit_detail.building.code }} - {{ transfer.to_unit_detail.room_name }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="text-sm text-gray-900">
-                            {% if transfer.notes %}
-                                {{ transfer.notes }}
-                            {% else %}
-                                <span class="text-gray-400">-</span>
-                            {% endif %}
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm text-gray-900">{{ transfer.transferred_by_user.name }}</div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+{% extends "base.html" %} {% block title %}Riwayat Pemindahan Barang - Smart Geo
+Inventory{% endblock %} {% block page_title %}Riwayat Pemindahan Barang{%
+endblock %} {% set page_icon = 'fas fa-exchange-alt' %} {% set page_description
+= 'Lihat riwayat pemindahan barang antar unit' %} {% block page_header_actions
+%}
+<a
+  href="{{ url_for('asset_transfer.create') }}"
+  class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center"
+>
+  <i class="fas fa-plus mr-2"></i>Pindahkan Barang
+</a>
+{% endblock %} {% block content %} {% if transfers %}
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full paginated-table">
+      <thead class="bg-gray-50">
+        <tr>
+          <th
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+          >
+            Tanggal
+          </th>
+          <th
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+          >
+            Barang
+          </th>
+          <th
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+          >
+            Catatan
+          </th>
+          <th
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+          >
+            Dipindahkan Oleh
+          </th>
+          <th
+            class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+          >
+            Aksi
+          </th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for transfer in transfers %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <i class="fas fa-calendar mr-2 text-gray-500"></i>
+              <span class="text-sm text-gray-900"
+                >{{ transfer.transfer_date|format_wib_datetime }}</span
+              >
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex items-center">
+              <i class="fas fa-box mr-2 text-gray-500"></i>
+              <div>
+                <div class="text-sm font-medium text-gray-900">
+                  {{ transfer.item_detail.item.name }}
+                </div>
+                <div class="text-sm text-gray-500">
+                  Serial: {{ transfer.item_detail.serial_number }}
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-sm text-gray-900">
+              {% if transfer.notes %} {{ transfer.notes }} {% else %}
+              <span class="text-gray-400">-</span>
+              {% endif %}
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <i class="fas fa-user mr-2 text-gray-500"></i>
+              <span class="text-sm text-gray-900"
+                >{{ transfer.transferred_by_user.name }}</span
+              >
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <button
+              onclick="showTransferDetail({{ transfer.id }})"
+              class="text-emerald-600 hover:text-emerald-700 font-medium text-sm inline-flex items-center"
+            >
+              <i class="fas fa-eye mr-1"></i>
+              Lihat Detail
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </div>
 {% else %}
-<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
-    <div class="text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-            <i class="fas fa-exchange-alt text-3xl text-gray-400"></i>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-2">Belum Ada Riwayat Pemindahan</h3>
-        <p class="text-gray-500 mb-6">Silakan pindahkan barang untuk melihat riwayat di sini</p>
-        <a href="{{ url_for('asset_transfer.create') }}" class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium inline-flex items-center">
-            <i class="fas fa-plus mr-2"></i>
-            Pindahkan Barang
-        </a>
+<div class="bg-white rounded-xl shadow-md p-12">
+  <div class="text-center">
+    <div
+      class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4"
+    >
+      <i class="fas fa-exchange-alt text-3xl text-gray-400"></i>
     </div>
+    <h3 class="text-lg font-semibold text-gray-900 mb-2">
+      Belum Ada Riwayat Pemindahan
+    </h3>
+    <p class="text-gray-500 mb-6">
+      Silakan pindahkan barang untuk melihat riwayat di sini
+    </p>
+    <a
+      href="{{ url_for('asset_transfer.create') }}"
+      class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium inline-flex items-center"
+    >
+      <i class="fas fa-plus mr-2"></i>Pindahkan Barang
+    </a>
+  </div>
 </div>
 {% endif %}
+
+<!-- Modal Detail Transfer -->
+<div
+  id="transferDetailModal"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto"
+>
+  <div class="min-h-full flex items-center justify-center p-4">
+    <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-xl">
+      <!-- Modal Header -->
+      <div
+        class="flex items-center justify-between px-6 py-4 border-b border-gray-200"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center"
+          >
+            <i class="fas fa-exchange-alt text-white"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900">
+              Detail Pemindahan
+            </h3>
+            <p class="text-sm text-gray-500">
+              Informasi lengkap transfer barang
+            </p>
+          </div>
+        </div>
+        <button
+          onclick="closeTransferDetail()"
+          class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+        >
+          <i class="fas fa-times text-gray-600"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-5" id="modalContent">
+        <!-- Content will be loaded here via JavaScript -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div
+        class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg"
+      >
+        <button
+          onclick="closeTransferDetail()"
+          class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm inline-flex items-center gap-2"
+        >
+          <i class="fas fa-times"></i>
+          <span>Tutup</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+  }
+</style>
+
+<script>
+  // Store transfer data
+  const transfersData = {
+      {% for transfer in transfers %}
+      {{ transfer.id }}: {
+          transferDate: '{{ transfer.transfer_date|format_wib_datetime }}',
+          itemName: '{{ transfer.item_detail.item.name }}',
+          itemSerial: '{{ transfer.item_detail.serial_number }}',
+          fromUnit: {
+              name: '{{ transfer.from_unit.name }}',
+              room: {% if transfer.from_unit_detail %}'{{ transfer.from_unit_detail.building.code }} - {{ transfer.from_unit_detail.room_name }}'{% else %}null{% endif %}
+          },
+          toUnit: {
+              name: '{{ transfer.to_unit.name }}',
+              room: {% if transfer.to_unit_detail %}'{{ transfer.to_unit_detail.building.code }} - {{ transfer.to_unit_detail.room_name }}'{% else %}null{% endif %}
+          },
+          notes: {% if transfer.notes %}'{{ transfer.notes }}'{% else %}null{% endif %},
+          transferredBy: '{{ transfer.transferred_by_user.name }}'
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+  };
+
+  function showTransferDetail(transferId) {
+      const transfer = transfersData[transferId];
+      if (!transfer) return;
+
+      const modalContent = document.getElementById('modalContent');
+
+      modalContent.innerHTML = `
+      <!-- Flow Visualizer -->
+      <div class="bg-gray-50 rounded-lg p-6 mb-6">
+          <div class="flex items-center justify-between gap-6">
+              <!-- Source -->
+              <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-3">
+                      <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <i class="fas fa-arrow-up text-white"></i>
+                      </div>
+                      <div>
+                          <p class="text-xs font-semibold text-orange-600 uppercase tracking-wide">Dari</p>
+                          <h4 class="text-base font-bold text-gray-900">${transfer.fromUnit.name}</h4>
+                      </div>
+                  </div>
+                  <div class="ml-13">
+                      <div class="inline-flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200">
+                          <i class="fas fa-door-open text-orange-500 text-sm"></i>
+                          <span class="text-sm text-gray-700">${transfer.fromUnit.room || '-'}</span>
+                      </div>
+                  </div>
+              </div>
+
+              <!-- Arrow -->
+              <div class="flex-shrink-0">
+                  <div class="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center">
+                      <i class="fas fa-arrow-right text-white text-lg"></i>
+                  </div>
+              </div>
+
+              <!-- Destination -->
+              <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-3 justify-end">
+                      <div class="text-right">
+                          <p class="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Ke</p>
+                          <h4 class="text-base font-bold text-gray-900">${transfer.toUnit.name}</h4>
+                      </div>
+                      <div class="w-10 h-10 bg-emerald-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <i class="fas fa-arrow-down text-white"></i>
+                      </div>
+                  </div>
+                  <div class="mr-13 text-right">
+                      <div class="inline-flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200">
+                          <span class="text-sm text-gray-700">${transfer.toUnit.room || '-'}</span>
+                          <i class="fas fa-door-open text-emerald-500 text-sm"></i>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <!-- Item Info Card -->
+      <div class="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-200">
+          <div class="flex items-start gap-3">
+              <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i class="fas fa-box text-white"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                  <h4 class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-3">Informasi Barang</h4>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                          <p class="text-xs text-gray-600 mb-1">Nama Barang</p>
+                          <p class="text-sm font-semibold text-gray-900">${transfer.itemName}</p>
+                      </div>
+                      <div>
+                          <p class="text-xs text-gray-600 mb-1">Nomor Serial</p>
+                          <p class="text-sm font-mono font-semibold text-gray-900">${transfer.itemSerial}</p>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <!-- Additional Info Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Date -->
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+              <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <i class="fas fa-calendar text-white text-sm"></i>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                      <p class="text-xs text-gray-500 mb-1">Tanggal</p>
+                      <p class="text-sm font-semibold text-gray-900 truncate">${transfer.transferDate}</p>
+                  </div>
+              </div>
+          </div>
+
+          <!-- Transferred By -->
+          <div class="bg-white border border-gray-200 rounded-lg p-4">
+              <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <i class="fas fa-user text-white text-sm"></i>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                      <p class="text-xs text-gray-500 mb-1">Oleh</p>
+                      <p class="text-sm font-semibold text-gray-900 truncate">${transfer.transferredBy}</p>
+                  </div>
+              </div>
+          </div>
+
+          ${transfer.notes ? `
+          <!-- Notes -->
+          <div class="col-span-1 sm:col-span-2 bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div class="flex items-start gap-3">
+                  <div class="w-9 h-9 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <i class="fas fa-sticky-note text-white text-sm"></i>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                      <p class="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2">Catatan</p>
+                      <p class="text-sm text-gray-800 break-words leading-relaxed">${transfer.notes}</p>
+                  </div>
+              </div>
+          </div>
+          ` : ''}
+      </div>
+  `;
+      // Tampilkan modal
+      document.getElementById('transferDetailModal').classList.remove('hidden');
+  }
+
+  function closeTransferDetail() {
+      document.getElementById('transferDetailModal').classList.add('hidden');
+  }
+
+  // Close modal when clicking outside
+  document.getElementById('transferDetailModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+          closeTransferDetail();
+      }
+  });
+</script>
+
 {% endblock %}

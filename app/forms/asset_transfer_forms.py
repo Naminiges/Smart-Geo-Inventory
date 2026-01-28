@@ -18,16 +18,18 @@ class AssetTransferForm(FlaskForm):
     """Form for transferring assets between units/rooms"""
     # Source - From where
     source_unit_id = DynamicSelectField('Unit Asal', coerce=int, choices=[(0, '')], validators=[DataRequired()])
-    source_item_detail_id = DynamicSelectField('Barang yang Dipindahkan', coerce=int, choices=[(0, '')], validators=[DataRequired()])
+    source_item_detail_id = DynamicSelectField('Barang yang Dipindahkan', coerce=int, choices=[(0, '')], validators=[Optional()])  # Changed to Optional since we use checkbox now
 
-    # Destination - To where
-    target_same_unit = SelectField('Pindah ke Unit yang Sama', choices=[
-        ('no', 'Tidak, beda unit'),
-        ('yes', 'Ya, unit sama')
+    # Transfer type - room, unit, or both
+    transfer_type = SelectField('Jenis Pemindahan', choices=[
+        ('room', 'Pindah Ruangan'),
+        ('unit', 'Pindah Unit'),
+        ('both', 'Pindah Lengkap')
     ], validators=[DataRequired()])
 
+    # Destination - To where (multiple fields for different tabs)
     target_unit_id = DynamicSelectField('Unit Tujuan', coerce=int, choices=[(0, '')], validators=[Optional()])
-    target_unit_detail_id = DynamicSelectField('Ruangan Tujuan', coerce=int, choices=[(0, '')], validators=[DataRequired()])
+    target_unit_detail_id = DynamicSelectField('Ruangan Tujuan', coerce=int, choices=[(0, '')], validators=[Optional()])
 
     notes = TextAreaField('Catatan', validators=[Optional()])
     submit = SubmitField('Pindahkan Barang')

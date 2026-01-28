@@ -1,20 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Kategori Barang - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Kategori Barang{% endblock %}
-
+{% block title %}Pengadaan - Smart Geo Inventory{% endblock %}
+{% block page_title %}Daftar Kategori{% endblock %}
+{% set page_icon = 'fas fa-plus-circle' %}
+{% set page_description = 'Kelola kategori untuk pengelompokan barang' %}
+{% block page_header_actions %}
+<a href="{{ url_for('categories.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Tambah Kategori
+</a>
+{% endblock %}
 {% block content %}
-<!-- Header with Search & Create Button -->
-<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Daftar Kategori</h2>
-        <p class="text-sm text-gray-600">Kelola kategori untuk pengelompokan barang</p>
-    </div>
-    <a href="{{ url_for('categories.create') }}" class="mt-4 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-        <i class="fas fa-plus mr-2"></i>Tambah Kategori
-    </a>
-</div>
 
 <!-- Search -->
 <div class="bg-white rounded-xl shadow-md mb-6 p-4">

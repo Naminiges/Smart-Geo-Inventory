@@ -2,9 +2,11 @@ import json
 import os
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from datetime import datetime
 from app import db
-from app.models import Unit, User, UserUnit, AssetRequest, Building
+from app.models import Unit, User, UserUnit, AssetRequest, Building, VenueLoan, UnitDetail
 from app.forms.unit_forms import UnitForm
+from app.forms import VenueLoanForm
 from app.utils.decorators import role_required
 from sqlalchemy import or_
 
@@ -60,7 +62,6 @@ def loans():
 
     # Get statistics
     total_count = VenueLoan.query.count()
-    pending_count = VenueLoan.query.filter_by(status='pending').count()
     approved_count = VenueLoan.query.filter_by(status='approved').count()
     active_count = VenueLoan.query.filter_by(status='active').count()
     completed_count = VenueLoan.query.filter_by(status='completed').count()
@@ -70,11 +71,85 @@ def loans():
                          status_filter=status_filter,
                          stats={
                              'total': total_count,
-                             'pending': pending_count,
                              'approved': approved_count,
                              'active': active_count,
                              'completed': completed_count
                          })
+
+
+@bp.route('/loans/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def create_loan():
+    """Create new venue loan directly (Admin)"""
+    form = VenueLoanForm()
+
+    # Populate unit choices
+    form.borrower_unit_id.choices = [(0, '-- Pilih Unit --')] + [(u.id, u.name) for u in Unit.query.order_by(Unit.name).all()]
+    form.unit_detail_id.choices = [(0, '-- Pilih Unit Terlebih Dahulu --')]
+
+    if request.method == 'POST':
+        try:
+            # Get form data
+            unit_detail_id = form.unit_detail_id.data
+            borrower_unit_id = form.borrower_unit_id.data
+            event_name = form.event_name.data
+            start_datetime = form.start_datetime.data
+            end_datetime = form.end_datetime.data
+            notes = form.notes.data
+
+            # Validate required fields
+            if not all([unit_detail_id, borrower_unit_id, event_name, start_datetime, end_datetime]):
+                flash('Semua field wajib diisi!', 'danger')
+                return render_template('admin/units/create_loan.html', form=form)
+
+            # Validate datetime
+            if end_datetime <= start_datetime:
+                flash('Waktu selesai harus setelah waktu mulai!', 'danger')
+                return render_template('admin/units/create_loan.html', form=form)
+
+            if start_datetime < datetime.now():
+                flash('Waktu mulai tidak boleh di masa lalu!', 'danger')
+                return render_template('admin/units/create_loan.html', form=form)
+
+            # Check if venue is already booked for the requested time
+            conflicting_loans = VenueLoan.query.filter(
+                VenueLoan.unit_detail_id == unit_detail_id,
+                VenueLoan.status.in_(['approved', 'active']),
+                VenueLoan.start_datetime < end_datetime,
+                VenueLoan.end_datetime > start_datetime
+            ).first()
+
+            if conflicting_loans:
+                flash('Ruangan sudah dipesan untuk waktu yang diminta!', 'danger')
+                return render_template('admin/units/create_loan.html', form=form)
+
+            # Create venue loan - langsung active karena admin yang buat
+            venue_loan = VenueLoan(
+                unit_detail_id=unit_detail_id,
+                borrower_unit_id=borrower_unit_id,
+                borrower_user_id=current_user.id,
+                event_name=event_name,
+                start_datetime=start_datetime,
+                end_datetime=end_datetime,
+                notes=notes,
+                status='approved'  # Langsung approved karena dibuat oleh admin
+            )
+            venue_loan.save()
+
+            # Mark as approved by admin
+            venue_loan.approved_by = current_user.id
+            venue_loan.approved_at = datetime.now()
+            venue_loan.save()
+
+            flash('Peminjaman tempat berhasil dibuat dan langsung aktif!', 'success')
+            return redirect(url_for('units.loans'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return render_template('admin/units/create_loan.html', form=form)
 
 
 @bp.route('/create', methods=['GET', 'POST'])

@@ -52,7 +52,7 @@
     <div class="bg-white rounded-xl shadow-md p-6 border-l-4 border-yellow-600">
         <div class="text-center">
             <div class="text-3xl font-bold text-yellow-600">{{ total_obname }}</div>
-            <div class="text-sm text-gray-500 mt-1">Obname</div>
+            <div class="text-sm text-gray-500 mt-1">Opname</div>
         </div>
     </div>
 </div>
@@ -70,8 +70,8 @@
             <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="retur">
                 <i class="fas fa-undo mr-2"></i>Retur
             </button>
-            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="obname">
-                <i class="fas fa-boxes mr-2"></i>Obname
+            <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="opname">
+                <i class="fas fa-boxes mr-2"></i>Opname
             </button>
             <button class="tab-button px-4 py-2 rounded-lg font-semibold text-sm transition-all" data-tab="semua">
                 <i class="fas fa-list mr-2"></i>Semua Data
@@ -265,14 +265,14 @@
     </div>
 </div>
 
-<!-- Obname (Barang Endap di Gudang) -->
-<div class="bg-white rounded-xl shadow-md mb-6 tab-content no-print" data-tab="obname" style="display: none;">
+<!-- Opname (Barang Endap di Gudang) -->
+<div class="bg-white rounded-xl shadow-md mb-6 tab-content no-print" data-tab="opname" style="display: none;">
     <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
                 <i class="fas fa-boxes text-yellow-600 text-xl mr-3"></i>
                 <div>
-                    <h5 class="text-lg font-semibold mb-0">Obname (Barang Tersedia di Gudang)</h5>
+                    <h5 class="text-lg font-semibold mb-0">Opname (Barang Tersedia di Gudang)</h5>
                     <small class="text-gray-500">Total: {{ total_obname }} barang</small>
                 </div>
             </div>
@@ -355,7 +355,7 @@
                 <td style="border: 1px solid #000; padding: 8px; text-align: center;">Barang</td>
             </tr>
             <tr>
-                <td style="border: 1px solid #000; padding: 8px; font-weight: bold;">5. Sisa di Gudang (Obname)</td>
+                <td style="border: 1px solid #000; padding: 8px; font-weight: bold;">5. Sisa di Gudang (Opname)</td>
                 <td style="border: 1px solid #000; padding: 8px; text-align: center; font-weight: bold;">{{ total_obname }}</td>
                 <td style="border: 1px solid #000; padding: 8px; text-align: center;">Barang</td>
             </tr>
@@ -510,10 +510,10 @@
     </div>
     {% endif %}
 
-    <!-- Obname Detail -->
+    <!-- Opname Detail -->
     {% if obname_items %}
     <div style="margin-bottom: 20px; page-break-inside: avoid;">
-        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">V. DAFTAR BARANG YANG MASIH TERSEDIA DI GUDANG (OBNAME)</h4>
+        <h4 style="font-size: 11pt; font-weight: bold; margin-bottom: 10px; border-bottom: 2px solid #000; padding-bottom: 5px;">V. DAFTAR BARANG YANG MASIH TERSEDIA DI GUDANG (OPNAME)</h4>
         <table style="width: 100%; border-collapse: collapse; font-size: 9pt;">
             <thead>
                 <tr style="background-color: #f0f0f0;">

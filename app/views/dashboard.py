@@ -710,43 +710,6 @@ def api_unit_received_chart():
     return jsonify(data)
 
 
-@bp.route('/api/unit/recent-loans')
-@login_required
-@role_required('unit_staff')
-def api_unit_recent_loans():
-    """API for recent venue loans (peminjaman tempat)"""
-    from app.models import VenueLoan, UnitDetail, Unit
-
-    # Get user's assigned unit IDs
-    unit_ids = [uu.unit_id for uu in current_user.user_units]
-
-    # Get recent venue loans for these units
-    loans = VenueLoan.query.filter(
-        VenueLoan.borrower_unit_id.in_(unit_ids)
-    ).order_by(
-        VenueLoan.created_at.desc()
-    ).limit(3).all()
-
-    data = []
-    for loan in loans:
-        unit_detail = loan.unit_detail
-        unit = unit_detail.unit if unit_detail else None
-
-        data.append({
-            'id': loan.id,
-            'event_name': loan.event_name,
-            'unit_name': unit.name if unit else 'Unknown',
-            'room_name': unit_detail.room_name if unit_detail else '',
-            'start_datetime': loan.start_datetime.strftime('%d/%m/%Y %H:%M'),
-            'end_datetime': loan.end_datetime.strftime('%d/%m/%Y %H:%M'),
-            'status': loan.status,
-            'status_display': loan.status_display,
-            'status_badge_class': loan.status_badge_class
-        })
-
-    return jsonify(data)
-
-
 @bp.route('/api/warehouse/comparison-chart')
 @login_required
 @role_required('warehouse_staff')

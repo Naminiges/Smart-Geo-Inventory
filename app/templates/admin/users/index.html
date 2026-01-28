@@ -1,21 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Manajemen User - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Manajemen User{% endblock %}
-
+{% block title %}Manajemen Pengguna - Smart Geo Inventory{% endblock %}
+{% block page_title %}Manajemen Pengguna{% endblock %}
+{% set page_icon = 'fas fa-user' %}
+{% set page_description = 'Kelola user dan hak akses warehouse' %}
+{% block page_header_actions %}
+<a href="{{ url_for('users.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Tambah User Baru
+</a>
+{% endblock %}
 {% block content %}
-<!-- Header with Search & Create Button -->
-<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Daftar Pengguna</h2>
-        <p class="text-sm text-gray-600">Kelola user dan hak akses warehouse</p>
-    </div>
-    <a href="{{ url_for('users.create') }}" class="mt-4 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-        <i class="fas fa-plus mr-2"></i>Tambah User Baru
-    </a>
-</div>
-
 <!-- Filters -->
 <div class="bg-white rounded-xl shadow-md mb-6 p-4">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">

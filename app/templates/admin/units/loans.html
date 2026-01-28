@@ -1,190 +1,159 @@
 {% extends "base.html" %}
 
 {% block title %}Peminjaman Tempat - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Daftar Peminjaman Tempat{% endblock %}
-
+{% block page_title %}Peminjaman Tempat{% endblock %}
+{% set page_icon = 'fas fa-building' %}
+{% set page_description = 'Kelola jadwal peminjaman ruangan' %}
+{% block page_header_actions %}
+<a href="{{ url_for('units.create_loan') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Buat Peminjaman
+</a>
+{% endblock %}
 {% block content %}
-<!-- Back Button -->
-<div class="mb-4">
-    <a href="{{ url_for('units.index') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
-        <i class="fas fa-arrow-left mr-2"></i>
-        Kembali ke Daftar Unit
-    </a>
-</div>
 
 <!-- Statistics Cards -->
-<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-blue-100 rounded-full p-2">
-                <i class="fas fa-door-open text-blue-600"></i>
-            </div>
-            <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.total }}</div>
-                <div class="text-xs text-gray-500">Total</div>
-            </div>
-        </div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-blue-600 hover:shadow-lg transition-shadow">
+    <div class="flex items-center">
+      <div class="bg-blue-100 rounded-full p-2">
+        <i class="fas fa-door-open text-blue-600"></i>
+      </div>
+      <div class="ml-3">
+        <div class="text-2xl font-bold text-gray-800">{{ stats.total }}</div>
+        <div class="text-xs text-gray-500">Total</div>
+      </div>
     </div>
+  </div>
 
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-yellow-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-yellow-100 rounded-full p-2">
-                <i class="fas fa-clock text-yellow-600"></i>
-            </div>
-            <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.pending }}</div>
-                <div class="text-xs text-gray-500">Pending</div>
-            </div>
-        </div>
+  <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-green-600 hover:shadow-lg transition-shadow">
+    <div class="flex items-center">
+      <div class="bg-green-100 rounded-full p-2">
+        <i class="fas fa-check text-green-600"></i>
+      </div>
+      <div class="ml-3">
+        <div class="text-2xl font-bold text-gray-800">{{ stats.approved }}</div>
+        <div class="text-xs text-gray-500">Disetujui</div>
+      </div>
     </div>
+  </div>
 
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-green-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-green-100 rounded-full p-2">
-                <i class="fas fa-check text-green-600"></i>
-            </div>
-            <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.approved }}</div>
-                <div class="text-xs text-gray-500">Disetujui</div>
-            </div>
-        </div>
+  <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-600 hover:shadow-lg transition-shadow">
+    <div class="flex items-center">
+      <div class="bg-purple-100 rounded-full p-2">
+        <i class="fas fa-handshake text-purple-600"></i>
+      </div>
+      <div class="ml-3">
+        <div class="text-2xl font-bold text-gray-800">{{ stats.active }}</div>
+        <div class="text-xs text-gray-500">Dipinjam</div>
+      </div>
     </div>
+  </div>
 
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-purple-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-purple-100 rounded-full p-2">
-                <i class="fas fa-handshake text-purple-600"></i>
-            </div>
-            <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.active }}</div>
-                <div class="text-xs text-gray-500">Dipinjam</div>
-            </div>
-        </div>
+  <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-gray-600 hover:shadow-lg transition-shadow">
+    <div class="flex items-center">
+      <div class="bg-gray-100 rounded-full p-2">
+        <i class="fas fa-check-circle text-gray-600"></i>
+      </div>
+      <div class="ml-3">
+        <div class="text-2xl font-bold text-gray-800">{{ stats.completed }}</div>
+        <div class="text-xs text-gray-500">Selesai</div>
+      </div>
     </div>
-
-    <div class="bg-white rounded-xl shadow-md p-4 border-l-4 border-gray-600 hover:shadow-lg transition-shadow">
-        <div class="flex items-center">
-            <div class="bg-gray-100 rounded-full p-2">
-                <i class="fas fa-check-circle text-gray-600"></i>
-            </div>
-            <div class="ml-3">
-                <div class="text-2xl font-bold text-gray-800">{{ stats.completed }}</div>
-                <div class="text-xs text-gray-500">Selesai</div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>
 
 <!-- Filters -->
-<div class="bg-white rounded-xl shadow-md mb-6">
-    <div class="p-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
-        <div class="flex flex-wrap gap-2">
-            <a href="{{ url_for('units.loans') }}?status="
-               class="px-4 py-2 {% if status_filter == '' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Semua
-            </a>
-            <a href="{{ url_for('units.loans') }}?status=pending"
-               class="px-4 py-2 {% if status_filter == 'pending' %}bg-yellow-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Pending
-            </a>
-            <a href="{{ url_for('units.loans') }}?status=approved"
-               class="px-4 py-2 {% if status_filter == 'approved' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Disetujui
-            </a>
-            <a href="{{ url_for('units.loans') }}?status=active"
-               class="px-4 py-2 {% if status_filter == 'active' %}bg-purple-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Dipinjam
-            </a>
-            <a href="{{ url_for('units.loans') }}?status=completed"
-               class="px-4 py-2 {% if status_filter == 'completed' %}bg-gray-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Selesai
-            </a>
-            <a href="{{ url_for('units.loans') }}?status=rejected"
-               class="px-4 py-2 {% if status_filter == 'rejected' %}bg-red-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
-                Ditolak
-            </a>
-        </div>
-    </div>
+<div class="bg-white rounded-xl shadow-md mb-6 p-4">
+  <div class="flex flex-wrap gap-2">
+    <a href="{{ url_for('units.loans') }}?status="
+       class="px-4 py-2 {% if status_filter == '' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
+      Semua
+    </a>
+    <a href="{{ url_for('units.loans') }}?status=approved"
+       class="px-4 py-2 {% if status_filter == 'approved' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
+      Disetujui
+    </a>
+    <a href="{{ url_for('units.loans') }}?status=active"
+       class="px-4 py-2 {% if status_filter == 'active' %}bg-purple-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
+      Dipinjam
+    </a>
+    <a href="{{ url_for('units.loans') }}?status=completed"
+       class="px-4 py-2 {% if status_filter == 'completed' %}bg-gray-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif%} rounded-lg transition-colors font-semibold text-sm">
+      Selesai
+    </a>
+  </div>
 </div>
 
 <!-- Venue Loans Table -->
-<div class="bg-white rounded-xl shadow-md">
-    <div class="p-6 border-b border-gray-200">
-        <div class="flex items-center justify-between">
+<div class="bg-white rounded-xl shadow-md overflow-hidden">
+  <div class="overflow-x-auto">
+    {% if venue_loans and venue_loans|length > 0 %}
+    <table class="w-full paginated-table">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Peminjam</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tempat</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Acara</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Waktu</th>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+          <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200">
+        {% for loan in venue_loans %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4">
             <div class="flex items-center">
-                <i class="fas fa-door-open text-orange-600 text-2xl mr-3"></i>
-                <div>
-                    <h5 class="text-lg font-semibold mb-0">Daftar Peminjaman Tempat</h5>
-                    <small class="text-gray-500">Menunggu verifikasi admin</small>
-                </div>
+              <div class="bg-blue-100 rounded-lg p-2 mr-3">
+                <i class="fas fa-hashtag text-blue-600"></i>
+              </div>
+              <strong class="text-gray-900">#{{ loan.id }}</strong>
             </div>
-            {% if venue_loans and venue_loans|length > 0 %}
-            <span class="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                {{ venue_loans|length }} Peminjaman
+          </td>
+          <td class="px-6 py-4 text-gray-600">
+            {{ loan.borrower_unit.name if loan.borrower_unit else 'Unknown' }}
+            <br><small class="text-gray-400">{{ loan.borrower_user.name if loan.borrower_user else '' }}</small>
+          </td>
+          <td class="px-6 py-4 text-gray-600">
+            {{ loan.unit_detail.unit.name if loan.unit_detail and loan.unit_detail.unit else '' }}
+            <br><small class="text-gray-400">{{ loan.unit_detail.room_name if loan.unit_detail else '' }}</small>
+          </td>
+          <td class="px-6 py-4 text-gray-800 font-semibold">{{ loan.event_name }}</td>
+          <td class="px-6 py-4 text-gray-600 text-sm">
+            <div>{{ loan.start_datetime.strftime('%d/%m/%Y %H:%M') }}</div>
+            <div class="text-xs text-gray-500">s/d {{ loan.end_datetime.strftime('%d/%m/%Y %H:%M') }}</div>
+          </td>
+          <td class="px-6 py-4">
+            <span class="px-3 py-1 {{ loan.status_badge_class }} rounded-full text-xs font-semibold">
+              {{ loan.status_display }}
             </span>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="p-6 overflow-x-auto">
-        {% if venue_loans and venue_loans|length > 0 %}
-        <table class="w-full paginated-table">
-            <thead>
-                <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">ID</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Peminjam</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tempat</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Acara</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Waktu</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for loan in venue_loans %}
-                <tr class="border-b border-gray-100 hover:bg-gray-50">
-                    <td class="py-3 px-4"><strong class="text-gray-800">#{{ loan.id }}</strong></td>
-                    <td class="py-3 px-4 text-gray-600">
-                        {{ loan.borrower_unit.name if loan.borrower_unit else 'Unknown' }}
-                        <br><small class="text-gray-400">{{ loan.borrower_user.name if loan.borrower_user else '' }}</small>
-                    </td>
-                    <td class="py-3 px-4 text-gray-600">
-                        {{ loan.unit_detail.unit.name if loan.unit_detail and loan.unit_detail.unit else '' }}
-                        <br><small class="text-gray-400">{{ loan.unit_detail.room_name if loan.unit_detail else '' }}</small>
-                    </td>
-                    <td class="py-3 px-4 text-gray-800 font-semibold">{{ loan.event_name }}</td>
-                    <td class="py-3 px-4 text-gray-600 text-sm">
-                        <div>{{ loan.start_datetime.strftime('%d/%m/%Y %H:%M') }}</div>
-                        <div class="text-xs text-gray-500">s/d {{ loan.end_datetime.strftime('%d/%m/%Y %H:%M') }}</div>
-                    </td>
-                    <td class="py-3 px-4">
-                        <span class="px-3 py-1 {{ loan.status_badge_class }} rounded-full text-xs font-semibold">
-                            {{ loan.status_display }}
-                        </span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <a href="{{ url_for('venue_loans.admin_detail', id=loan.id) }}"
-                           class="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors text-xs font-semibold">
-                            <i class="fas fa-eye mr-1"></i> Detail
-                        </a>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="flex items-center justify-center space-x-2">
+              <a href="{{ url_for('venue_loans.admin_detail', id=loan.id) }}"
+                 class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                 title="Detail">
+                <i class="fas fa-eye"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center text-gray-500 py-12">
+      <i class="fas fa-door-open text-6xl mb-4 opacity-30"></i>
+      <p class="text-lg font-medium">
+        {% if status_filter %}
+        Tidak ada peminjaman tempat dengan status {{ status_filter }}
         {% else %}
-        <div class="text-center text-gray-500 py-12">
-            <i class="fas fa-door-open text-6xl mb-4 opacity-30"></i>
-            <p class="text-lg mb-0">
-                {% if status_filter %}
-                Tidak ada peminjaman tempat dengan status {{ status_filter }}
-                {% else %}
-                Tidak ada permohonan peminjaman tempat
-                {% endif %}
-            </p>
-        </div>
+        Tidak ada permohonan peminjaman tempat
         {% endif %}
+      </p>
     </div>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

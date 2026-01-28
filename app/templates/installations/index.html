@@ -1,29 +1,20 @@
 {% extends "base.html" %}
 
 {% block title %}Distribusi Aset Umum - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Kirim Langsung{% endblock %}
-
+{% block page_title %}Distribusi Aset Umum{% endblock %}
+{% set page_icon = 'fas fa-plus-circle' %}
+{% set page_description = 'Kirim langsung' %}
+{% if current_user.is_warehouse_staff() or current_user.is_admin() %}
+{% block page_header_actions %}
+<a href="{{ url_for('installations.create_general_distribution') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Buat Pengiriman Baru
+</a>
+<a href="{{ url_for('installations.rejected_list') }}" class="px-5 py-2.5 rounded-xl border border-red-600 text-red-600 hover:bg-red-600 hover:text-white  transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-times-circle mr-2"></i>Ditolak
+</a>
+{% endblock %}
+{% endif %}
 {% block content %}
-<!-- Action Buttons -->
-<div class="mb-6 flex gap-3">
-    {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
-    <a href="{{ url_for('installations.create_general_distribution') }}" class="px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
-        <i class="fas fa-plus-circle mr-2"></i>
-        Buat Pengiriman Baru
-    </a>
-    {% endif %}
-    {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
-    <a href="{{ url_for('installations.rejected_list') }}" class="px-6 py-4 border border-red-600 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-colors font-semibold inline-flex items-center">
-        <i class="fas fa-times-circle mr-2"></i>
-        Ditolak
-    </a>
-    {% endif %}
-    <a href="{{ url_for('map.index', show='distributions') }}" class="px-6 py-4 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-colors font-semibold inline-flex items-center">
-        <i class="fas fa-map mr-2"></i>
-        Lihat Peta
-    </a>
-</div>
 
 <!-- Draft Section (Warehouse Staff & Admin) -->
 {% if current_user.is_warehouse_staff() or current_user.is_admin() %}

@@ -5,19 +5,31 @@
 {% block page_title %}Dashboard Warehouse{% endblock %}
 
 {% block content %}
+{% set page_icon = 'fas fa-warehouse' %}
+{% set page_description = 'Ringkasan statistik dan aktivitas gudang' %}
+
 <!-- Welcome Section -->
 <div class="mb-6">
-    <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl shadow-lg p-6 text-white">
-        <div class="flex items-center justify-between">
+    <div class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+        <!-- Decorative pattern -->
+        <div class="absolute top-0 right-0 w-96 h-96 opacity-10">
+            <svg viewBox="0 0 200 200" class="w-full h-full">
+                <path fill="currentColor" d="M44.7,-76.4C58.9,-69.2,71.8,-59.1,79.6,-46.9C87.4,-34.7,90.1,-20.4,86.8,-7.3C83.5,5.8,74.2,17.7,65.8,28.8C57.4,39.9,49.9,50.2,40.4,58.6C30.9,67,19.4,73.5,6.8,75.8C-5.8,78.1,-19.5,76.2,-31.7,70.5C-43.9,64.8,-54.6,55.3,-63.4,44.2C-72.2,33.1,-79.1,20.4,-80.9,7.2C-82.7,-6,-79.4,-19.7,-71.5,-31.2C-63.6,-42.7,-51.1,-52,-38.8,-59.6C-26.5,-67.2,-14.4,-73.1,-0.6,-72.1C13.2,-71.1,26.4,-63.2,30.5,-83.6L44.7,-76.4Z" transform="translate(100 100)" />
+            </svg>
+        </div>
+
+        <div class="relative flex items-center justify-between">
             <div class="flex-1">
-                <h2 class="text-2xl font-bold mb-2">Selamat Datang, {{ user.name }}!</h2>
-                <p class="mb-0 text-emerald-100">
+                <h2 class="text-2xl md:text-3xl font-bold mb-2">Selamat Datang, {{ user.name.split()[0] }}!</h2>
+                <p class="mb-0 text-emerald-100 text-lg">
                     <i class="fas fa-warehouse mr-2"></i>
                     {{ warehouse.name if warehouse else 'Gudang' }}
                 </p>
             </div>
             <div class="text-right">
-                <i class="fas fa-tachometer-alt text-6xl opacity-30"></i>
+                <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                    <i class="fas fa-tachometer-alt text-5xl opacity-80"></i>
+                </div>
             </div>
         </div>
     </div>
@@ -389,10 +401,5 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('yearFilter').addEventListener('change', loadChartData);
     document.getElementById('monthFilter').addEventListener('change', loadChartData);
 });
-
-// Auto-refresh dashboard every 60 seconds
-setTimeout(function() {
-    location.reload();
-}, 60000);
 </script>
 {% endblock %}

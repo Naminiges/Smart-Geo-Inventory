@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Peminjaman Tempat - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Buat Peminjaman Tempat{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('units.loans') }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Daftar Peminjaman
+    </a>
+</div>
+
+<!-- Form Card -->
+<div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-xl shadow-md">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center">
+                <i class="fas fa-calendar-plus text-orange-600 text-2xl mr-3"></i>
+                <div>
+                    <h5 class="text-lg font-semibold mb-0">Form Peminjaman Tempat</h5>
+                    <small class="text-gray-500">Buat jadwal peminjaman ruangan/tempat</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <form method="POST" action="" class="space-y-6">
+                <!-- CSRF Token -->
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                <!-- Unit Peminjam -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-building mr-1"></i> Unit Peminjam <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.borrower_unit_id(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", placeholder="Pilih unit yang akan meminjam") }}
+                    {% if form.borrower_unit_id.errors %}
+                        {% for error in form.borrower_unit_id.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Ruangan/Tempat -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-door-open mr-1"></i> Ruangan/Tempat <span class="text-red-500">*</span>
+                    </label>
+                    <select id="unit_detail_id" name="unit_detail_id"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled>
+                        <option value="0">-- Pilih Unit Terlebih Dahulu --</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">Pilih unit peminjam terlebih dahulu untuk melihat ruangan yang tersedia</p>
+                    {% if form.unit_detail_id.errors %}
+                        {% for error in form.unit_detail_id.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Nama Acara -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-event mr-1"></i> Nama Acara <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.event_name(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", placeholder="Contoh: Rapat Fakultas, Seminar Nasional") }}
+                    {% if form.event_name.errors %}
+                        {% for error in form.event_name.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Waktu Mulai & Selesai -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Waktu Mulai -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-clock mr-1"></i> Waktu Mulai <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.start_datetime(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", type="datetime-local") }}
+                        {% if form.start_datetime.errors %}
+                            {% for error in form.start_datetime.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+
+                    <!-- Waktu Selesai -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-clock mr-1"></i> Waktu Selesai <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.end_datetime(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", type="datetime-local") }}
+                        {% if form.end_datetime.errors %}
+                            {% for error in form.end_datetime.errors %}
+                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Catatan -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        <i class="fas fa-sticky-note mr-1"></i> Catatan
+                    </label>
+                    {{ form.notes(class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500", rows="3", placeholder="Catatan tambahan (opsional)") }}
+                    {% if form.notes.errors %}
+                        {% for error in form.notes.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <a href="{{ url_for('units.loans') }}" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-semibold">
+                        <i class="fas fa-times mr-2"></i> Batal
+                    </a>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                        <i class="fas fa-save mr-2"></i> Simpan Peminjaman
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const borrowerUnitSelect = document.getElementById('borrower_unit_id');
+    const unitDetailSelect = document.getElementById('unit_detail_id');
+
+    borrowerUnitSelect.addEventListener('change', function() {
+        const unitId = this.value;
+
+        if (unitId && unitId !== '0') {
+            // Fetch unit details for the selected unit
+            fetch(`/venue-loans/api/unit-details/${unitId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Clear existing options
+                    unitDetailSelect.innerHTML = '<option value="">-- Pilih Ruangan --</option>';
+
+                    // Add new options
+                    data.forEach(unitDetail => {
+                        const option = document.createElement('option');
+                        option.value = unitDetail.id;
+                        option.textContent = `${unitDetail.room_name} (Lantai ${unitDetail.floor || 'N/A'}) - ${unitDetail.items_count} barang`;
+                        unitDetailSelect.appendChild(option);
+                    });
+
+                    // Enable the select
+                    unitDetailSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error fetching unit details:', error);
+                    unitDetailSelect.innerHTML = '<option value="">-- Error memuat data --</option>';
+                });
+        } else {
+            // Reset and disable
+            unitDetailSelect.innerHTML = '<option value="0">-- Pilih Unit Terlebih Dahulu --</option>';
+            unitDetailSelect.disabled = true;
+        }
+    });
+
+    // Availability check
+    let checkTimeout;
+    const checkAvailability = function() {
+        const unitDetailId = unitDetailSelect.value;
+        const startDatetime = document.getElementById('start_datetime').value;
+        const endDatetime = document.getElementById('end_datetime').value;
+
+        if (unitDetailId && startDatetime && endDatetime) {
+            const data = {
+                unit_detail_id: parseInt(unitDetailId),
+                start_datetime: startDatetime,
+                end_datetime: endDatetime
+            };
+
+            fetch('/venue-loans/api/check-availability', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.available) {
+                    // Show warning
+                    const warningDiv = document.createElement('div');
+                    warningDiv.className = 'mt-2 p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded';
+                    warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i>${result.message}`;
+
+                    // Remove existing warning if any
+                    const existingWarning = unitDetailSelect.parentElement.querySelector('.bg-yellow-100');
+                    if (existingWarning) {
+                        existingWarning.remove();
+                    }
+
+                    unitDetailSelect.parentElement.appendChild(warningDiv);
+                } else {
+                    // Remove existing warning if any
+                    const existingWarning = unitDetailSelect.parentElement.querySelector('.bg-yellow-100');
+                    if (existingWarning) {
+                        existingWarning.remove();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error checking availability:', error);
+            });
+        }
+    };
+
+    // Add event listeners for availability check
+    document.getElementById('start_datetime').addEventListener('change', function() {
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(checkAvailability, 500);
+    });
+
+    document.getElementById('end_datetime').addEventListener('change', function() {
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(checkAvailability, 500);
+    });
+
+    unitDetailSelect.addEventListener('change', function() {
+        clearTimeout(checkTimeout);
+        checkTimeout = setTimeout(checkAvailability, 500);
+    });
+});
+</script>
+{% endblock %}
