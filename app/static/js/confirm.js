@@ -22,8 +22,9 @@ function showConfirm(options) {
         const settings = {...defaults, ...options};
 
         // Create modal HTML
+        const modalId = 'confirmModal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         const modalHtml = `
-            <div class="fixed inset-0 z-50 flex items-center justify-center p-4" id="confirmModal">
+            <div class="fixed inset-0 z-50 flex items-center justify-center p-4" id="${modalId}">
                 <div class="absolute inset-0 bg-black opacity-50"></div>
                 <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-auto relative z-10 transform transition-all">
                     <div class="p-6">
@@ -41,12 +42,10 @@ function showConfirm(options) {
                             </div>
                         </div>
                         <div class="flex gap-3 justify-end">
-                            <button type="button" id="confirmCancelBtn"
-                                class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-sm">
+                            <button type="button" class="confirm-cancel-btn px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold text-sm">
                                 ${settings.cancelButtonText}
                             </button>
-                            <button type="button" id="confirmOkBtn"
-                                class="px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${settings.confirmButtonClass || 'bg-blue-600 text-white hover:bg-blue-700'}">
+                            <button type="button" class="confirm-ok-btn px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${settings.confirmButtonClass || 'bg-blue-600 text-white hover:bg-blue-700'}">
                                 ${settings.confirmButtonText}
                             </button>
                         </div>
@@ -59,9 +58,9 @@ function showConfirm(options) {
         document.body.insertAdjacentHTML('beforeend', modalHtml);
 
         // Get modal elements
-        const modal = document.getElementById('confirmModal');
-        const cancelBtn = document.getElementById('confirmCancelBtn');
-        const okBtn = document.getElementById('confirmOkBtn');
+        const modal = document.getElementById(modalId);
+        const cancelBtn = modal.querySelector('.confirm-cancel-btn');
+        const okBtn = modal.querySelector('.confirm-ok-btn');
 
         // Handle cancel
         const closeModal = () => {
@@ -303,9 +302,10 @@ document.addEventListener('DOMContentLoaded', function() {
     logoutBtns.forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
+            const href = this.getAttribute('href'); // Simpan href sebelum masuk ke then()
             confirmAction.logout().then(confirmed => {
                 if (confirmed) {
-                    window.location.href = this.getAttribute('href');
+                    window.location.href = href;
                 }
             });
         });
@@ -316,15 +316,16 @@ document.addEventListener('DOMContentLoaded', function() {
     deleteBtns.forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
+            const btnElement = this; // Simpan reference ke element
             const itemName = this.getAttribute('data-item-name') || 'item ini';
             confirmAction.delete(itemName).then(confirmed => {
                 if (confirmed) {
                     // Submit form or navigate
-                    const form = this.closest('form');
+                    const form = btnElement.closest('form');
                     if (form) {
                         form.submit();
                     } else {
-                        window.location.href = this.getAttribute('href');
+                        window.location.href = btnElement.getAttribute('href');
                     }
                 }
             });

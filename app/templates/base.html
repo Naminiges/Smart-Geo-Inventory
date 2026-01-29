@@ -4,25 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{% block title %}LOKASET Inventory{% endblock %}</title>
-
-    <!-- Font Awesome Icons -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    />
-
-    <!-- Leaflet CSS for maps -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <title>{% block title %}SAPA PSI - Smart Geo Inventory Inventory{% endblock %}</title>
 
     <!-- Custom CSS -->
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/output.css') }}"
-    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png"/>
     
     {% block extra_css %}{% endblock %}
   </head>
@@ -630,6 +617,16 @@
                 }
             }
         }, 100);
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdowns = document.querySelectorAll('[class*="z-[60]"]');
+            dropdowns.forEach(function(dropdown) {
+                if (!dropdown.previousElementSibling.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
     });
     </script>
 

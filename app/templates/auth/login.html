@@ -6,28 +6,30 @@
     <title>Login - SAPA PSI</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png"/>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 overflow-x-hidden min-h-screen">
+<body class="bg-gradient-to-br from-white via-emerald-50 to-white overflow-x-hidden min-h-screen">
 
-    <div class="main-container flex h-screen w-full overflow-y-auto overflow-x-hidden relative z-10">
+    <div class="main-container flex w-full overflow-y-auto overflow-x-hidden relative z-10">
         <!-- Login Section -->
-        <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-6 md:p-8 lg:p-12 bg-gradient-to-br from-slate-900/90 to-emerald-950/90 backdrop-blur-xl min-h-full">
+        <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-6 md:p-8 lg:p-12 bg-gradient-to-br from-white via-emerald-50 to-white backdrop-blur-xl min-h-full">
             <div class="sidebar-content relative z-10 w-full max-w-md py-4">
                 <!-- Logo Section -->
                 <div class="logo-section flex items-center justify-center gap-3 mb-6">
-                    <div class="flex items-center justify-center w-32 h-12 rounded-xl bg-white shadow-lg flex-shrink-0 px-2">
+                    <div class="flex items-center justify-center w-32 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg flex-shrink-0 px-2">
                         <img src="{{ url_for('static', filename='img/logo-panjang.png') }}" alt="Logo" class="w-full h-full object-contain">
                     </div>
                     <div class="text-left">
-                        <h2 class="text-xl font-bold text-white leading-tight">
+                        <h2 class="text-xl font-bold text-gray-800 leading-tight">
                             SAPA PSI
                         </h2>
-                        <p class="text-emerald-200 text-xs leading-tight">Smart Geo Inventory System</p>
+                        <p class="text-emerald-600 text-xs leading-tight font-medium">Smart Geo Inventory System</p>
                     </div>
                 </div>
 
                 <!-- Login Card -->
-                <div class="login-card bg-white/95 backdrop-blur-xl rounded-3xl p-6 md:p-8 shadow-2xl">
+                <div class="login-card bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-emerald-100">
                     <h4 class="mb-4 text-center text-xl font-bold text-gray-800">
                         Selamat Datang
                     </h4>
