@@ -10,6 +10,8 @@ class Config:
     # Security
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT') or 'security-salt'
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
 
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
@@ -38,6 +40,10 @@ class Config:
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_TYPE = 'filesystem'  # Explicitly set session type
+    SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')  # Session file directory
+    SESSION_FILE_THRESHOLD = 500  # Maximum number of session files
+    SESSION_FILE_MODE = 0o600  # File permissions for session files
 
     # File Upload
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
@@ -73,6 +79,8 @@ class Config:
         """Initialize application with this configuration"""
         # Create upload folder if it doesn't exist
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+        # Create session folder if it doesn't exist
+        os.makedirs(Config.SESSION_FILE_DIR, exist_ok=True)
 
 
 class DevelopmentConfig(Config):
