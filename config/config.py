@@ -17,10 +17,10 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False  # Set to True for SQL query debugging
 
-    # Database Connection Pooling - Optimized for performance
+    # Database Connection Pooling - Reduced to prevent connection overflow
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 20,              # Base pool size for concurrent connections
-        'max_overflow': 30,           # Additional connections when pool is full
+        'pool_size': 5,               # Reduced pool size
+        'max_overflow': 10,           # Reduced overflow
         'pool_timeout': 30,           # Timeout in seconds for getting connection
         'pool_recycle': 3600,         # Recycle connections every hour (prevent stale)
         'pool_pre_ping': True,        # Verify connections before using
@@ -87,10 +87,10 @@ class ProductionConfig(Config):
     SESSION_COOKIE_SECURE = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
 
-    # Production-specific optimizations
+    # Production-specific optimizations - Reduced to prevent connection overflow
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': 30,              # Larger pool for production
-        'max_overflow': 50,           # More overflow capacity
+        'pool_size': 5,               # Reduced pool size
+        'max_overflow': 10,           # Reduced overflow capacity
         'pool_timeout': 30,
         'pool_recycle': 3600,
         'pool_pre_ping': True,
