@@ -42,7 +42,9 @@ def create_app(config_name='default'):
     cors.init_app(app)
     csrf.init_app(app)
     cache.init_app(app)
-    server_session.init_app(app)  # Initialize server-side session
+    # Only initialize server-side session if SESSION_TYPE is set
+    if app.config.get('SESSION_TYPE'):
+        server_session.init_app(app)
     limiter.init_app(app)
     mail.init_app(app)
 
