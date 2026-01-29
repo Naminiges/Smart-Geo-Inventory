@@ -1,4 +1,4 @@
-from flask import Flask, redirect, url_for
+from flask import Flask, redirect, url_for, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
@@ -7,6 +7,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_session import Session  # Import Session for filesystem session
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
 from app.utils.status_helper import translate_status, get_status_color, get_status_icon
@@ -19,6 +20,7 @@ migrate = Migrate()
 cors = CORS()
 csrf = CSRFProtect()
 cache = Cache()
+server_session = Session()  # Filesystem session
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
@@ -40,6 +42,7 @@ def create_app(config_name='default'):
     cors.init_app(app)
     csrf.init_app(app)
     cache.init_app(app)
+    server_session.init_app(app)  # Initialize filesystem session
     limiter.init_app(app)
     mail.init_app(app)
 
