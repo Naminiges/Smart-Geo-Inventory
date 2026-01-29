@@ -11,8 +11,8 @@ bind = "0.0.0.0:5000"
 backlog = 2048
 
 # Worker processes
-# Calculate workers based on CPU cores (recommended: (2 x CPU cores) + 1)
-workers = multiprocessing.cpu_count() * 2 + 1
+# Reduced workers to prevent database connection overflow
+workers = 2  # Start with 2 workers only
 worker_class = "sync"  # Can use 'gevent' or 'gthread' for async workers
 worker_connections = 1000
 max_requests = 1000  # Restart workers after this many requests to prevent memory leaks

@@ -108,9 +108,10 @@ def create_app(config_name='default'):
     app.register_blueprint(api_units.bp)
     app.register_blueprint(api_unit_procurement.bp, url_prefix='/api')
 
-    # Create tables
-    with app.app_context():
-        db.create_all()
+    # Create tables - DISABLED in production to prevent connection overflow
+    # Tables should be created manually using migrations or seed scripts
+    # with app.app_context():
+    #     db.create_all()
 
     # Initialize background scheduler for venue loans
     from app.scheduler import init_scheduler
