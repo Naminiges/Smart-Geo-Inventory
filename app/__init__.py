@@ -69,7 +69,7 @@ def create_app(config_name='default'):
     def utility_helpers():
         from flask_wtf.csrf import generate_csrf
         data = notification_counts()
-        data['csrf_token'] = generate_csrf
+        data['csrf_token'] = generate_csrf()  # Call the function to generate token
         return data
 
     # Register blueprints

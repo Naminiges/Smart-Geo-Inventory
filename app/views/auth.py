@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, login_manager
 from app.models import User, ActivityLog
@@ -20,6 +20,13 @@ def login():
         return redirect(url_for('dashboard.index'))
 
     form = LoginForm()
+
+    # Debug: Print session info
+    if request.method == 'GET':
+        from flask_wtf.csrf import generate_csrf
+        csrf_token = generate_csrf()
+        print(f"DEBUG: Generated CSRF token: {csrf_token[:20]}...")
+
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
 
