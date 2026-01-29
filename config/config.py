@@ -36,7 +36,8 @@ class Config:
     CACHE_DEFAULT_TIMEOUT = 300  # 5 minutes default cache timeout
     CACHE_KEY_PREFIX = 'sgi_'    # Prefix for cache keys
 
-    # Session
+    # Session - Using default Flask client-side signed cookies
+    # Flask-Session is DISABLED to avoid FileSystemSession issues
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
@@ -44,15 +45,8 @@ class Config:
     SESSION_COOKIE_NAME = 'smart_geo_session'  # Custom session cookie name
     SESSION_COOKIE_PATH = '/'  # Cookie available for all paths
 
-    # Session type for multi-worker environments (gunicorn)
-    # IMPORTANT: If using gunicorn with workers > 1, MUST use Redis or filesystem
-    # For single worker, can use default (client-side cookie)
-    SESSION_TYPE = os.environ.get('SESSION_TYPE', None)  # None = default client-side
-    if SESSION_TYPE == 'filesystem':
-        # Get the project root directory
-        BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-        SESSION_FILE_DIR = os.path.join(BASE_DIR, 'flask_session')
-    SESSION_REDIS = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    # Flask-Session settings - NOT USED, DISABLED
+    # SESSION_TYPE = None  # Explicitly None to use default Flask session
 
     # File Upload
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size

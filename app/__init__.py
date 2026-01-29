@@ -7,7 +7,7 @@ from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_session import Session  # For server-side session
+# from flask_session import Session  # DISABLED - Use default Flask session instead
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
 from app.utils.status_helper import translate_status, get_status_color, get_status_icon
@@ -20,7 +20,7 @@ migrate = Migrate()
 cors = CORS()
 csrf = CSRFProtect()
 cache = Cache()
-server_session = Session()  # Server-side session for multi-worker
+# server_session = Session()  # DISABLED - Not using Flask-Session
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
@@ -42,9 +42,8 @@ def create_app(config_name='default'):
     cors.init_app(app)
     csrf.init_app(app)
     cache.init_app(app)
-    # Only initialize server-side session if SESSION_TYPE is set
-    if app.config.get('SESSION_TYPE'):
-        server_session.init_app(app)
+    # Flask-Session DISABLED - Using default Flask client-side session
+    # server_session.init_app(app)  # DISABLED
     limiter.init_app(app)
     mail.init_app(app)
 
