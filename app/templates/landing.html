@@ -6,6 +6,7 @@
     <title>SAPA PSI - Smart Geo Inventory</title>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
 </head>
 <body class="bg-gradient-to-br from-[#0f172a] via-[#064e3b] to-[#0f172a] text-white antialiased overflow-x-hidden min-h-screen">
 
@@ -257,8 +258,8 @@
             <div class="grid md:grid-cols-4 gap-8 mb-8">
                 <div class="md:col-span-2">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                            <i class="fas fa-boxes text-white"></i>
+                        <div class="w-10 h-10 rounded-lg bg-white flex items-center justify-center">
+                            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-8 h-8">
                         </div>
                         <div>
                             <h3 class="font-bold text-lg">SAPA PSI</h3>
