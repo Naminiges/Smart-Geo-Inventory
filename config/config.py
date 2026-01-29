@@ -39,14 +39,12 @@ class Config:
     # Session - Using default Flask client-side signed cookies
     # Flask-Session is DISABLED to avoid FileSystemSession issues
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_NAME = 'smart_geo_session'  # Custom session cookie name
+    SESSION_COOKIE_SECURE = False  # False for HTTP (non-HTTPS)
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+    SESSION_COOKIE_SAMESITE = None  # None for HTTP, 'Lax' for HTTPS
+    SESSION_COOKIE_NAME = 'session'  # Use simple name
     SESSION_COOKIE_PATH = '/'  # Cookie available for all paths
-
-    # Flask-Session settings - NOT USED, DISABLED
-    # SESSION_TYPE = None  # Explicitly None to use default Flask session
+    SESSION_COOKIE_DOMAIN = None  # Allow cookie to work
 
     # File Upload
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
