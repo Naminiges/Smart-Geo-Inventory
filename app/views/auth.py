@@ -21,11 +21,16 @@ def login():
 
     form = LoginForm()
 
-    # Debug: Print session info
+    # Debug: Print session and cookie info
     if request.method == 'GET':
         from flask_wtf.csrf import generate_csrf
         csrf_token = generate_csrf()
         print(f"DEBUG: Generated CSRF token: {csrf_token[:20]}...")
+        print(f"DEBUG: Session: {session}")
+        print(f"DEBUG: Session cookie in request: {request.cookies.get('smart_geo_session', 'Not found')}")
+    elif request.method == 'POST':
+        print(f"DEBUG: POST request - Session: {session}")
+        print(f"DEBUG: POST request - Session cookie: {request.cookies.get('smart_geo_session', 'Not found')}")
 
     if form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
@@ -50,6 +55,12 @@ def login():
                 return redirect(url_for('dashboard.unit_index'))
         else:
             flash('Email atau password salah.', 'danger')
+
+    # If form validation failed, print errors
+    if request.method == 'POST' and not form.validate_on_submit():
+        print(f"DEBUG: Form validation failed. Errors: {form.errors}")
+        if 'csrf_token' in form.errors:
+            print(f"DEBUG: CSRF token errors: {form.errors['csrf_token']}")
 
     return render_template('auth/login.html', form=form)
 

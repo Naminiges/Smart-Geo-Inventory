@@ -3,11 +3,10 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_session import Session  # Import Session for filesystem session
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
 from app.utils.status_helper import translate_status, get_status_color, get_status_icon
@@ -20,7 +19,6 @@ migrate = Migrate()
 cors = CORS()
 csrf = CSRFProtect()
 cache = Cache()
-server_session = Session()  # Filesystem session
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
@@ -42,7 +40,6 @@ def create_app(config_name='default'):
     cors.init_app(app)
     csrf.init_app(app)
     cache.init_app(app)
-    server_session.init_app(app)  # Initialize filesystem session
     limiter.init_app(app)
     mail.init_app(app)
 
@@ -67,10 +64,20 @@ def create_app(config_name='default'):
     # Make helpers available in all templates
     @app.context_processor
     def utility_helpers():
-        from flask_wtf.csrf import generate_csrf
         data = notification_counts()
-        data['csrf_token'] = generate_csrf()  # Call the function to generate token
+        # CSRF token is automatically handled by Flask-WTF's form.hidden_tag()
         return data
+
+    # CSRF error handler
+    @app.errorhandler(400)
+    def handle_csrf_error(e):
+        from flask import render_template
+        if 'CSRF' in str(e):
+            import logging
+            logging.error(f"CSRF Error: {e}")
+            logging.error(f"Session data: {session}")
+            return render_template('errors/csrf_error.html', error=str(e)), 400
+        return e
 
     # Register blueprints
     from app.views import main, auth, dashboard, installations, stock, items, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans, warehouses, buildings, asset_transfer

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF Error - Smart Geo Inventory</title>
+</head>
+<body>
+    <div style="max-width: 600px; margin: 100px auto; padding: 20px; font-family: Arial, sans-serif;">
+        <h1 style="color: #d32f2f;">CSRF Token Error</h1>
+        <p>Terjadi kesalahan pada CSRF token: {{ error }}</p>
+
+        <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <h3>Solusi:</h3>
+            <ol>
+                <li>Coba refresh halaman ini</li>
+                <li>Clear browser cookies untuk site ini</li>
+                <li>Coba login kembali</li>
+            </ol>
+        </div>
+
+        <p><a href="{{ url_for('auth.login') }}">Kembali ke Halaman Login</a></p>
+
+        <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            <p><strong>Debug Info:</strong></p>
+            <p>Error: {{ error }}</p>
+        </div>
+    </div>
+</body>
+</html>
