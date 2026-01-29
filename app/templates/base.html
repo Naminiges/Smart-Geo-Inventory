@@ -617,6 +617,16 @@
                 }
             }
         }, 100);
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdowns = document.querySelectorAll('[class*="z-[60]"]');
+            dropdowns.forEach(function(dropdown) {
+                if (!dropdown.previousElementSibling.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
     });
     </script>
 
