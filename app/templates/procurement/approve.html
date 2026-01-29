@@ -22,7 +22,7 @@
             </div>
             <div class="flex-1">
                 <h3 class="text-xl font-semibold text-gray-800 mb-1">Ringkasan Permohonan #{{ procurement.id }}</h3>
-                <p class="text-sm text-gray-500">Step 2: Admin memverifikasi dan memilih supplier</p>
+                <p class="text-sm text-gray-500">Step 2: Admin memverifikasi permohonan pengadaan</p>
             </div>
             <span class="px-4 py-2 bg-amber-100 text-amber-700 rounded-full font-semibold">
                 <i class="fas fa-clock mr-1"></i> Pending
@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
                 <h4 class="text-sm font-semibold text-gray-600 mb-2">Informasi Permohonan</h4>
                 <div class="bg-gray-50 rounded-lg p-4">
@@ -68,6 +68,16 @@
                     <p class="text-sm text-gray-700 italic">"{{ procurement.request_notes or '-' }}"</p>
                 </div>
             </div>
+            <div>
+                <h4 class="text-sm font-semibold text-gray-600 mb-2">Warehouse Tujuan</h4>
+                <div class="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                    <p class="text-sm text-gray-600">
+                        <i class="fas fa-warehouse text-blue-600 mr-1"></i>
+                        <span class="font-semibold text-blue-700">{{ procurement.warehouse.name if procurement.warehouse else 'N/A' }}</span>
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">Barang akan dikirim ke warehouse ini</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -80,29 +90,14 @@
                 <i class="fas fa-thumbs-up text-green-600 text-2xl"></i>
             </div>
             <div>
-                <h3 class="text-xl font-semibold text-gray-800">Form Persetujuan & Pemilihan Supplier</h3>
-                <p class="text-sm text-gray-500">Pilih supplier untuk pengadaan barang ini</p>
+                <h3 class="text-xl font-semibold text-gray-800">Form Persetujuan Pengadaan</h3>
+                <p class="text-sm text-gray-500">Setujui permohonan pengadaan barang ini</p>
             </div>
         </div>
     </div>
 
     <form method="POST" class="p-6">
         {{ form.hidden_tag() }}
-
-        <!-- Supplier Selection -->
-        <div class="mb-6">
-            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                <i class="fas fa-truck-loading mr-1 text-blue-600"></i>
-                Pilih Supplier
-            </label>
-            {{ form.supplier_id(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all") }}
-            {% if form.supplier_id.errors %}
-                {% for error in form.supplier_id.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
-            <p class="mt-1 text-xs text-gray-500">Supplier yang akan menyediakan barang</p>
-        </div>
 
         <!-- Admin Notes -->
         <div class="mb-6">
@@ -111,27 +106,22 @@
                 Catatan Admin (Opsional)
             </label>
             {{ form.notes(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all", rows="3", placeholder="Tambahkan catatan untuk persetujuan ini...") }}
-            {% if form.notes.errors %}
-                {% for error in form.notes.errors %}
-                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                {% endfor %}
-            {% endif %}
         </div>
 
         <!-- Action Buttons -->
         <div class="flex items-center justify-between pt-6 border-t border-gray-200">
-            <button type="button" onclick="confirmReject()" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
-                <i class="fas fa-times-circle mr-2"></i>
-                Tolak Permohonan
+            <button type="button" onclick="confirmReject()" id="rejectBtn" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-red-400 disabled:cursor-not-allowed">
+                <i class="fas fa-times-circle mr-2 reject-icon"></i>
+                <span class="reject-text">Tolak Permohonan</span>
             </button>
             <div class="flex space-x-3">
                 <a href="{{ url_for('procurement.detail', id=procurement.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Kembali
                 </a>
-                <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    Setujui & Pilih Supplier
+                <button type="submit" id="approveSubmitBtn" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-green-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-check-circle mr-2 approve-icon"></i>
+                    <span class="approve-text">Setujui Permohonan</span>
                 </button>
             </div>
         </div>
@@ -148,7 +138,6 @@
             <h4 class="font-semibold text-green-900 mb-2">Panduan Persetujuan</h4>
             <ul class="text-sm text-green-800 space-y-1">
                 <li><i class="fas fa-check-circle mr-2"></i>Pastikan barang yang diminta sesuai dengan kebutuhan</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Pilih supplier yang terpercaya dan tersedia</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Setelah disetujui, warehouse staff dapat menerima barang</li>
             </ul>
         </div>
@@ -156,7 +145,7 @@
 </div>
 
 <!-- Reject Modal -->
-<div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+<div id="rejectModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
         <div class="p-6 border-b border-gray-200">
             <h3 class="text-lg font-semibold text-gray-800">
@@ -165,9 +154,10 @@
             </h3>
         </div>
         <form action="{{ url_for('procurement.reject', id=procurement.id) }}" method="POST" class="p-6">
+            {{ reject_form.hidden_tag() }}
             <div class="mb-4">
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Alasan Penolakan</label>
-                <textarea name="rejection_reason" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Jelaskan alasan penolakan..." required></textarea>
+                {{ reject_form.rejection_reason(rows="3", class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500", placeholder="Jelaskan alasan penolakan...") }}
             </div>
             <div class="flex justify-end space-x-3">
                 <button type="button" onclick="closeRejectModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
@@ -191,6 +181,34 @@ function confirmReject() {
 function closeRejectModal() {
     document.getElementById('rejectModal').classList.add('hidden');
     document.getElementById('rejectModal').classList.remove('flex');
+}
+
+// Add loading state for approve form
+const approveForm = document.querySelector('form[action*="/approve"]');
+if (approveForm) {
+    approveForm.addEventListener('submit', function() {
+        const btn = document.getElementById('approveSubmitBtn');
+        const icon = btn.querySelector('.approve-icon');
+        const text = btn.querySelector('.approve-text');
+        btn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin mr-2 approve-icon';
+        text.textContent = 'Memproses...';
+    });
+}
+
+// Add loading state for reject button
+const rejectBtn = document.getElementById('rejectBtn');
+if (rejectBtn) {
+    const rejectForm = document.getElementById('rejectForm');
+    if (rejectForm) {
+        rejectForm.addEventListener('submit', function() {
+            const icon = rejectBtn.querySelector('.reject-icon');
+            const text = rejectBtn.querySelector('.reject-text');
+            rejectBtn.disabled = true;
+            icon.className = 'fas fa-spinner fa-spin mr-2 reject-icon';
+            text.textContent = 'Memproses...';
+        });
+    }
 }
 
 // Close modal when clicking outside

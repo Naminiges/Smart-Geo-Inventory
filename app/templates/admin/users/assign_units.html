@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Unit - {{ user.name }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Assign Unit{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('users.detail', id=user.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail User
+    </a>
+</div>
+
+<!-- User Info -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6">
+        <div class="flex items-center">
+            <div class="bg-yellow-100 rounded-full p-3 mr-4">
+                <i class="fas fa-user text-yellow-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">{{ user.name }}</h3>
+                <p class="text-sm text-gray-600">{{ user.email }}</p>
+                <div class="mt-1">
+                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                        <i class="fas fa-building mr-1"></i>Unit Staff
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignment Form -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center">
+            <div class="bg-yellow-100 rounded-lg p-3 mr-4">
+                <i class="fas fa-building text-yellow-600 text-2xl"></i>
+            </div>
+            <div>
+                <h3 class="text-xl font-semibold text-gray-800">Assignment Unit</h3>
+                <p class="text-sm text-gray-500">Pilih unit yang bisa diakses oleh user ini</p>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" class="p-6">
+        {{ form.hidden_tag() }}
+
+        <div class="mb-6">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-building mr-1 text-yellow-600"></i>
+                Pilih Unit
+            </label>
+            {{ form.unit_id(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all") }}
+            {% if form.unit_id.errors %}
+                {% for error in form.unit_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+            <p class="mt-2 text-xs text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                Pilih satu unit untuk user ini
+            </p>
+        </div>
+
+        <!-- Info Box -->
+        <div class="mb-6 p-4 bg-yellow-50 rounded-lg">
+            <div class="flex items-start">
+                <div class="bg-yellow-100 rounded-lg p-2 mr-3">
+                    <i class="fas fa-info-circle text-yellow-600 text-xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-semibold text-yellow-900 mb-2">Informasi Assignment</h4>
+                    <ul class="text-sm text-yellow-800 space-y-1">
+                        <li><i class="fas fa-check-circle mr-2"></i>User hanya bisa mengakses satu unit yang ditugaskan</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Unit staff akan bisa melihat instalasi dan distribusi di unit ini</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>User tanpa unit assignment tidak bisa mengakses fitur unit</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+            <a href="{{ url_for('users.detail', id=user.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-arrow-left mr-2"></i>
+                Kembali
+            </a>
+            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+                <i class="fas fa-save mr-2"></i>
+                Simpan Assignment
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

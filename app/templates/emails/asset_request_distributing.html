@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Permohonan Aset Sedang Didistribusikan - #{{ asset_request.id }}{% endblock %}
+
+{% block content %}
+<h2>Permohonan Aset Sedang Didistribusikan</h2>
+
+<p>Halo,</p>
+
+<p>Permohonan aset Anda sedang dalam proses distribusi:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Permohonan:</span> #{{ asset_request.id }}</p>
+    <p><span class="info-label">Unit:</span> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+    <p><span class="info-label">Tanggal Distribusi:</span> {{ asset_request.distributed_at|format_wib_datetime if asset_request.distributed_at else '-' }}</p>
+    <p><span class="info-label">Didistribusikan oleh:</span> {{ asset_request.distributor.name if asset_request.distributor else '-' }}</p>
+    <p><span class="info-label">Status:</span> Sedang Didistribusikan</p>
+</div>
+
+<p>Barang dari permohonan Anda sedang dikirim ke lokasi unit. Silakan konfirmasi penerimaan barang setelah barang diterima.</p>
+
+<a href="{{ base_url }}/asset-requests/{{ asset_request.id }}" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail Permohonan</a>
+
+{% endblock %}

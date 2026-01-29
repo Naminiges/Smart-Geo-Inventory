@@ -1,0 +1,44 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Permohonan Aset Terverifikasi - Silakan Distribusikan - #{{ asset_request.id }}{% endblock %}
+
+{% block content %}
+<h2>Permohonan Aset Siap Didistribusikan</h2>
+
+<p>Halo Warehouse Staff,</p>
+
+<p>Admin telah memverifikasi permohonan aset dan siap untuk didistribusikan:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Permohonan:</span> #{{ asset_request.id }}</p>
+    <p><span class="info-label">Unit Tujuan:</span> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+    <p><span class="info-label">Alamat:</span> {{ asset_request.unit.address if asset_request.unit else '-' }}</p>
+    <p><span class="info-label">Diajukan oleh:</span> {{ asset_request.requester.name if asset_request.requester else '-' }}</p>
+    <p><span class="info-label">Tanggal Verifikasi:</span> {{ asset_request.verified_at.strftime('%d/%m/%Y %H:%M') if asset_request.verified_at else '-' }}</p>
+    <p><span class="info-label">Jumlah Item:</span> {{ asset_request.items|length }} jenis aset</p>
+</div>
+
+<h3 style="margin-top: 20px;">Detail Aset:</h3>
+<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+    <thead>
+        <tr style="background-color: #f3f4f6;">
+            <th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb;">Nama Aset</th>
+            <th style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">Jumlah</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in asset_request.items %}
+        <tr>
+            <td style="padding: 8px; border: 1px solid #e5e7eb;">{{ item.item.name if item.item else '-' }}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">{{ item.quantity }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p style="margin-top: 20px;">Silakan login ke sistem untuk memproses distribusi barang ini ke unit yang dituju.</p>
+
+<a href="{{ base_url }}/asset-requests/{{ asset_request.id }}/distribute" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Proses Distribusi</a>
+
+{% endblock %}

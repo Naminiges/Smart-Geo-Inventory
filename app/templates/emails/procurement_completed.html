@@ -1,0 +1,29 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Pengadaan Selesai - {{ procurement.procurement_code }}{% endblock %}
+
+{% block content %}
+<h2>Pengadaan Selesai</h2>
+
+<p>Selamat!</p>
+
+<p>Pengadaan telah selesai diproses dan barang telah ditambahkan ke stok:</p>
+
+<div class="alert alert-success">
+    <strong><i class="fas fa-check-circle"></i> Status:</strong> Completed
+</div>
+
+<div class="info-box">
+    <p><span class="info-label">No. Pengadaan:</span> {{ procurement.procurement_code }}</p>
+    <p><span class="info-label">Diajukan oleh:</span> {{ procurement.created_by_user.name if procurement.created_by_user else '-' }}</p>
+    <p><span class="info-label">Tanggal Selesai:</span> {{ procurement.completion_date.strftime('%d/%m/%Y %H:%M') if procurement.completion_date else '-' }}</p>
+    <p><span class="info-label">Total Barang:</span> {{ procurement.total_quantity }} unit</p>
+</div>
+
+<p>Barang telah berhasil ditambahkan ke stok gudang dan siap digunakan.</p>
+
+<a href="{{ base_url }}/stock/" class="btn">Lihat Stok</a>
+<a href="{{ base_url }}/procurement/{{ procurement.id }}" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail Pengadaan</a>
+
+{% endblock %}

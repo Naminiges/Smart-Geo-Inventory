@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth overflow-x-hidden">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SAPA PSI - Smart Geo Inventory</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png"/>
+</head>
+<body class="bg-gradient-to-br from-white via-emerald-50 to-white text-gray-800 antialiased overflow-x-hidden min-h-screen">
+
+    <!-- Navigation -->
+    <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-white/80 backdrop-blur-lg border-b border-emerald-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <a href="{{ url_for('main.landing') }}" class="flex items-center gap-3 group">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:shadow-emerald-500/30 transition-all">
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-8 h-8">
+                    </div>
+                    <div class="text-left">
+                        <h1 class="text-2xl font-bold text-gray-800 group-hover:text-emerald-600 transition-colors">SAPA PSI</h1>
+                        <p class="text-xs text-gray-500">Smart Geo Inventory</p>
+                    </div>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-gray-600 hover:text-emerald-600 transition-colors font-medium">Fitur</a>
+                    <a href="#about" class="text-gray-600 hover:text-emerald-600 transition-colors font-medium">Tentang</a>
+                    <a href="#contact" class="text-gray-600 hover:text-emerald-600 transition-colors font-medium">Kontak</a>
+                    <a href="{{ url_for('auth.login') }}" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 px-6 py-2.5 rounded-full text-white font-medium flex items-center gap-2 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/30">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Login
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button id="menu-btn" class="md:hidden text-gray-700 p-2 hover:bg-emerald-50 rounded-lg transition-colors">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white/95 backdrop-blur-lg border-t border-emerald-100 shadow-lg">
+            <div class="px-4 py-6 space-y-4">
+                <a href="#features" class="block text-gray-600 hover:text-emerald-600 transition-colors py-2 font-medium">Fitur</a>
+                <a href="#about" class="block text-gray-600 hover:text-emerald-600 transition-colors py-2 font-medium">Tentang</a>
+                <a href="#contact" class="block text-gray-600 hover:text-emerald-600 transition-colors py-2 font-medium">Kontak</a>
+                <a href="{{ url_for('auth.login') }}" class="block bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 px-6 py-3 rounded-full text-white font-medium text-center transition-all hover:-translate-y-0.5">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center pt-20 px-4">
+        <div class="max-w-6xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-full mb-6">
+                <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                <span class="text-sm text-emerald-700 font-medium">Sistem Administrasi dan Pengelolaan Aset (SAPA)</span>
+            </div>
+
+            <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
+                <span class="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">Kelola Aset</span>
+                <br>
+                <span class="text-gray-800">Dengan Pemetaan Geografis</span>
+            </h1>
+
+            <p class="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto mb-10">
+                Sistem inventaris berbasis geografis yang membantu Anda melacak, mengelola, dan memantau aset secara real-time dengan teknologi GIS modern.
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <a href="{{ url_for('auth.login') }}" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 px-8 py-4 rounded-full text-white font-semibold text-lg flex items-center gap-3 w-full sm:w-auto justify-center transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-500/30">
+                    <i class="fas fa-rocket"></i>
+                    Mulai Sekarang
+                </a>
+                <a href="https://psi.usu.ac.id/" class="bg-white border border-emerald-200 px-8 py-4 rounded-full text-emerald-600 font-semibold text-lg flex items-center gap-3 hover:bg-emerald-50 transition-all w-full sm:w-auto justify-center">
+                    <i class="fas fa-play-circle"></i>
+                    Tentang PSI
+                </a>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mt-20">
+                <div class="bg-white rounded-2xl p-6 shadow-lg border border-emerald-100 hover:shadow-xl hover:border-emerald-200 transition-all">
+                    <div class="text-4xl md:text-5xl font-bold text-emerald-600 mb-2">500+</div>
+                    <div class="text-gray-600 text-sm font-medium">Aset Terkelola</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-lg border border-emerald-100 hover:shadow-xl hover:border-emerald-200 transition-all">
+                    <div class="text-4xl md:text-5xl font-bold text-emerald-600 mb-2">50+</div>
+                    <div class="text-gray-600 text-sm font-medium">Lokasi Gedung</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-lg border border-emerald-100 hover:shadow-xl hover:border-emerald-200 transition-all">
+                    <div class="text-4xl md:text-5xl font-bold text-emerald-600 mb-2">4</div>
+                    <div class="text-gray-600 text-sm font-medium">Divisi</div>
+                </div>
+                <div class="bg-white rounded-2xl p-6 shadow-lg border border-emerald-100 hover:shadow-xl hover:border-emerald-200 transition-all">
+                    <div class="text-4xl md:text-5xl font-bold text-emerald-600 mb-2">99%</div>
+                    <div class="text-gray-600 text-sm font-medium">Akurasi Tracking</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 px-4 relative z-10 bg-gradient-to-b from-emerald-50/50 to-transparent">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-5xl font-bold mb-4">
+                    <span class="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">Fitur Unggulan</span>
+                </h2>
+                <p class="text-gray-600 text-lg max-w-2xl mx-auto">
+                    Sistem lengkap untuk manajemen aset dengan teknologi terkini
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-emerald-100 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-emerald-200">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/30">
+                        <i class="fas fa-map-marked-alt text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Pemetaan Geografis</h3>
+                    <p class="text-gray-600">Lacak lokasi aset secara real-time dengan peta interaktif dan teknologi GIS yang akurat.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-blue-100 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-blue-200">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
+                        <i class="fas fa-boxes text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Manajemen Inventaris</h3>
+                    <p class="text-gray-600">Kelola stok masuk dan keluar dengan sistem otomatis yang terintegrasi.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-purple-100 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-purple-200">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center mb-6 shadow-lg shadow-purple-500/30">
+                        <i class="fas fa-building text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Multi Gudang & Divisi</h3>
+                    <p class="text-gray-600">Kelola aset di berbagai gudang dan divisi dengan satu sistem terpusat.</p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-amber-100 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-amber-200">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center mb-6 shadow-lg shadow-amber-500/30">
+                        <i class="fas fa-chart-line text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Analitik & Laporan</h3>
+                    <p class="text-gray-600">Pantau pergerakan aset dengan grafik dan laporan yang komprehensif.</p>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-red-100 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-red-200">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mb-6 shadow-lg shadow-red-500/30">
+                        <i class="fas fa-bell text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Notifikasi Real-time</h3>
+                    <p class="text-gray-600">Dapatkan alert otomatis untuk stok minimum, permintaan, dan distribusi.</p>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-indigo-100 transition-all hover:-translate-y-2 hover:shadow-xl hover:border-indigo-200">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/30">
+                        <i class="fas fa-users text-2xl text-white"></i>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-3 text-gray-800">Multi Role Access</h3>
+                    <p class="text-gray-600">Hak akses berbeda untuk Admin, Warehouse Staff, dan Unit Staff.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-20 px-4 relative z-10 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-3xl md:text-5xl font-bold mb-6">
+                        <span class="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">Tentang SAPA PSI</span>
+                    </h2>
+                    <p class="text-gray-600 text-lg mb-6">
+                        SAPA PSI (Sistem Administrasi dan Pengelolaan Aset Pusat Sistem Informasi) adalah sistem manajemen aset berbasis geografis yang dikembangkan khusus untuk Pusat Sistem Informasi Universitas Sumatera Utara.
+                    </p>
+                    <p class="text-gray-600 text-lg mb-8">
+                        Sistem ini mengintegrasikan teknologi GIS dengan manajemen inventaris modern, memungkinkan pelacakan aset secara akurat berdasarkan lokasi fisiknya di berbagai gedung dan divisi.
+                    </p>
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-check text-emerald-600"></i>
+                            </div>
+                            <span class="text-gray-700">Tracking real-time dengan GPS coordinate</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-check text-emerald-600"></i>
+                            </div>
+                            <span class="text-gray-700">Manajemen multi-gudang terintegrasi</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <i class="fas fa-check text-emerald-600"></i>
+                            </div>
+                            <span class="text-gray-700">Distribusi dan retur otomatis</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative">
+                    <div class="bg-white rounded-3xl p-8 shadow-lg border border-emerald-100">
+                        <div class="aspect-video bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl flex items-center justify-center">
+                            <img src="{{ url_for('static', filename='img/psi.png') }}"></img>
+                        </div>
+                    </div>
+                    <div class="absolute -bottom-6 -right-6 bg-white rounded-2xl p-4 shadow-lg border border-emerald-100">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center">
+                                <i class="fas fa-university text-white"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm text-gray-500">Developed for</div>
+                                <div class="font-semibold text-gray-800">Pusat Sistem Informasi Universitas Sumatera Utara</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 px-4 relative z-10 bg-gradient-to-b from-transparent to-emerald-50">
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-3xl p-8 md:p-12 text-center shadow-lg border border-emerald-100">
+                <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+                    Siap Mengelola Aset Anda?
+                </h2>
+                <p class="text-gray-600 text-lg mb-8 max-w-2xl mx-auto">
+                    Bergabung dengan sistem manajemen aset terintegrasi dan mulai lacak aset Anda dengan efisiensi tinggi.
+                </p>
+                <a href="{{ url_for('auth.login') }}" class="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 inline-flex px-8 py-4 rounded-full text-white font-semibold text-lg items-center gap-3 transition-all hover:-translate-y-0.5 shadow-lg shadow-emerald-500/30">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Login ke Sistem
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact" class="py-12 px-4 border-t border-emerald-200 bg-white relative z-10">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+                            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-8 h-8">
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-800">SAPA PSI</h3>
+                            <p class="text-xs text-gray-500">Smart Geo Inventory</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 text-sm max-w-md">
+                        Sistem Manajemen Aset Berbasis Geografis untuk Pusat Sistem Informasi Universitas Sumatera Utara
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4 text-gray-800">Menu</h4>
+                    <ul class="space-y-2 text-gray-600">
+                        <li><a href="#features" class="hover:text-emerald-600 transition-colors">Fitur</a></li>
+                        <li><a href="#about" class="hover:text-emerald-600 transition-colors">Tentang</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="hover:text-emerald-600 transition-colors">Login</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4 text-gray-800">Kontak</h4>
+                    <ul class="space-y-2 text-gray-600 text-sm">
+                        <li><i class="fas fa-envelope mr-2 text-emerald-600"></i> helpdeskpsi@usu.ac.id</li>
+                        <li><i class="fas fa-map-marker-alt mr-2 text-emerald-600"></i> Pusat Sistem Informasi Universitas Sumatera Utara</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-emerald-200 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                <p class="text-gray-600 text-sm">
+                    &copy; 2026 SAPA PSI - Pusat Sistem Informasi Universitas Sumatera Utara. All rights reserved.
+                </p>
+                <div class="flex items-center gap-4">
+                    <a href="https://www.usu.ac.id/" class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-gray-600 hover:text-emerald-600 hover:bg-emerald-100 transition-colors">
+                        <i class="fa-solid fa-earth-africa"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+</body>
+</html>

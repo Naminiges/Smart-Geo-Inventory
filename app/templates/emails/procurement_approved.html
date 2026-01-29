@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Pengadaan Disetujui - {{ procurement.procurement_code }}{% endblock %}
+
+{% block content %}
+<h2>Pengadaan Disetujui</h2>
+
+<p>Halo {{ procurement.created_by_user.name if procurement.created_by_user else 'User' }},</p>
+
+<p>Kabar baik! Pengadaan yang Anda ajukan telah disetujui oleh Admin:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Pengadaan:</span> {{ procurement.procurement_code }}</p>
+    <p><span class="info-label">Status:</span> Disetujui</p>
+</div>
+
+<div class="alert alert-success">
+    Pengadaan Anda telah disetujui. Silakan lanjutkan dengan proses berikutnya.
+</div>
+
+<a href="{{ base_url }}/procurement/" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail</a>
+
+{% endblock %}

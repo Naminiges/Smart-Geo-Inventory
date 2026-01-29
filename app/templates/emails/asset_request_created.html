@@ -1,0 +1,33 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Permohonan Aset Baru - #{{ asset_request.id }}{% endblock %}
+
+{% block content %}
+<h2>Permohonan Aset Baru Diajukan</h2>
+
+<p>Halo Admin,</p>
+
+<p>Unit staff telah mengajukan permohonan aset baru dan memerlukan verifikasi Anda:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Permohonan:</span> #{{ asset_request.id }}</p>
+    <p><span class="info-label">Unit:</span> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+    <p><span class="info-label">Diajukan oleh:</span> {{ asset_request.requester.name if asset_request.requester else '-' }}</p>
+    <p><span class="info-label">Tanggal:</span> {{ asset_request.request_date.strftime('%d/%m/%Y %H:%M') if asset_request.request_date else '-' }}</p>
+    <p><span class="info-label">Jumlah Item:</span> {{ asset_request.items|length }} jenis aset</p>
+    <p><span class="info-label">Status:</span> Pending - Menunggu Verifikasi</p>
+</div>
+
+{% if asset_request.request_notes %}
+<div class="alert alert-warning">
+    <strong><i class="fas fa-comment-alt"></i> Alasan Permohonan:</strong><br>
+    {{ asset_request.request_notes }}
+</div>
+{% endif %}
+
+<p>Silakan login ke sistem untuk memverifikasi dan menyetujui permohonan ini.</p>
+
+<a href="{{ base_url }}/asset-requests/{{ asset_request.id }}" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail Permohonan</a>
+
+{% endblock %}

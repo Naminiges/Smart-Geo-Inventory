@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
-{% block title %}Buat Permohonan Pengadaan - Smart Geo Inventory{% endblock %}
+{% block title %}{% if is_admin %}Buat Pengadaan Barang{% else %}Buat Permohonan Pengadaan{% endif %} - Smart Geo Inventory{% endblock %}
 
-{% block page_title %}Buat Permohonan Pengadaan{% endblock %}
+{% block page_title %}{% if is_admin %}Buat Pengadaan Barang{% else %}Buat Permohonan Pengadaan{% endif %}{% endblock %}
 
 {% block content %}
 <!-- Back Button -->
@@ -13,24 +13,55 @@
     </a>
 </div>
 
+{% if is_admin %}
+<!-- Info Banner for Admin -->
+<div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6">
+    <div class="flex items-start">
+        <div class="bg-emerald-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-info-circle text-emerald-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-emerald-900 mb-1">Pengadaan Langsung (Admin)</h4>
+            <p class="text-sm text-emerald-800">
+                Sebagai admin, pengadaan yang Anda buat akan langsung disetujui tanpa perlu verifikasi tambahan. Supplier akan ditetapkan secara otomatis.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- Form Card -->
 <div class="bg-white rounded-xl shadow-md">
     <div class="p-6 border-b border-gray-200">
         <div class="flex items-center">
-            <div class="bg-blue-100 rounded-lg p-3 mr-4">
-                <i class="fas fa-clipboard-list text-blue-600 text-2xl"></i>
+            <div class="{% if is_admin %}bg-emerald-100{% else %}bg-blue-100{% endif %} rounded-lg p-3 mr-4">
+                <i class="fas {% if is_admin %}fa-clipboard-check text-emerald-600{% else %}fa-clipboard-list text-blue-600{% endif %} text-2xl"></i>
             </div>
             <div>
-                <h3 class="text-xl font-semibold text-gray-800 mb-1">Form Permohonan Pengadaan Barang</h3>
-                <p class="text-sm text-gray-500">Step 1: Isi detail barang yang diajukan (bisa multiple barang)</p>
+                <h3 class="text-xl font-semibold text-gray-800 mb-1">
+                    {% if is_admin %}
+                        Form Pengadaan Barang
+                    {% else %}
+                        Form Permohonan Pengadaan Barang
+                    {% endif %}
+                </h3>
+                <p class="text-sm text-gray-500">
+                    {% if is_admin %}
+                        Isi detail barang yang akan diajukan (bisa multiple barang)
+                    {% else %}
+                        Step 1: Isi detail barang yang diajukan (bisa multiple barang)
+                    {% endif %}
+                </p>
             </div>
         </div>
     </div>
 
     <form method="POST" id="procurementForm" class="p-6">
         {{ form.hidden_tag() }}
+        <input type="hidden" name="form_token" value="{{ form_token }}">
 
-        <!-- Step Indicator -->
+        {% if not is_admin %}
+        <!-- Step Indicator for Warehouse Staff -->
         <div class="mb-8">
             <div class="flex items-center justify-between">
                 <div class="flex items-center">
@@ -54,27 +85,61 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+
+        {% if is_admin %}
+        <!-- Warehouse Selection (Admin Only) -->
+        <div class="mb-6" style="position: relative; z-index: 10;">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-warehouse mr-1 text-emerald-600"></i>
+                Pilih Warehouse Tujuan
+            </label>
+            <select name="warehouse_id" id="warehouseSelect" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all" required style="min-height: 48px;">
+                <option value="">-- Pilih Warehouse --</option>
+                {% for warehouse in warehouses %}
+                <option value="{{ warehouse.id }}">{{ warehouse.name }}</option>
+                {% endfor %}
+            </select>
+            <p class="mt-1 text-xs text-gray-500">Pilih warehouse tempat barang akan diterima</p>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t border-gray-200 my-6"></div>
+
+        <!-- Section Header for Items -->
+        <div class="mb-4">
+            <h4 class="text-lg font-semibold text-gray-800">
+                <i class="fas fa-boxes mr-2 text-emerald-600"></i>
+                Detail Barang
+            </h4>
+            <p class="text-sm text-gray-600">Pilih barang yang akan di-procurement</p>
+        </div>
+        {% endif %}
 
         <!-- Items List -->
         <div class="mb-6">
-            <div class="flex items-center justify-between mb-3">
+            <div class="mb-3">
                 <label class="block text-sm font-semibold text-gray-700">
-                    <i class="fas fa-boxes mr-1 text-blue-600"></i>
-                    Daftar Barang yang Diminta
+                    <i class="fas fa-boxes mr-1 {% if is_admin %}text-emerald-600{% else %}text-blue-600{% endif %}"></i>
+                    Daftar Barang
                 </label>
-                <button type="button" id="addItemBtn" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold">
-                    <i class="fas fa-plus mr-1"></i>
-                    Tambah Barang
-                </button>
             </div>
 
             <div id="itemsContainer">
                 <!-- Items will be added dynamically here -->
             </div>
 
-            <p class="mt-2 text-xs text-gray-500">
+            <!-- Add Item Button - Placed at the bottom for easy access -->
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <button type="button" id="addItemBtn" class="w-full px-4 py-3 {% if is_admin %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white rounded-lg transition-colors font-semibold flex items-center justify-center">
+                    <i class="fas fa-plus mr-2"></i>
+                    Tambah Barang Lagi
+                </button>
+            </div>
+
+            <p class="mt-2 text-xs text-gray-500 text-center">
                 <i class="fas fa-info-circle mr-1"></i>
-                Klik "Tambah Barang" untuk menambahkan barang ke dalam permohonan. Minimal 1 barang.
+                Klik tombol di atas untuk menambahkan barang. Minimal 1 barang.
             </p>
         </div>
 
@@ -82,7 +147,7 @@
         <div class="mb-6">
             <label class="block text-sm font-semibold text-gray-700 mb-2">
                 <i class="fas fa-comment-alt mr-1 text-amber-600"></i>
-                Alasan Permohonan
+                {% if is_admin %}Catatan Pengadaan{% else %}Alasan Permohonan{% endif %}
             </label>
             {{ form.request_notes(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all", rows="4", placeholder="Jelaskan alasan pengadaan barang ini (min. 10 karakter)") }}
             {% if form.request_notes.errors %}
@@ -99,9 +164,9 @@
                 <i class="fas fa-times mr-2"></i>
                 Batal
             </a>
-            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
+            <button type="button" onclick="showConfirmModal()" class="px-6 py-3 {% if is_admin %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-blue-600 hover:bg-blue-700{% endif %} text-white rounded-lg transition-colors font-semibold">
                 <i class="fas fa-paper-plane mr-2"></i>
-                Ajukan Permohonan
+                {% if is_admin %}Buat Pengadaan{% else %}Ajukan Permohonan{% endif %}
             </button>
         </div>
     </form>
@@ -120,7 +185,7 @@
                 <li><i class="fas fa-check-circle mr-2"></i>Pilih barang dari daftar jika barang sudah terdaftar di sistem</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Jika barang baru, sistem akan otomatis membuat item baru</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Permohonan akan melalui proses persetujuan admin</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Admin akan memilih supplier dan menetapkan harga per barang</li>
+                <li><i class="fas fa-check-circle mr-2"></i>Admin akan menetapkan warehouse tujuan dan menyetujui permohonan</li>
             </ul>
         </div>
     </div>
@@ -139,9 +204,9 @@
         </div>
 
         <!-- Item Selection -->
-        <div class="mb-3">
+        <div class="mb-3" style="position: relative; z-index: 10;">
             <label class="block text-xs font-semibold text-gray-700 mb-1">Pilih Barang</label>
-            <select class="item-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm">
+            <select class="item-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" style="min-height: 42px;">
                 <option value="0">-- Pilih dari daftar barang --</option>
                 {% for item in items %}
                 <option value="{{ item.id }}">{{ item.item_code }} - {{ item.name }}</option>
@@ -162,9 +227,9 @@
                 </div>
 
                 <!-- New Item Category -->
-                <div class="mb-2">
+                <div class="mb-2" style="position: relative; z-index: 10;">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Kategori Barang</label>
-                    <select class="new-item-category w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm">
+                    <select class="new-item-category w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" style="min-height: 42px;">
                         <option value="0">-- Pilih Kategori --</option>
                         {% for category in categories %}
                         <option value="{{ category.id }}">{{ category.name }}</option>
@@ -187,6 +252,91 @@
         </div>
     </div>
 </template>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-xl animate-fade-in">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="{% if is_admin %}w-10 h-10 bg-emerald-500{% else %}w-10 h-10 bg-blue-500{% endif %} rounded-lg flex items-center justify-center">
+                        <i class="fas {% if is_admin %}fa-clipboard-check{% else %}fa-clipboard-list{% endif %} text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Konfirmasi {% if is_admin %}Pengadaan{% else %}Permohonan{% endif %}</h3>
+                        <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
+                    </div>
+                </div>
+                <button onclick="closeConfirmModal()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600 text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-5">
+                <p class="text-gray-700 mb-4">Apakah data {% if is_admin %}pengadaan{% else %}permohonan{% endif %} berikut sudah benar?</p>
+
+                <!-- Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h6 class="font-semibold text-gray-800 mb-3">Ringkasan Data:</h6>
+
+                    {% if is_admin %}
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="w-32 text-gray-600">Warehouse:</span>
+                            <span class="font-medium text-gray-800" id="summaryWarehouse">-</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-3">
+                        <span class="text-sm text-gray-600">Barang yang diajukan:</span>
+                        <div id="summaryItems" class="mt-2 space-y-1 text-sm">
+                            <!-- Items will be listed here -->
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <div class="flex">
+                            <span class="w-32 text-gray-600">Catatan:</span>
+                            <span class="font-medium text-gray-800" id="summaryNotes">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>Batal</span>
+                </button>
+                <button onclick="submitForm()" class="px-4 py-2 {% if is_admin %}bg-emerald-600 hover:bg-emerald-700{% else %}bg-blue-600 hover:bg-blue-700{% endif %} text-white rounded-lg transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-check"></i>
+                    <span>Ya, Ajukan</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -222,6 +372,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 newItemFields.classList.add('hidden');
             }
+
+            // Check for duplicate items
+            checkDuplicateItems();
         });
 
         // Remove item button
@@ -245,77 +398,197 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Form submission
-    form.addEventListener('submit', function(e) {
+    // Check for duplicate items
+    function checkDuplicateItems() {
         const itemCards = itemsContainer.querySelectorAll('.item-card');
-        const itemsData = [];
+        const selectedItems = [];
 
-        for (let card of itemCards) {
+        itemCards.forEach(card => {
             const itemSelect = card.querySelector('.item-select');
-            const itemQuantity = card.querySelector('.item-quantity');
-            const newItemName = card.querySelector('.new-item-name');
-            const newItemCategory = card.querySelector('.new-item-category');
-            const newItemUnit = card.querySelector('.new-item-unit');
+            const itemId = itemSelect.value;
 
-            const itemId = parseInt(itemSelect.value);
-            const quantity = parseInt(itemQuantity.value);
+            if (itemId && itemId !== '0' && itemId !== '-1') {
+                const itemName = itemSelect.options[itemSelect.selectedIndex].text;
 
-            // Validation
-            if (!itemId || itemId === 0) {
-                e.preventDefault();
-                alert('Harap pilih barang dari daftar atau pilih "Lainnya"!');
-                itemSelect.focus();
-                return false;
-            }
-
-            if (!quantity || quantity <= 0) {
-                e.preventDefault();
-                alert('Harap isi jumlah barang dengan benar!');
-                itemQuantity.focus();
-                return false;
-            }
-
-            // If new item, validate new item fields
-            if (itemId === -1) {
-                if (!newItemName.value.trim()) {
-                    e.preventDefault();
-                    alert('Harap isi nama barang baru!');
-                    newItemName.focus();
-                    return false;
+                if (selectedItems.includes(itemId)) {
+                    // Duplicate found!
+                    alert(`Barang "${itemName}" sudah dipilih!\n\nSilakan pilih barang yang lain atau hapus salah satu dari daftar.`);
+                    itemSelect.value = '0'; // Reset selection
+                    return;
                 }
 
-                if (!newItemCategory.value || newItemCategory.value === '0') {
-                    e.preventDefault();
-                    alert('Harap pilih kategori barang baru!');
-                    newItemCategory.focus();
-                    return false;
-                }
+                selectedItems.push(itemId);
             }
+        });
+    }
+});
 
-            // Collect item data
-            const itemData = {
-                item_id: itemId,
-                quantity: quantity
-            };
+// Modal Functions
+function showConfirmModal() {
+    const form = document.getElementById('procurementForm');
 
-            if (itemId === -1) {
-                itemData.item_name = newItemName.value.trim();
-                itemData.item_category_id = parseInt(newItemCategory.value);
-                itemData.item_unit = newItemUnit.value.trim() || 'pcs';
-            }
+    // Check form validation first
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
 
-            itemsData.push(itemData);
+    const itemCards = document.querySelectorAll('#itemsContainer .item-card');
+    let hasError = false;
+
+    // Validate items
+    for (let card of itemCards) {
+        const itemSelect = card.querySelector('.item-select');
+        const itemQuantity = card.querySelector('.item-quantity');
+        const newItemName = card.querySelector('.new-item-name');
+        const newItemCategory = card.querySelector('.new-item-category');
+
+        const itemId = parseInt(itemSelect.value);
+        const quantity = parseInt(itemQuantity.value);
+
+        if (!itemId || itemId === 0) {
+            alert('Harap pilih barang dari daftar atau pilih "Lainnya"!');
+            itemSelect.focus();
+            return;
         }
 
-        // Add items data as hidden fields
-        for (let itemData of itemsData) {
-            const hiddenField = document.createElement('input');
-            hiddenField.type = 'hidden';
-            hiddenField.name = 'items';
-            hiddenField.value = JSON.stringify(itemData);
-            form.appendChild(hiddenField);
+        if (!quantity || quantity <= 0) {
+            alert('Harap isi jumlah barang dengan benar!');
+            itemQuantity.focus();
+            return;
         }
+
+        if (itemId === -1) {
+            if (!newItemName.value.trim()) {
+                alert('Harap isi nama barang baru!');
+                newItemName.focus();
+                return;
+            }
+            if (!newItemCategory.value || newItemCategory.value === '0') {
+                alert('Harap pilih kategori barang baru!');
+                newItemCategory.focus();
+                return;
+            }
+        }
+    }
+
+    // Populate summary
+    {% if is_admin %}
+    const warehouseSelect = document.getElementById('warehouseSelect');
+    document.getElementById('summaryWarehouse').textContent = warehouseSelect.options[warehouseSelect.selectedIndex]?.text || '-';
+    {% endif %}
+
+    // Summary items
+    const summaryItems = document.getElementById('summaryItems');
+    summaryItems.innerHTML = '';
+
+    itemCards.forEach((card, index) => {
+        const itemSelect = card.querySelector('.item-select');
+        const itemQuantity = card.querySelector('.item-quantity');
+        const newItemName = card.querySelector('.new-item-name');
+
+        const itemId = parseInt(itemSelect.value);
+        const quantity = itemQuantity.value;
+        let itemName = '';
+
+        if (itemId === -1) {
+            itemName = newItemName.value + ' (Baru)';
+        } else {
+            itemName = itemSelect.options[itemSelect.selectedIndex]?.text || '-';
+        }
+
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'flex items-start';
+        itemDiv.innerHTML = `
+            <span class="text-gray-500 mr-2">${index + 1}.</span>
+            <div>
+                <span class="font-medium">${itemName}</span>
+                <span class="text-gray-600 ml-2">x${quantity}</span>
+            </div>
+        `;
+        summaryItems.appendChild(itemDiv);
     });
+
+    // Summary notes
+    const notesField = document.querySelector('[name="request_notes"]');
+    document.getElementById('summaryNotes').textContent = notesField?.value || '-';
+
+    // Show modal
+    document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function submitForm() {
+    const form = document.getElementById('procurementForm');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const itemCards = itemsContainer.querySelectorAll('.item-card');
+    const itemsData = [];
+
+    // Remove any existing hidden 'items' fields from previous submissions
+    const existingHiddenFields = form.querySelectorAll('input[type="hidden"][name="items"]');
+    existingHiddenFields.forEach(field => field.remove());
+
+    // Collect items data before submission
+    for (let card of itemCards) {
+        const itemSelect = card.querySelector('.item-select');
+        const itemQuantity = card.querySelector('.item-quantity');
+        const newItemName = card.querySelector('.new-item-name');
+        const newItemCategory = card.querySelector('.new-item-category');
+        const newItemUnit = card.querySelector('.new-item-unit');
+
+        const itemId = parseInt(itemSelect.value);
+        const quantity = parseInt(itemQuantity.value);
+
+        // Collect item data
+        const itemData = {
+            item_id: itemId,
+            quantity: quantity
+        };
+
+        if (itemId === -1) {
+            itemData.item_name = newItemName.value.trim();
+            itemData.item_category_id = parseInt(newItemCategory.value);
+            itemData.item_unit = newItemUnit.value.trim() || 'pcs';
+        }
+
+        itemsData.push(itemData);
+    }
+
+    // Add items data as hidden fields
+    for (let itemData of itemsData) {
+        const hiddenField = document.createElement('input');
+        hiddenField.type = 'hidden';
+        hiddenField.name = 'items';
+        hiddenField.value = JSON.stringify(itemData);
+        form.appendChild(hiddenField);
+    }
+
+    // Disable submit button to prevent double submission
+    const submitBtn = document.querySelector('button[onclick="submitForm()"]');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
+    }
+
+    // Submit the form
+    form.submit();
+}
+
+// Close modal on outside click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+    }
 });
 </script>
 {% endblock %}

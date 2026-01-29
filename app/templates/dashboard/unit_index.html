@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Unit - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Dashboard Unit{% endblock %}
+
+{% block content %}
+{% set page_icon = 'fas fa-building' %}
+{% set page_description = 'Ringkasan statistik dan aktivitas aset di unit Anda' %}
+
+<!-- Welcome Section -->
+<div class="mb-6">
+    <div class="bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+        <!-- Decorative pattern -->
+        <div class="absolute top-0 right-0 w-96 h-96 opacity-10">
+            <svg viewBox="0 0 200 200" class="w-full h-full">
+                <path fill="currentColor" d="M44.7,-76.4C58.9,-69.2,71.8,-59.1,79.6,-46.9C87.4,-34.7,90.1,-20.4,86.8,-7.3C83.5,5.8,74.2,17.7,65.8,28.8C57.4,39.9,49.9,50.2,40.4,58.6C30.9,67,19.4,73.5,6.8,75.8C-5.8,78.1,-19.5,76.2,-31.7,70.5C-43.9,64.8,-54.6,55.3,-63.4,44.2C-72.2,33.1,-79.1,20.4,-80.9,7.2C-82.7,-6,-79.4,-19.7,-71.5,-31.2C-63.6,-42.7,-51.1,-52,-38.8,-59.6C-26.5,-67.2,-14.4,-73.1,-0.6,-72.1C13.2,-71.1,26.4,-63.2,30.5,-83.6L44.7,-76.4Z" transform="translate(100 100)" />
+            </svg>
+        </div>
+
+        <div class="relative flex items-center justify-between">
+            <div class="flex-1">
+                <h2 class="text-2xl md:text-3xl font-bold mb-2">Selamat Datang, {{ user.name.split()[0] }}!</h2>
+                <p class="mb-0 text-emerald-100 text-lg">
+                    <i class="fas fa-building mr-2"></i>
+                    Ringkasan Aset Unit
+                </p>
+            </div>
+            <div class="text-right">
+                <div class="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                    <i class="fas fa-user-tie text-5xl opacity-80"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Network Devices Statistics (for this unit only) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- Access Point -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Access Point</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.access_point_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Unit</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Server -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Server</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.server_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Unit</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Battery -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Baterai</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.battery_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Unit</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Switch -->
+    <div class="bg-emerald-500 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow text-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-blue-100 text-sm mb-3">Switch</div>
+                <div class="text-4xl font-bold mb-1">{{ stats.switch_count or 0 }}</div>
+                <div class="text-blue-100 text-sm">Total Unit</div>
+            </div>
+            <div class="bg-white/20 rounded-xl p-3">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Grafik Penerimaan Barang -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <i class="fas fa-chart-bar text-emerald-600 mr-3"></i>
+                <h5 class="text-lg font-semibold mb-0">Penerimaan Barang</h5>
+            </div>
+            <div class="flex items-center gap-2">
+                <select id="filterType" class="form-select form-select-sm text-sm" style="width: auto;">
+                    <option value="month">Per Bulan</option>
+                    <option value="year">Per Tahun</option>
+                </select>
+                <select id="yearFilter" class="form-select form-select-sm text-sm" style="width: auto;">
+                </select>
+                <select id="monthFilter" class="form-select form-select-sm text-sm" style="width: auto;">
+                    <option value="1">Januari</option>
+                    <option value="2">Februari</option>
+                    <option value="3">Maret</option>
+                    <option value="4">April</option>
+                    <option value="5">Mei</option>
+                    <option value="6">Juni</option>
+                    <option value="7">Juli</option>
+                    <option value="8">Agustus</option>
+                    <option value="9">September</option>
+                    <option value="10">Oktober</option>
+                    <option value="11">November</option>
+                    <option value="12">Desember</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="p-6">
+        <div class="chart-container" style="position: relative; height: 280px;">
+            <canvas id="receivedChart"></canvas>
+        </div>
+        <div class="flex justify-center gap-6 mt-4">
+            <div class="flex items-center">
+                <div class="w-4 h-4 rounded bg-emerald-500 mr-2"></div>
+                <span class="text-sm text-gray-600">Barang Diterima</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let receivedChart = null;
+
+// Initialize year and month filters
+function initializeFilters() {
+    const yearFilter = document.getElementById('yearFilter');
+    const monthFilter = document.getElementById('monthFilter');
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    // Populate year filter (last 5 years + current)
+    for (let y = currentYear; y >= currentYear - 5; y--) {
+        const option = document.createElement('option');
+        option.value = y;
+        option.textContent = y;
+        if (y === currentYear) option.selected = true;
+        yearFilter.appendChild(option);
+    }
+
+    // Set current month
+    monthFilter.value = currentMonth;
+}
+
+// Load chart data
+function loadChartData() {
+    const filterType = document.getElementById('filterType').value;
+    const year = document.getElementById('yearFilter').value;
+    const month = document.getElementById('monthFilter').value;
+
+    // Show/hide month filter based on filter type
+    document.getElementById('monthFilter').style.display = filterType === 'month' ? 'block' : 'none';
+
+    fetch(`{{ url_for('dashboard.api_unit_received_chart') }}?filter=${filterType}&year=${year}&month=${month}`)
+        .then(response => response.json())
+        .then(data => {
+            updateChart(data);
+        })
+        .catch(error => console.error('Error loading chart data:', error));
+}
+
+// Update chart
+function updateChart(data) {
+    const ctx = document.getElementById('receivedChart').getContext('2d');
+
+    if (receivedChart) {
+        receivedChart.destroy();
+    }
+
+    receivedChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Barang Diterima',
+                    data: data.received,
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 13
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        font: {
+                            size: 11
+                        },
+                        stepSize: 1
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 11
+                        },
+                        maxRotation: 45,
+                        minRotation: 0
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    initializeFilters();
+    loadChartData();
+
+    // Event listeners for filters
+    document.getElementById('filterType').addEventListener('change', loadChartData);
+    document.getElementById('yearFilter').addEventListener('change', loadChartData);
+    document.getElementById('monthFilter').addEventListener('change', loadChartData);
+});
+</script>
+{% endblock %}

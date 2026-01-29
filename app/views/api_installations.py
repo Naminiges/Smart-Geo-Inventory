@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Distribution, ItemDetail, User, Unit, UnitDetail, AssetMovementLog
 from app.utils.decorators import role_required
+from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('api_installations', __name__)
 
@@ -12,7 +13,7 @@ bp = Blueprint('api_installations', __name__)
 def api_list():
     """Get all installations"""
     if current_user.is_warehouse_staff():
-        installations = Distribution.query.filter_by(warehouse_id=current_user.warehouse_id).all()
+        installations = Distribution.query.filter_by(warehouse_id=get_user_warehouse_id(current_user)).all()
     elif current_user.is_field_staff():
         installations = Distribution.query.filter_by(field_staff_id=current_user.id).all()
     else:

@@ -1,0 +1,48 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Permohonan Aset Selesai - #{{ asset_request.id }}{% endblock %}
+
+{% block content %}
+<h2>Permohonan Aset Selesai</h2>
+
+<p>Permohonan aset telah selesai dan barang telah diterima oleh unit:</p>
+
+<div class="alert alert-success">
+    <strong><i class="fas fa-check-circle"></i> Status:</strong> Completed
+</div>
+
+<div class="info-box">
+    <p><span class="info-label">No. Permohonan:</span> #{{ asset_request.id }}</p>
+    <p><span class="info-label">Unit:</span> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+    <p><span class="info-label">Diajukan oleh:</span> {{ asset_request.requester.name if asset_request.requester else '-' }}</p>
+    <p><span class="info-label">Tanggal Permohonan:</span> {{ asset_request.request_date.strftime('%d/%m/%Y %H:%M') if asset_request.request_date else '-' }}</p>
+    <p><span class="info-label">Terverifikasi:</span> {{ asset_request.verified_at.strftime('%d/%m/%Y %H:%M') if asset_request.verified_at else '-' }}</p>
+    <p><span class="info-label">Didistribusikan:</span> {{ asset_request.distributed_at|format_wib_datetime if asset_request.distributed_at else '-' }}</p>
+    <p><span class="info-label">Diterima Unit:</span> {{ asset_request.received_at.strftime('%d/%m/%Y %H:%M') if asset_request.received_at else '-' }}</p>
+    <p><span class="info-label">Distributor:</span> {{ asset_request.distributor.name if asset_request.distributor else '-' }}</p>
+</div>
+
+<h3 style="margin-top: 20px;">Ringkasan Aset:</h3>
+<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+    <thead>
+        <tr style="background-color: #f3f4f6;">
+            <th style="padding: 8px; text-align: left; border: 1px solid #e5e7eb;">Nama Aset</th>
+            <th style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">Jumlah</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in asset_request.items %}
+        <tr>
+            <td style="padding: 8px; border: 1px solid #e5e7eb;">{{ item.item.name if item.item else '-' }}</td>
+            <td style="padding: 8px; text-align: center; border: 1px solid #e5e7eb;">{{ item.quantity }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p style="margin-top: 20px;">Semua barang telah berhasil diterima oleh unit. Permohonan ini telah selesai.</p>
+
+<a href="{{ base_url }}/asset-requests/{{ asset_request.id }}" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail Permohonan</a>
+
+{% endblock %}

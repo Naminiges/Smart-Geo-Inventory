@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Konfirmasi Penerimaan #{{ asset_request.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Konfirmasi Penerimaan Barang{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail
+    </a>
+</div>
+
+<!-- Info Card -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-check-circle text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-900 mb-2">Konfirmasi Penerimaan Barang</h4>
+            <p class="text-sm text-blue-800">
+                Silakan upload foto barang yang telah diterima sebagai bukti penerimaan.
+                Pastikan foto menunjukkan kondisi barang dengan jelas.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Request Info -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Informasi Permohonan</h3>
+    </div>
+    <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <span class="text-gray-600 text-sm">No. Permohonan:</span>
+                <p class="font-semibold">#{{ asset_request.id }}</p>
+            </div>
+            <div>
+                <span class="text-gray-600 text-sm">Unit:</span>
+                <p class="font-semibold">{{ asset_request.unit.name }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Items List -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Daftar Barang</h3>
+    </div>
+    <div class="p-6">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barang</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jumlah</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lokasi Tujuan</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for item in asset_request.items %}
+                    <tr>
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">{{ item.item.name }}</div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ item.item.category.name if item.item and item.item.category else '-' }}</div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{{ item.quantity }} unit</div>
+                        </td>
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">{{ item.unit_detail.room_name if item.unit_detail else 'Main Location' }}</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Photo Upload Form -->
+<div class="bg-white rounded-xl shadow-md mb-6">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Upload Foto Bukti Penerimaan</h3>
+        <p class="text-sm text-gray-600 mt-1">Format: JPG, PNG, GIF, WebP (Maksimal 10MB)</p>
+    </div>
+    <div class="p-6">
+        <form method="POST" enctype="multipart/form-data" id="confirmReceiptForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="distribution_id" value="{{ asset_request.distribution_id }}"/>
+
+            <!-- Photo Preview Area -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Foto Barang</label>
+
+                <!-- Drop Zone -->
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer">
+                    <div id="uploadPlaceholder">
+                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                        <p class="text-gray-600 mb-2">Klik atau drag foto ke sini</p>
+                        <p class="text-xs text-gray-500">JPG, PNG, GIF, WebP (maks. 10MB)</p>
+                    </div>
+                    <div id="previewContainer" class="hidden">
+                        <img id="photoPreview" src="" alt="Preview" class="max-h-64 mx-auto rounded-lg shadow-md">
+                        <p id="fileName" class="text-sm text-gray-600 mt-2"></p>
+                        <button type="button" id="removePhoto" class="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm">
+                            <i class="fas fa-trash mr-2"></i>Hapus Foto
+                        </button>
+                    </div>
+                </div>
+                <input type="file" name="proof_photo" id="proofPhoto" accept="image/jpeg,image/png,image/gif,image/webp" class="hidden" required>
+            </div>
+
+            <!-- Warning -->
+            <div class="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <h4 class="text-sm font-semibold text-amber-800 mb-2">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                    Penting!
+                </h4>
+                <ul class="text-sm text-amber-700 space-y-1">
+                    <li>• Pastikan foto menunjukkan kondisi barang dengan jelas</li>
+                    <li>• Foto harus menampilkan seluruh barang yang diterima</li>
+                    <li>• Pastikan pencahayaan cukup untuk detail yang jelas</li>
+                    <li>• Setelah dikonfirmasi, permohonan akan ditandai selesai</li>
+                </ul>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
+                <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                    <i class="fas fa-times mr-2"></i>
+                    Batal
+                </a>
+                <button type="submit" id="submitBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                    <i class="fas fa-check mr-2 submit-icon"></i>
+                    <span class="submit-text">Konfirmasi Penerimaan</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.drop-zone-active {
+    border-color: #3b82f6 !important;
+    background-color: #eff6ff !important;
+}
+</style>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const proofPhoto = document.getElementById('proofPhoto');
+const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+const previewContainer = document.getElementById('previewContainer');
+const photoPreview = document.getElementById('photoPreview');
+const fileName = document.getElementById('fileName');
+const removePhoto = document.getElementById('removePhoto');
+const submitBtn = document.getElementById('submitBtn');
+const submitIcon = submitBtn.querySelector('.submit-icon');
+const submitText = submitBtn.querySelector('.submit-text');
+
+// Click to upload
+dropZone.addEventListener('click', function(e) {
+    if (e.target !== removePhoto && !removePhoto.contains(e.target)) {
+        proofPhoto.click();
+    }
+});
+
+// Drag and drop
+dropZone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dropZone.classList.add('drop-zone-active');
+});
+
+dropZone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('drop-zone-active');
+});
+
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('drop-zone-active');
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        proofPhoto.files = files;
+        handleFileSelect(files[0]);
+    }
+});
+
+// File input change
+proofPhoto.addEventListener('change', function(e) {
+    if (e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+    }
+});
+
+// Remove photo
+removePhoto.addEventListener('click', function(e) {
+    e.stopPropagation();
+    proofPhoto.value = '';
+    uploadPlaceholder.classList.remove('hidden');
+    previewContainer.classList.add('hidden');
+    submitBtn.disabled = true;
+});
+
+function handleFileSelect(file) {
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('Format file tidak didukung. Gunakan JPG, PNG, GIF, atau WebP.');
+        proofPhoto.value = '';
+        return;
+    }
+
+    // Validate file size (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Ukuran file terlalu besar. Maksimal 10MB.');
+        proofPhoto.value = '';
+        return;
+    }
+
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        photoPreview.src = e.target.result;
+        fileName.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+        uploadPlaceholder.classList.add('hidden');
+        previewContainer.classList.remove('hidden');
+        submitBtn.disabled = false;
+    };
+    reader.readAsDataURL(file);
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Add loading state for form submission
+const form = document.querySelector('form');
+const submitBtn = document.getElementById('submitBtn');
+if (form && submitBtn) {
+    form.addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        const icon = submitBtn.querySelector('.submit-icon');
+        const text = submitBtn.querySelector('.submit-text');
+        if (icon) icon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+        if (text) text.textContent = 'Memproses...';
+    });
+}
+</script>
+{% endblock %}

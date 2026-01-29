@@ -1,11 +1,37 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import Procurement, Supplier, Item, User, Warehouse
+from app.models import Procurement, Item, User, Warehouse, Category
 from app.utils.decorators import role_required
 from datetime import datetime
 
 bp = Blueprint('api_procurement', __name__)
+
+
+def generate_item_code(category_id):
+    """Generate item code based on category code"""
+    category = Category.query.get(category_id)
+    if not category or not category.code:
+        # Fallback if category has no code
+        return f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    prefix = category.code.upper()
+
+    # Find the last item code with this prefix
+    last_item = Item.query.filter(Item.item_code.like(f'{prefix}-%')).order_by(Item.item_code.desc()).first()
+
+    if last_item and last_item.item_code:
+        # Extract the number from the last item code (e.g., JAR-001 -> 001)
+        try:
+            last_number = int(last_item.item_code.split('-')[1])
+            new_number = last_number + 1
+        except (IndexError, ValueError):
+            new_number = 1
+    else:
+        new_number = 1
+
+    # Format: PREFIX-001 (3 digits)
+    return f"{prefix}-{new_number:03d}"
 
 
 @bp.route('/procurements', methods=['GET'])
@@ -62,10 +88,21 @@ def create_request():
             item_id = data['item_id']
         elif data.get('item_name'):
             # Create new item
+            category_id = data.get('item_category_id')
+            if not category_id:
+                return jsonify({
+                    'success': False,
+                    'message': 'Kategori barang harus dipilih untuk barang baru'
+                }), 400
+
+            # Generate item code based on category
+            item_code = generate_item_code(category_id)
+
             new_item = Item(
                 name=data['item_name'],
-                item_code=f"NEW-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-                category='uncategorized'
+                item_code=item_code,
+                category_id=category_id,
+                unit=data.get('item_unit', 'pcs')
             )
             new_item.save()
             item_id = new_item.id
@@ -103,7 +140,7 @@ def create_request():
 @login_required
 @role_required('admin')
 def approve_request(id):
-    """Step 3: Admin approves and selects supplier"""
+    """Step 3: Admin approves procurement request"""
     procurement = Procurement.query.get_or_404(id)
     data = request.get_json()
 
@@ -113,16 +150,9 @@ def approve_request(id):
             'message': 'Hanya permohonan dengan status pending yang bisa disetujui'
         }), 400
 
-    if 'supplier_id' not in data:
-        return jsonify({
-            'success': False,
-            'message': 'supplier_id is required'
-        }), 400
-
     try:
         success, message = procurement.approve(
-            user_id=current_user.id,
-            supplier_id=data['supplier_id']
+            user_id=current_user.id
         )
 
         if success:
@@ -134,7 +164,7 @@ def approve_request(id):
 
             return jsonify({
                 'success': True,
-                'message': f'{message}. Supplier telah dipilih',
+                'message': f'{message}',
                 'data': procurement.to_dict()
             })
         else:

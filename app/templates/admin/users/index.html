@@ -1,21 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Manajemen User - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Manajemen User{% endblock %}
-
+{% block title %}Manajemen Pengguna - Smart Geo Inventory{% endblock %}
+{% block page_title %}Manajemen Pengguna{% endblock %}
+{% set page_icon = 'fas fa-user' %}
+{% set page_description = 'Kelola user dan hak akses warehouse' %}
+{% block page_header_actions %}
+<a href="{{ url_for('users.create') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Tambah User Baru
+</a>
+{% endblock %}
 {% block content %}
-<!-- Header with Search & Create Button -->
-<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-    <div>
-        <h2 class="text-2xl font-bold text-gray-800">Daftar Pengguna</h2>
-        <p class="text-sm text-gray-600">Kelola user dan hak akses warehouse</p>
-    </div>
-    <a href="{{ url_for('users.create') }}" class="mt-4 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-        <i class="fas fa-plus mr-2"></i>Tambah User Baru
-    </a>
-</div>
-
 <!-- Filters -->
 <div class="bg-white rounded-xl shadow-md mb-6 p-4">
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -30,6 +24,7 @@
                 <option value="admin" {{ 'selected' if role_filter == 'admin' else '' }}>Administrator</option>
                 <option value="warehouse_staff" {{ 'selected' if role_filter == 'warehouse_staff' else '' }}>Warehouse Staff</option>
                 <option value="field_staff" {{ 'selected' if role_filter == 'field_staff' else '' }}>Field Staff</option>
+                <option value="unit_staff" {{ 'selected' if role_filter == 'unit_staff' else '' }}>Unit Staff</option>
             </select>
         </div>
         <div>
@@ -52,12 +47,12 @@
 <!-- Users Table -->
 <div class="bg-white rounded-xl shadow-md overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full paginated-table">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">User</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Warehouse Assignment</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">penempatan</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                     <th class="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                 </tr>
@@ -83,17 +78,34 @@
                         </span>
                         {% elif user.role == 'warehouse_staff' %}
                         <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                            <i class="fas fa-warehouse mr-1"></i>Warehouse Staff
+                            <i class="fas fa-warehouse mr-1"></i>Storeman
                         </span>
                         {% elif user.role == 'field_staff' %}
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                             <i class="fas fa-hard-hat mr-1"></i>Field Staff
                         </span>
+                        {% elif user.role == 'unit_staff' %}
+                        <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-building mr-1"></i>Koordinator
+                        </span>
                         {% endif %}
                     </td>
                     <td class="px-6 py-4">
                         {% if user.role == 'admin' %}
-                        <span class="text-sm text-gray-500 italic">Akses semua warehouse</span>
+                        <span class="text-sm text-gray-500 italic">Akses semua warehouse & unit</span>
+                        {% elif user.role == 'unit_staff' %}
+                            {% set units = user_units.get(user.id, []) %}
+                            {% if units %}
+                            <div class="flex flex-wrap gap-1">
+                                {% for unit in units %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-semibold">
+                                    {{ unit.name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-sm text-red-600 italic">Belum ada penempatan</span>
+                            {% endif %}
                         {% else %}
                             {% set warehouses = user_warehouses.get(user.id, []) %}
                             {% if warehouses %}
@@ -105,7 +117,7 @@
                                 {% endfor %}
                             </div>
                             {% else %}
-                            <span class="text-sm text-red-600 italic">Belum ada assignment</span>
+                            <span class="text-sm text-red-600 italic">Belum ada penempatan</span>
                             {% endif %}
                         {% endif %}
                     </td>
@@ -114,9 +126,13 @@
                         <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                             <i class="fas fa-user-check mr-1"></i>Login saat ini
                         </span>
+                        {% elif user.is_active %}
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-check-circle mr-1"></i>Aktif
+                        </span>
                         {% else %}
-                        <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">
-                            <i class="fas fa-user mr-1"></i>Active
+                        <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                            <i class="fas fa-times-circle mr-1"></i>Nonaktif
                         </span>
                         {% endif %}
                     </td>
@@ -125,18 +141,34 @@
                             <a href="{{ url_for('users.detail', id=user.id) }}" class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Detail">
                                 <i class="fas fa-eye"></i>
                             </a>
+                            {% if user.role == 'unit_staff' %}
+                            <a href="{{ url_for('users.assign_units', id=user.id) }}" class="p-2 text-gray-600 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors" title="Assign Unit">
+                                <i class="fas fa-building"></i>
+                            </a>
+                            {% else %}
                             <a href="{{ url_for('users.assign_warehouses', id=user.id) }}" class="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors" title="Assign Warehouse">
                                 <i class="fas fa-warehouse"></i>
                             </a>
+                            {% endif %}
                             <a href="{{ url_for('users.edit', id=user.id) }}" class="p-2 text-gray-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
                             {% if user.id != current_user.id %}
-                            <form action="{{ url_for('users.delete', id=user.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus user {{ user.name }}?');" class="inline">
-                                <button type="submit" class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                                {% if user.is_active %}
+                                <form action="{{ url_for('users.deactivate', id=user.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menonaktifkan user {{ user.name }}?');" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Nonaktifkan">
+                                        <i class="fas fa-user-slash"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <form action="{{ url_for('users.activate', id=user.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin mengaktifkan user {{ user.name }}?');" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Aktifkan">
+                                        <i class="fas fa-user-check"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
                             {% endif %}
                         </div>
                     </td>

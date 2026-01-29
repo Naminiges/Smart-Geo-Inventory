@@ -1,193 +1,87 @@
 {% extends "base.html" %}
 
-{% block title %}Instalasi - Smart Geo Inventory{% endblock %}
-
-{% block page_title %}Manajemen Instalasi{% endblock %}
-
+{% block title %}Distribusi Aset Umum - Smart Geo Inventory{% endblock %}
+{% block page_title %}Distribusi Aset Umum{% endblock %}
+{% set page_icon = 'fas fa-plus-circle' %}
+{% set page_description = 'Kirim langsung' %}
+{% if current_user.is_warehouse_staff() or current_user.is_admin() %}
+{% block page_header_actions %}
+<a href="{{ url_for('installations.create_general_distribution') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-plus mr-2"></i>Buat Pengiriman Baru
+</a>
+<a href="{{ url_for('installations.rejected_list') }}" class="px-5 py-2.5 rounded-xl border border-red-600 text-red-600 hover:bg-red-600 hover:text-white  transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-times-circle mr-2"></i>Ditolak
+</a>
+{% endblock %}
+{% endif %}
 {% block content %}
-<!-- Filter Section -->
-<div class="mb-6">
-    <div class="bg-white rounded-xl shadow-md p-6">
-        <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+<!-- Draft Section (Warehouse Staff & Admin) -->
+{% if current_user.is_warehouse_staff() or current_user.is_admin() %}
+{% if draft_batches and draft_batches|length > 0 %}
+<div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+    <div class="flex items-center justify-between">
+        <div class="flex items-center">
+            <i class="fas fa-file-alt text-yellow-600 text-xl mr-3"></i>
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                <select name="status" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
-                    <option value="">Semua Status</option>
-                    <option value="installing" {{ 'selected' if request.args.get('status') == 'installing' }}>Sedang Dipasang</option>
-                    <option value="installed" {{ 'selected' if request.args.get('status') == 'installed' }}>Terpasang</option>
-                    <option value="broken" {{ 'selected' if request.args.get('status') == 'broken' }}>Rusak</option>
-                    <option value="maintenance" {{ 'selected' if request.args.get('status') == 'maintenance' }}>Maintenance</option>
-                </select>
+                <h4 class="font-semibold text-yellow-900">Draft Pengiriman</h4>
+                <p class="text-sm text-yellow-700">{{ draft_batches|length }} draft menunggu verifikasi</p>
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Unit</label>
-                <select name="unit_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
-                    <option value="">Semua Unit</option>
-                    {% for unit in units %}
-                    <option value="{{ unit.id }}" {{ 'selected' if request.args.get('unit_id')|int == unit.id }}>{{ unit.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Field Staff</label>
-                <select name="field_staff_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
-                    <option value="">Semua Staff</option>
-                    {% for staff in field_staffs %}
-                    <option value="{{ staff.id }}" {{ 'selected' if request.args.get('field_staff_id')|int == staff.id }}>{{ staff.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">&nbsp;</label>
-                <div class="flex gap-2">
-                    <button type="submit" class="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
-                        <i class="fas fa-filter mr-1"></i> Filter
-                    </button>
-                    <a href="{{ url_for('installations.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                        <i class="fas fa-times-circle"></i>
+        </div>
+        <a href="{{ url_for('installations.draft_list') }}" class="text-sm text-yellow-800 hover:text-yellow-900 font-semibold">
+            Lihat Semua →
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endif %}
+
+<!-- Active Distribution Batches -->
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-6 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800">Pengiriman Aktif</h3>
+    </div>
+    <div class="p-6">
+        {% if active_batches and active_batches|length > 0 %}
+        <div class="space-y-4">
+            {% for batch in active_batches %}
+            <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-blue-100 rounded-lg p-3">
+                            <i class="fas fa-share-square text-blue-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-lg font-bold text-gray-800">
+                                    Divisi {{ batch.unit.name if batch.unit else 'Unit Tidak Diketahui' }}
+                                </span>
+                                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                                    {{ batch.total_items }} Barang
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">
+                                <i class="fas fa-user mr-1"></i> {{ batch.creator.name if batch.creator else '-' }}
+                                <span class="mx-2">•</span>
+                                <i class="fas fa-clock mr-1"></i> {{ batch.verified_at|format_wib_datetime }}
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ url_for('installations.batch_detail', id=batch.ref_id) }}" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
+                        <i class="fas fa-eye mr-2"></i>
+                        Lihat
                     </a>
                 </div>
             </div>
-        </form>
-    </div>
-</div>
-
-<!-- Installations Table -->
-<div class="bg-white rounded-xl shadow-md">
-    <div class="p-6 border-b border-gray-200 flex justify-between items-center">
-        <div class="flex items-center">
-            <i class="fas fa-tools text-emerald-600 mr-3"></i>
-            <h5 class="text-lg font-semibold mb-0">Daftar Instalasi</h5>
-        </div>
-        <div class="flex gap-2">
-            <a href="{{ url_for('map.index', show='distributions') }}" class="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-colors">
-                <i class="fas fa-map mr-1"></i> Lihat di Peta
-            </a>
-            <a href="{{ url_for('installations.create') }}" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
-                <i class="fas fa-plus-circle mr-1"></i> Instalasi Baru
-            </a>
-        </div>
-    </div>
-    <div class="p-6 overflow-x-auto">
-        <table class="w-full">
-            <thead>
-                <tr class="border-b border-gray-200">
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Serial Number</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Barang</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Lokasi</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Field Staff</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Tanggal Instalasi</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if distributions and distributions.items|length > 0 %}
-                    {% for distribution in distributions.items %}
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-3 px-4"><strong class="text-gray-800">{{ distribution.item_detail.serial_number }}</strong></td>
-                        <td class="py-3 px-4">
-                            <div class="font-bold text-gray-800">{{ distribution.item_detail.item.name }}</div>
-                            <small class="text-gray-500">{{ distribution.item_detail.item.item_code }}</small>
-                        </td>
-                        <td class="py-3 px-4">
-                            <div class="font-bold text-gray-800">{{ distribution.unit.name }}</div>
-                            <small class="text-gray-500">{{ distribution.unit_detail.room_name }}</small>
-                            {% if distribution.unit_detail.floor %}
-                            <small class="block text-gray-500">Lantai {{ distribution.unit_detail.floor }}</small>
-                            {% endif %}
-                        </td>
-                        <td class="py-3 px-4 text-gray-600">{{ distribution.field_staff.name }}</td>
-                        <td class="py-3 px-4 text-gray-600">{{ distribution.installed_at.strftime('%d/%m/%Y') }}</td>
-                        <td class="py-3 px-4">
-                            {% if distribution.status == 'installing' %}
-                                <span class="bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                    <i class="fas fa-clock mr-1"></i> Sedang Dipasang
-                                </span>
-                            {% elif distribution.status == 'installed' %}
-                                <span class="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                    <i class="fas fa-check-circle mr-1"></i> Terpasang
-                                </span>
-                            {% elif distribution.status == 'broken' %}
-                                <span class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                    <i class="fas fa-exclamation-triangle mr-1"></i> Rusak
-                                </span>
-                            {% elif distribution.status == 'maintenance' %}
-                                <span class="bg-orange-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                                    <i class="fas fa-tools mr-1"></i> Maintenance
-                                </span>
-                            {% endif %}
-                        </td>
-                        <td class="py-3 px-4">
-                            <div class="flex gap-1">
-                                <a href="{{ url_for('installations.detail', id=distribution.id) }}"
-                                   class="px-3 py-1 border border-emerald-600 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors text-sm" title="Detail">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                {% if distribution.status in ['installing', 'installed'] %}
-                                <a href="{{ url_for('installations.update_status', id=distribution.id, status='maintenance') }}"
-                                   class="px-3 py-1 border border-orange-500 text-orange-500 rounded-lg hover:bg-orange-500 hover:text-white transition-colors text-sm" title="Set Maintenance">
-                                    <i class="fas fa-tools"></i>
-                                </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center text-gray-500 py-8">
-                            <i class="fas fa-inbox text-4xl block mb-2 opacity-50"></i>
-                            <strong class="text-lg">Belum ada data instalasi</strong>
-                            <p class="mb-0">Mulai dengan membuat instalasi baru</p>
-                        </td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Pagination -->
-    {% if distributions and distributions.pages > 1 %}
-    <nav class="p-6" aria-label="Page navigation">
-        <ul class="flex justify-center gap-1">
-            {% if distributions.has_prev %}
-            <li>
-                <a class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors" href="{{ url_for('installations.index', page=distributions.prev_num, status=request.args.get('status'), unit_id=request.args.get('unit_id'), field_staff_id=request.args.get('field_staff_id')) }}">
-                    <i class="fas fa-chevron-left"></i> Prev
-                </a>
-            </li>
-            {% endif %}
-
-            {% for page_num in distributions.iter_pages() %}
-                {% if page_num %}
-                    {% if page_num == distributions.page %}
-                    <li>
-                        <span class="px-3 py-2 bg-emerald-600 text-white rounded-lg">{{ page_num }}</span>
-                    </li>
-                    {% else %}
-                    <li>
-                        <a class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors" href="{{ url_for('installations.index', page=page_num, status=request.args.get('status'), unit_id=request.args.get('unit_id'), field_staff_id=request.args.get('field_staff_id')) }}">
-                            {{ page_num }}
-                        </a>
-                    </li>
-                    {% endif %}
-                {% else %}
-                <li>
-                    <span class="px-3 py-2 text-gray-500">...</span>
-                </li>
-                {% endif %}
             {% endfor %}
-
-            {% if distributions.has_next %}
-            <li>
-                <a class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors" href="{{ url_for('installations.index', page=distributions.next_num, status=request.args.get('status'), unit_id=request.args.get('unit_id'), field_staff_id=request.args.get('field_staff_id')) }}">
-                    Next <i class="fas fa-chevron-right"></i>
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-    {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-gray-500 py-12">
+            <i class="fas fa-share-square text-4xl block mb-4 opacity-50"></i>
+            <strong class="text-lg">Belum ada pengiriman aktif</strong>
+            <p class="mb-0">Draft pengiriman ditampilkan di halaman terpisah</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

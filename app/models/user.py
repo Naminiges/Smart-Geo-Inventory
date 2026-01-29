@@ -11,12 +11,16 @@ class User(UserMixin, BaseModel):
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(50), nullable=False)  # admin | warehouse_staff | field_staff
+    role = db.Column(db.String(50), nullable=False)  # admin | warehouse_staff | field_staff | unit_staff
     warehouse_id = db.Column(db.Integer, db.ForeignKey('warehouses.id'))  # ONLY for warehouse_staff
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # For activation/deactivation
+    phone = db.Column(db.String(20))  # Phone number for WhatsApp notifications
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)  # Enable/disable email notifications
 
     # Relationships
     warehouse = db.relationship('Warehouse', back_populates='users')
     user_warehouses = db.relationship('UserWarehouse', back_populates='user', lazy='dynamic')
+    user_units = db.relationship('UserUnit', back_populates='user', foreign_keys='UserUnit.user_id', lazy='dynamic')
     distributions = db.relationship('Distribution', foreign_keys='Distribution.field_staff_id', back_populates='field_staff')
 
     def set_password(self, password):
@@ -39,12 +43,16 @@ class User(UserMixin, BaseModel):
         """Check if user is field staff"""
         return self.role == 'field_staff'
 
+    def is_unit_staff(self):
+        """Check if user is unit staff"""
+        return self.role == 'unit_staff'
+
     def get_accessible_warehouses(self):
         """Get list of warehouses this user can access"""
         if self.is_admin():
             from app.models import Warehouse
             return Warehouse.query.all()
-        elif self.is_warehouse_staff() or self.is_field_staff():
+        elif self.is_warehouse_staff() or self.is_field_staff() or self.is_unit_staff():
             # Get warehouses from UserWarehouse assignments
             return [uw.warehouse for uw in self.user_warehouses.all()]
         else:
@@ -57,6 +65,32 @@ class User(UserMixin, BaseModel):
 
         # Check if warehouse is in user's assignments
         return any(uw.warehouse_id == warehouse_id for uw in self.user_warehouses.all())
+
+    def get_assigned_units(self):
+        """Get list of units this user is assigned to"""
+        if self.is_admin():
+            from app.models import Unit
+            return Unit.query.all()
+        elif self.is_unit_staff():
+            # Get units from UserUnit assignments
+            return [uu.unit for uu in self.user_units.all()]
+        else:
+            return []
+
+    def has_unit_access(self, unit_id):
+        """Check if user has access to specific unit"""
+        if self.is_admin():
+            return True
+
+        # Check if unit is in user's assignments
+        return any(uu.unit_id == unit_id for uu in self.user_units.all())
+
+    def should_receive_email_notifications(self):
+        """Check if user should receive email notifications.
+        Returns False if user is inactive, regardless of email_notifications setting.
+        This ensures inactive users never receive emails.
+        """
+        return self.is_active and self.email_notifications
 
     def __repr__(self):
         return f'<User {self.email} - {self.role}>'
@@ -81,3 +115,26 @@ class UserWarehouse(BaseModel):
 
     def __repr__(self):
         return f'<UserWarehouse User:{self.user_id} Warehouse:{self.warehouse_id}>'
+
+
+class UserUnit(BaseModel):
+    """User-Unit many-to-many relationship for unit staff assignment"""
+    __tablename__ = 'user_units'
+
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    unit_id = db.Column(db.Integer, db.ForeignKey('units.id'), nullable=False)
+    assigned_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    assigned_by = db.Column(db.Integer, db.ForeignKey('users.id'))  # Admin who assigned
+
+    # Relationships
+    user = db.relationship('User', back_populates='user_units', foreign_keys=[user_id])
+    unit = db.relationship('Unit', backref='user_units')
+    assigner = db.relationship('User', foreign_keys=[assigned_by])
+
+    # Unique constraint
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'unit_id', name='unique_user_unit'),
+    )
+
+    def __repr__(self):
+        return f'<UserUnit User:{self.user_id} Unit:{self.unit_id}>'

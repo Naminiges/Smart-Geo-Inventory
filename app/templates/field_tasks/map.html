@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Peta Tugas - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Peta Tugas Saya{% endblock %}
+
+{% block extra_css %}
+<style>
+    .popup-content h5 {
+        color: #ea580c;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+    .popup-content p {
+        margin-bottom: 5px;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Map Header -->
+<div class="mb-4">
+    <div class="bg-emerald-600 rounded-xl shadow-lg p-6 text-white">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+                <h5 class="text-xl font-bold mb-2 flex items-center gap-2">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Peta Lokasi Tugas
+                </h5>
+                <p class="text-orange-100 text-sm">Lihat lokasi tugas instalasi dan pengiriman Anda</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="locateUser()"
+                        class="flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-600 rounded-lg font-medium hover:bg-orange-50 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5">
+                    <i class="fas fa-location-arrow"></i>
+                    Lokasi Saya
+                </button>
+                <button onclick="refreshMap()"
+                        class="flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-600 rounded-lg font-medium hover:bg-orange-50 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5">
+                    <i class="fas fa-sync-alt"></i>
+                    Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map Controls -->
+<div class="mb-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <!-- Layer Toggles -->
+            <div class="flex flex-wrap gap-3">
+                <!-- Pending Tasks Toggle -->
+                <div class="layer-toggle flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 bg-gray-50 hover:border-orange-500 hover:bg-white hover:shadow-md transition-all duration-300 cursor-pointer group"
+                     onclick="toggleCheckbox('showPending')">
+                    <div class="icon-wrapper w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-clock text-amber-600"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-semibold text-gray-800 text-sm">Belum Dikerjakan</span>
+                        <span class="text-gray-500 text-xs">{{ pending_tasks|length }} tugas</span>
+                    </div>
+                    <input class="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer ml-2"
+                           type="checkbox" id="showPending" checked onclick="event.stopPropagation()">
+                </div>
+
+                <!-- In Progress Tasks Toggle -->
+                <div class="layer-toggle flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 bg-gray-50 hover:border-orange-500 hover:bg-white hover:shadow-md transition-all duration-300 cursor-pointer group"
+                     onclick="toggleCheckbox('showInProgress')">
+                    <div class="icon-wrapper w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-hourglass-half text-blue-600"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-semibold text-gray-800 text-sm">Menunggu Verifikasi</span>
+                        <span class="text-gray-500 text-xs">{{ in_progress_tasks|length }} tugas</span>
+                    </div>
+                    <input class="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer ml-2"
+                           type="checkbox" id="showInProgress" checked onclick="event.stopPropagation()">
+                </div>
+
+                <!-- Completed Tasks Toggle -->
+                <div class="layer-toggle flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-gray-200 bg-gray-50 hover:border-orange-500 hover:bg-white hover:shadow-md transition-all duration-300 cursor-pointer group"
+                     onclick="toggleCheckbox('showCompleted')">
+                    <div class="icon-wrapper w-9 h-9 rounded-full bg-green-100 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <i class="fas fa-check-circle text-green-600"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="font-semibold text-gray-800 text-sm">Selesai</span>
+                        <span class="text-gray-500 text-xs">{{ completed_tasks|length }} tugas</span>
+                    </div>
+                    <input class="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer ml-2"
+                           type="checkbox" id="showCompleted" checked onclick="event.stopPropagation()">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map -->
+<div class="mb-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div id="map" class="h-[600px] w-full"></div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="mb-4">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                    <i class="fas fa-info-circle text-orange-600"></i>
+                </div>
+                <h6 class="font-semibold text-gray-800 text-lg">Legenda Peta</h6>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="w-6 h-6 rounded-full bg-amber-500 flex-shrink-0"></div>
+                    <span class="text-sm text-gray-700 font-medium">Belum Dikerjakan</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0"></div>
+                    <span class="text-sm text-gray-700 font-medium">Menunggu Verifikasi</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="w-6 h-6 rounded-full bg-green-500 flex-shrink-0"></div>
+                    <span class="text-sm text-gray-700 font-medium">Selesai</span>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="w-6 h-6 rounded-full bg-gray-500 flex-shrink-0"></div>
+                    <span class="text-sm text-gray-700 font-medium">Lokasi Anda</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize map
+var map = L.map('map').setView([3.561676, 98.6563423], 13);
+
+// Add tile layer
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+}).addTo(map);
+
+// Layer groups
+var pendingLayer = L.layerGroup().addTo(map);
+var inProgressLayer = L.layerGroup().addTo(map);
+var completedLayer = L.layerGroup().addTo(map);
+
+// Custom icons
+var pendingIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+var inProgressIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+var completedIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+// Task data from server
+var tasksData = {{ tasks | tojson }};
+
+// Load map data
+function loadMapData() {
+    // Clear existing markers
+    pendingLayer.clearLayers();
+    inProgressLayer.clearLayers();
+    completedLayer.clearLayers();
+
+    tasksData.forEach(function(task) {
+        if (task.geom) {
+            // Parse coordinates from GeoJSON
+            var coords = [task.geom.coordinates[1], task.geom.coordinates[0]];
+
+            var marker = L.marker(coords);
+            var popupContent = '<div class="popup-content">';
+            popupContent += '<h5>' + (task.task_type === 'installation' ? 'Tugas Instalasi' : 'Tugas Pengiriman') + ' #' + task.id + '</h5>';
+
+            if (task.item_detail && task.item_detail.item) {
+                popupContent += '<p><strong>Item:</strong> ' + task.item_detail.item.name + '</p>';
+            }
+
+            if (task.unit) {
+                popupContent += '<p><strong>Unit:</strong> ' + task.unit.name + '</p>';
+            }
+
+            if (task.unit_detail) {
+                popupContent += '<p><strong>Ruangan:</strong> ' + task.unit_detail.room_name + '</p>';
+            }
+
+            popupContent += '<p><strong>Alamat:</strong> ' + (task.address || '-') + '</p>';
+
+            // Status display
+            var statusMap = {
+                'pending': 'Belum Dikerjakan',
+                'submitted': 'Menunggu Verifikasi',
+                'verified': 'Selesai',
+                'rejected': 'Ditolak'
+            };
+            popupContent += '<p><strong>Status:</strong> ' + (statusMap[task.verification_status] || task.verification_status) + '</p>';
+
+            // Add action button
+            popupContent += '<a href="/field-tasks/' + task.id + '/detail" class="inline-block mt-2 px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700">Lihat Detail</a>';
+
+            popupContent += '</div>';
+            marker.bindPopup(popupContent);
+
+            // Add to appropriate layer based on verification status
+            if (task.verification_status === 'pending' || task.verification_status === 'rejected') {
+                marker.setIcon(pendingIcon);
+                marker.addTo(pendingLayer);
+            } else if (task.verification_status === 'submitted') {
+                marker.setIcon(inProgressIcon);
+                marker.addTo(inProgressLayer);
+            } else if (task.verification_status === 'verified') {
+                marker.setIcon(completedIcon);
+                marker.addTo(completedLayer);
+            }
+        }
+    });
+}
+
+// Toggle layer visibility
+$('#showPending').change(function() {
+    if ($(this).is(':checked')) {
+        map.addLayer(pendingLayer);
+    } else {
+        map.removeLayer(pendingLayer);
+    }
+});
+
+$('#showInProgress').change(function() {
+    if ($(this).is(':checked')) {
+        map.addLayer(inProgressLayer);
+    } else {
+        map.removeLayer(inProgressLayer);
+    }
+});
+
+$('#showCompleted').change(function() {
+    if ($(this).is(':checked')) {
+        map.addLayer(completedLayer);
+    } else {
+        map.removeLayer(completedLayer);
+    }
+});
+
+// Toggle checkbox when clicking on card
+function toggleCheckbox(checkboxId) {
+    var checkbox = document.getElementById(checkboxId);
+    checkbox.checked = !checkbox.checked;
+    $(checkbox).trigger('change');
+}
+
+// Refresh map
+function refreshMap() {
+    location.reload();
+}
+
+// Locate user
+function locateUser() {
+    map.locate({setView: true, maxZoom: 16});
+}
+
+map.on('locationfound', function(e) {
+    L.marker(e.latlng, {
+        icon: L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gray.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        })
+    }).addTo(map).bindPopup("Lokasi Anda").openPopup();
+});
+
+map.on('locationerror', function(e) {
+    alert("Tidak dapat mendapatkan lokasi Anda");
+});
+
+// Load data on page load
+$(document).ready(function() {
+    loadMapData();
+});
+</script>
+{% endblock %}

@@ -4,7 +4,7 @@ from app import db
 from app.models import Item, ItemDetail, Category
 from app.forms import CategoryForm, ItemForm, ItemDetailForm
 from app.utils.decorators import role_required
-from app.utils.helpers import generate_barcode
+from app.utils.helpers import generate_barcode, get_user_warehouse_id
 import os
 
 bp = Blueprint('items', __name__, url_prefix='/items')
@@ -12,6 +12,7 @@ bp = Blueprint('items', __name__, url_prefix='/items')
 
 @bp.route('/categories')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def categories():
     """List all categories"""
     categories = Category.query.all()
@@ -29,6 +30,7 @@ def create_category():
         try:
             category = Category(
                 name=form.name.data,
+                code=form.code.data.upper(),  # Convert to uppercase
                 description=form.description.data
             )
             category.save()
@@ -43,13 +45,24 @@ def create_category():
 
 @bp.route('/')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def index():
-    """List all items with category filter"""
+    """List all items with category filter and search"""
     category_id = request.args.get('category_id', '', type=int)
+    search = request.args.get('search', '')
+
     query = Item.query
 
     if category_id:
         query = query.filter_by(category_id=category_id)
+
+    if search:
+        query = query.filter(
+            db.or_(
+                Item.name.ilike(f'%{search}%'),
+                Item.item_code.ilike(f'%{search}%')
+            )
+        )
 
     items = query.all()
     categories = Category.query.all()
@@ -85,19 +98,29 @@ def create():
 
 @bp.route('/<int:id>/details')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def details(id):
     """Show item details and list of item details (serial numbers)"""
-    from app.models import Warehouse, Unit, Distribution
+    from app.models import Warehouse, Unit, Distribution, ReturnItem, VenueLoan
 
     item = Item.query.get_or_404(id)
 
     # Get filter parameters
     location_filter = request.args.get('location', '')
     search_filter = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', '')
 
-    # Build query for item details
+    # Build query for item details - NO warehouse filter, show all item_details
     query = ItemDetail.query.filter_by(item_id=id)
     item_details = query.all()
+
+    # Filter by status
+    if status_filter:
+        if status_filter == 'used_in_unit':
+            # Gabungkan status 'used' dan 'in_unit'
+            item_details = [d for d in item_details if d.status in ['used', 'in_unit']]
+        else:
+            item_details = [d for d in item_details if d.status == status_filter]
 
     # Filter by location
     if location_filter:
@@ -118,7 +141,7 @@ def details(id):
     if search_filter:
         item_details = [d for d in item_details if search_filter.lower() in d.serial_number.lower()]
 
-    # Build combined location list for dropdown
+    # Build combined location list for dropdown - show all warehouses and units
     locations = []
     for warehouse in Warehouse.query.all():
         locations.append({
@@ -133,9 +156,34 @@ def details(id):
             'type': 'unit'
         })
 
+    # Get ReturnItem data for items with 'returned' status
+    return_items_map = {}
+    returned_detail_ids = [d.id for d in item_details if d.status == 'returned']
+    if returned_detail_ids:
+        return_items = ReturnItem.query.filter(
+            ReturnItem.item_detail_id.in_(returned_detail_ids),
+            ReturnItem.status == 'returned'
+        ).all()
+        return_items_map = {ri.item_detail_id: ri for ri in return_items}
+
+    # Get VenueLoan data for items with 'loaned' status (via specification_notes)
+    venue_loans_map = {}
+    loaned_detail_ids = [d.id for d in item_details if d.status == 'loaned']
+    if loaned_detail_ids:
+        # Get active venue loans
+        active_venue_loans = VenueLoan.query.filter(
+            VenueLoan.status.in_(['approved', 'active'])
+        ).all()
+
+        # Build map of unit_detail_id to venue_loan
+        for vl in active_venue_loans:
+            venue_loans_map[vl.unit_detail_id] = vl
+
     return render_template('items/details.html', item=item, item_details=item_details,
                           locations=locations, location_filter=location_filter,
-                          search_filter=search_filter)
+                          status_filter=status_filter, search_filter=search_filter,
+                          return_items_map=return_items_map,
+                          venue_loans_map=venue_loans_map)
 
 
 @bp.route('/detail/create', methods=['GET', 'POST'])
@@ -147,14 +195,16 @@ def create_detail():
 
     form.item_id.choices = [(i.id, f"{i.item_code} - {i.name}") for i in Item.query.all()]
 
-    if current_user.is_warehouse_staff():
-        form.warehouse_id.choices = [(current_user.warehouse.id, current_user.warehouse.name)]
+    warehouse_id = get_user_warehouse_id(current_user)
+    if warehouse_id:
+        # Warehouse staff only sees their warehouse
+        from app.models import Warehouse
+        warehouse = Warehouse.query.get(warehouse_id)
+        form.warehouse_id.choices = [(warehouse.id, warehouse.name)] if warehouse else []
     else:
+        # Admin sees all warehouses
         from app.models import Warehouse
         form.warehouse_id.choices = [(w.id, w.name) for w in Warehouse.query.all()]
-
-    from app.models import Supplier
-    form.supplier_id.choices = [(0, 'Tanpa Supplier')] + [(s.id, s.name) for s in Supplier.query.all()]
 
     if form.validate_on_submit():
         try:
@@ -165,9 +215,6 @@ def create_detail():
                 status=form.status.data,
                 specification_notes=form.specification_notes.data
             )
-
-            if form.supplier_id.data != 0:
-                item_detail.supplier_id = form.supplier_id.data
 
             item_detail.save()
 
@@ -199,6 +246,7 @@ def create_detail():
 
 @bp.route('/barcode/<serial_number>')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def barcode(serial_number):
     """Generate barcode for item"""
     return generate_barcode(serial_number)
@@ -206,6 +254,7 @@ def barcode(serial_number):
 
 @bp.route('/search')
 @login_required
+@role_required('admin', 'warehouse_staff')
 def search():
     """Search items"""
     query = request.args.get('q', '')

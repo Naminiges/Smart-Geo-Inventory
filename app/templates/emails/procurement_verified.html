@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Pengadaan Diverifikasi - {{ procurement.procurement_code }}{% endblock %}
+
+{% block content %}
+<h2>Pengadaan Telah Diverifikasi</h2>
+
+<p>Halo {{ procurement.created_by_user.name if procurement.created_by_user else 'User' }},</p>
+
+<p>Pengadaan yang Anda ajukan telah diverifikasi oleh Admin:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Pengadaan:</span> {{ procurement.procurement_code }}</p>
+    <p><span class="info-label">Status:</span> {{ procurement.status|replace('_', ' ')|title }}</p>
+</div>
+
+<div class="alert alert-success">
+    Pengadaan Anda sedang dalam proses approval lebih lanjut.
+</div>
+
+<a href="{{ base_url }}/procurement/" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail</a>
+
+{% endblock %}

@@ -3,44 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}Smart Geo Inventory{% endblock %}</title>
-
-    <!-- Font Awesome Icons -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    />
-
-    <!-- Leaflet CSS for maps -->
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}SAPA PSI - Smart Geo Inventory Inventory{% endblock %}</title>
 
     <!-- Custom CSS -->
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='css/output.css') }}"
-    />
-
-    <!-- <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              primary: "#047857", // Hijau USU - Emerald 700
-              secondary: "#64748b",
-              success: "#22c55e",
-              danger: "#ef4444",
-              warning: "#f59e0b",
-              info: "#3b82f6",
-            },
-          },
-        },
-      };
-    </script> -->
-
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png"/>
+    
     {% block extra_css %}{% endblock %}
   </head>
   <body class="bg-gray-50">
@@ -54,12 +24,9 @@
       >
         <div class="px-4 lg:px-6 py-3 border-b border-gray-200">
           <div class="flex items-center space-x-3">
-            <!-- <div class="bg-emerald-600 rounded-lg p-2">
-                        <i class="fas fa-box text-xl text-white"></i>
-                    </div> -->
             <div>
-              <h1 class="text-lg font-bold text-gray-800">Smart Geo</h1>
-              <p class="text-xs text-gray-500">Inventory System</p>
+              <h1 class="text-lg font-bold text-gray-800">LOKASET</h1>
+              <p class="text-xs text-gray-500">Sistem Inventory Aset</p>
             </div>
           </div>
         </div>
@@ -73,37 +40,124 @@
           </p>
 
           <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'dashboard.index' or request.endpoint == 'dashboard.warehouse_index' or request.endpoint == 'dashboard.admin_index' or request.endpoint == 'dashboard.field_index' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'dashboard.index' or request.endpoint == 'dashboard.warehouse_index' or request.endpoint == 'dashboard.admin_index' or request.endpoint == 'dashboard.field_index' or request.endpoint == 'dashboard.unit_index' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('dashboard.index') }}"
           >
             <i
-              class="fas fa-tachometer-alt w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'dashboard.index' or request.endpoint == 'dashboard.warehouse_index' or request.endpoint == 'dashboard.admin_index' or request.endpoint == 'dashboard.field_index' else 'text-gray-400' }}"
+              class="fas fa-home w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'dashboard.index' or request.endpoint == 'dashboard.warehouse_index' or request.endpoint == 'dashboard.admin_index' or request.endpoint == 'dashboard.field_index' or request.endpoint == 'dashboard.unit_index' else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Dashboard</span>
+            <span class="font-medium">Beranda</span>
             {% if request.endpoint == 'dashboard.index' or request.endpoint ==
             'dashboard.warehouse_index' or request.endpoint ==
             'dashboard.admin_index' or request.endpoint ==
-            'dashboard.field_index' %}
+            'dashboard.field_index' or request.endpoint == 'dashboard.unit_index' %}
             <div class="ml-auto w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
             {% endif %}
           </a>
 
+          <!-- Peta GIS - Hanya untuk admin dan warehouse staff -->
+          {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
           <a
             class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'map' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('map.index') }}"
           >
             <i
-              class="fas fa-map w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'map' in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-map-marked-alt w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'map' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Peta GIS</span>
+            <span class="font-medium">Peta Lokasi Aset</span>
           </a>
+          {% endif %}
+
+
+          {% if current_user.is_field_staff() %}
+          <!-- Field Staff Only Menu -->
+          <p
+            class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
+          >
+            Menu Saya
+          </p>
+
+          <!-- Tugas Saya -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'field_tasks.index' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('field_tasks.index') }}"
+          >
+            <i
+              class="fas fa-clipboard-check w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'field_tasks.index' else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Daftar Pekerjaan</span>
+          </a>
+
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'field_tasks.map_view' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('field_tasks.map_view') }}"
+          >
+            <i
+              class="fas fa-map w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'field_tasks.map_view' else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Peta Pekerjaan</span>
+          </a>
+          {% endif %}
+
+
+          {% if current_user.is_unit_staff() %}
+          <!-- Unit Staff Only Menu -->
+          <p
+            class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
+          >
+            Menu Saya
+          </p>
+
+          <!-- Daftar Permohonan -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'asset_requests.index' or request.endpoint == 'asset_requests.create' or request.endpoint == 'asset_requests.detail' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_requests.index') }}"
+          >
+            <i
+              class="fas fa-file-alt w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'asset_requests.index' or request.endpoint == 'asset_requests.create' or request.endpoint == 'asset_requests.detail' else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Ajukan Permintaan</span>
+            {% if pending_request_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ pending_request_count }}
+            </span>
+            {% endif %}
+          </a>
+
+          <!-- Aset di Unit -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'asset_requests.unit_assets' else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_requests.unit_assets') }}"
+          >
+            <i
+              class="fas fa-box-open w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'asset_requests.unit_assets' else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Barang di Unit Saya</span>
+          </a>
+
+          <!-- Terima Distribusi -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'distributions' in request.endpoint and 'receive' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('distributions.receive_index') }}"
+          >
+            <i
+              class="fas fa-download w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'distributions' in request.endpoint and 'receive' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Terima Barang</span>
+            {% if pending_distribution_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ pending_distribution_count }}
+            </span>
+            {% endif %}
+          </a>
+          {% endif %}
 
           {% if current_user.is_warehouse_staff() or current_user.is_admin() %}
           <!-- Manajemen -->
           <p
             class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
           >
-            Manajemen
+            Menu Gudang
           </p>
 
           <!-- Pengadaan -->
@@ -112,21 +166,28 @@
             href="{{ url_for('procurement.index') }}"
           >
             <i
-              class="fas fa-shopping-cart w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'procurement' in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-plus-circle w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'procurement' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Pengadaan</span>
+            <span class="font-medium">Pengadaan Baru</span>
+            {% if (current_user.is_admin() or current_user.is_warehouse_staff()) and pending_procurement_count > 0 %}
+            <span class="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ pending_procurement_count }}
+            </span>
+            {% endif %}
           </a>
 
           <!-- Barang -->
+          {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
           <a
             class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'items' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('items.index') }}"
           >
             <i
-              class="fas fa-box w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'items' in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-boxes w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'items' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Barang</span>
+            <span class="font-medium">Daftar Barang</span>
           </a>
+          {% endif %}
 
           <!-- Kategori Barang -->
           <a
@@ -139,106 +200,208 @@
             <span class="font-medium">Kategori Barang</span>
           </a>
 
-          <!-- Distribusi -->
-          <div class="mb-1">
-            <button
-              class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-all duration-200"
-              onclick="toggleDistribusiMenu()"
-            >
-              <div class="flex items-center">
-                <i
-                  class="fas fa-truck w-5 h-5 mr-3 text-center text-gray-400"
-                ></i>
-                <span class="font-medium">Distribusi</span>
-              </div>
-              <i
-                class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200"
-                id="distribusi-icon"
-              ></i>
-            </button>
+          <!-- Manajemen Lokasi -->
+          <p
+            class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
+          >
+            Manajemen Lokasi
+          </p>
 
-            <!-- Submenu Distribusi -->
-            <div class="ml-8 mt-1 space-y-1 hidden" id="distribusi-submenu">
-              <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="{{ url_for('installations.index') }}"
-              >
-                <i
-                  class="fas fa-network-wired w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
-                ></i>
-                <span class="text-sm">Instalasi Jaringan</span>
-              </a>
-
-              <a
-                class="flex items-center px-3 py-2 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'assets' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200"
-                href="#"
-              >
-                <i
-                  class="fas fa-archive w-4 h-4 mr-2 text-center {{ 'text-emerald-600' if 'assets' in request.endpoint else 'text-gray-400' }}"
-                ></i>
-                <span class="text-sm">Aset Umum</span>
-              </a>
-            </div>
-          </div>
-
-          <!-- Supplier -->
-          {% if current_user.is_admin() or current_user.is_warehouse_staff() %}
+          <!-- Daftar Gedung (All Users) -->
           <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'suppliers' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
-            href="{{ url_for('suppliers.index') }}"
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'buildings' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('buildings.index') }}"
           >
             <i
-              class="fas fa-truck-loading w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'suppliers' in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-city w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'buildings' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Supplier</span>
+            <span class="font-medium">Daftar Gedung</span>
           </a>
+
+          <!-- Gudang (Admin Only) -->
+          {% if current_user.is_admin() %}
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'warehouses' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('warehouses.index') }}"
+          >
+            <i
+              class="fas fa-warehouse w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'warehouses' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Daftar Gudang</span>
+          </a>
+          {% endif %}
+
+          <!-- Unit (Admin Only) -->
+          {% if current_user.is_admin() %}
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if ('units' in request.endpoint and 'loans' not in request.endpoint) or '/stock/per-unit' in request.path else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('units.index') }}"
+          >
+            <i
+              class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if ('units' in request.endpoint and 'loans' not in request.endpoint) or '/stock/per-unit' in request.path else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Daftar Divisi</span>
+          </a>
+
+          <!-- Daftar Peminjaman Tempat (Admin Only) -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'units.loans' or request.endpoint == 'units.create_loan' or 'venue_loans.admin' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('units.loans') }}"
+          >
+            <i
+              class="fas fa-door-open w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'units.loans' or request.endpoint == 'units.create_loan' or 'venue_loans.admin' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Daftar Peminjaman Tempat</span>
+          </a>
+          {% endif %}
+
+          <!-- Distribusi -->
+          <p
+            class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
+          >
+            Kirim Barang
+          </p>
+
+          <!-- Permohonan Aset (Warehouse Staff & Admin) -->
+          <a
+          class="flex items-center px-3 py-2.5 rounded-lg
+          {{ 'bg-emerald-50 text-emerald-700' if 'asset_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }}
+          transition-all duration-200 mb-1"
+          href="{{ url_for('asset_requests.index') }}"
+        >
+          <i
+            class="fas fa-file-signature w-5 h-5 mr-3 text-center
+            {{ 'text-emerald-600' if 'asset_requests' in request.endpoint else 'text-gray-400' }}"
+          ></i>
+
+          <span class="font-medium">Permintaan dari Divisi</span>
+
+          {% if current_user.is_admin() and pending_request_count > 0 %}
+            <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ pending_request_count }}
+            </span>
+          {% elif current_user.is_warehouse_staff() and verified_request_count > 0 %}
+            <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ verified_request_count }}
+            </span>
+          {% endif %}
+        </a>
+
+          <a
+          class="flex items-center px-3 py-2.5 rounded-lg
+          {{ 'bg-emerald-50 text-emerald-700' if 'installations' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }}
+          transition-all duration-200"
+          href="{{ url_for('installations.index') }}"
+        >
+          <i
+            class="fas fa-share-square w-5 h-5 mr-3 text-center
+            {{ 'text-emerald-600' if 'installations' in request.endpoint else 'text-gray-400' }}"
+          ></i>
+
+          <span class="font-medium">Kirim Langsung</span>
+
+          {% if draft_distribution_count > 0 %}
+            <span class="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs font-semibold rounded-full">
+              {{ draft_distribution_count }}
+            </span>
+          {% endif %}
+        </a>
+
+          <!-- Retur Barang (Warehouse Staff & Admin Only) -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'returns' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('returns.index') }}"
+          >
+            <i
+              class="fas fa-undo-alt w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'returns' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Barang Kembali</span>
+          </a>
+
+          <!-- Pemindahan Barang (Admin & Warehouse Staff Only) -->
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'asset_transfer' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('asset_transfer.index') }}"
+          >
+            <i
+              class="fas fa-exchange-alt w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'asset_transfer' in request.endpoint else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Pemindahan Barang</span>
+          </a>
+
+          <!-- Stok (All Users) -->
+          {% if current_user.is_admin() %}
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if ('stock' in request.endpoint and '/per-unit' not in request.path) else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('stock.index') }}"
+          >
+            <i
+              class="fas fa-history w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if ('stock' in request.endpoint and '/per-unit' not in request.path) else 'text-gray-400' }}"
+            ></i>
+            <span class="font-medium">Riwayat Keluar Masuk</span>
+          </a>
+          {% endif %}
 
           <!-- Manajemen User (Admin Only) -->
           {% if current_user.is_admin() %}
+          <p
+            class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-4"
+          >
+            Pengaturan
+          </p>
+
           <a
             class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if 'users' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('users.index') }}"
           >
             <i
-              class="fas fa-users-cog w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'users' in request.endpoint else 'text-gray-400' }}"
+              class="fas fa-users w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if 'users' in request.endpoint else 'text-gray-400' }}"
             ></i>
-            <span class="font-medium">Manajemen User</span>
+            <span class="font-medium">Kelola Pengguna</span>
           </a>
           {% endif %}
-          {% endif %} {% endif %}
+          {% endif %}
         </div>
 
         <div
           class="sticky bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-white"
         >
-          <div class="flex items-center mb-3 p-2 bg-gray-50 rounded-lg">
+          <a href="{{ url_for('auth.profile') }}"
+             class="flex items-center mb-3 p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            {% if current_user.profile_image %}
+            <img src="{{ url_for('static', filename=current_user.profile_image) }}"
+                 alt="{{ current_user.name }}"
+                 class="w-10 h-10 rounded-full object-cover mr-3">
+            {% else %}
             <div
               class="bg-emerald-600 rounded-full flex items-center justify-center mr-3"
               style="width: 40px; height: 40px"
             >
               <i class="fas fa-user text-lg text-white"></i>
             </div>
+            {% endif %}
             <div class="flex-1 min-w-0">
               <p class="text-sm font-semibold text-gray-800 truncate">
                 {{ current_user.name }}
               </p>
-              <p class="text-xs text-gray-500">{{ current_user.role|title }}</p>
+              <p class="text-xs text-gray-500">{{ current_user.role|replace('_', ' ')|title }}</p>
             </div>
-          </div>
+            <i class="fas fa-chevron-right text-gray-400"></i>
+          </a>
           <a
             href="{{ url_for('auth.logout') }}"
-            class="flex items-center justify-center w-full px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
+            class="logout-btn flex items-center justify-center w-full px-3 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 text-sm font-medium"
           >
             <i class="fas fa-sign-out-alt mr-2 text-gray-500"></i>
-            Logout
+            Keluar
           </a>
         </div>
       </nav>
 
       <!-- Main Content -->
-      <main class="flex-1 lg:ml-0 overflow-y-auto h-screen">
+      <main class="flex-1 lg:ml-0 overflow-y-auto min-h-screen flex flex-col">
         <!-- Top Navigation Bar -->
-        <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 flex-shrink-0">
           <div
             class="w-full px-4 lg:px-6 py-3 flex items-center justify-between"
           >
@@ -250,52 +413,59 @@
               >
                 <i class="fas fa-bars text-gray-600"></i>
               </button>
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-3">
                 <div
-                  class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center"
+                  class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-sm"
                 >
-                  <i class="fas fa-th text-emerald-600 text-sm"></i>
+                  <i class="fas fa-th text-white text-sm"></i>
                 </div>
-                <h1 class="text-lg font-semibold text-gray-800">
-                  {% block page_title %}Dashboard{% endblock %}
-                </h1>
+                <div>
+                  <h1 class="text-lg font-bold text-gray-800 leading-tight">
+                    {% block page_title %}Beranda{% endblock %}
+                  </h1>
+                  {% block page_subtitle %}{% endblock %}
+                </div>
               </div>
             </div>
 
             <div class="flex items-center space-x-1">
-              <button
-                class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <i class="fas fa-bell text-gray-500"></i>
-                <span
-                  class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
-                  >3</span
-                >
-              </button>
               <div class="relative ml-2">
                 <button
-                  class="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                  class="flex items-center space-x-2 p-1 pr-3 rounded-lg hover:bg-gray-100 transition-colors"
                   onclick="this.nextElementSibling.classList.toggle('hidden')"
                 >
-                  <i class="fas fa-cog text-gray-500"></i>
+                  {% if current_user.profile_image %}
+                  <img src="{{ url_for('static', filename=current_user.profile_image) }}"
+                       alt="{{ current_user.name }}"
+                       class="w-8 h-8 rounded-full object-cover">
+                  {% else %}
+                  <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-white text-sm"></i>
+                  </div>
+                  {% endif %}
+                  <i class="fas fa-chevron-down text-gray-400 text-xs"></i>
                 </button>
                 <div
                   class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
                 >
+                  <div class="px-4 py-3 border-b border-gray-200">
+                    <p class="text-sm font-semibold text-gray-800">{{ current_user.name }}</p>
+                    <p class="text-xs text-gray-500">{{ current_user.email }}</p>
+                  </div>
                   <a
                     class="flex items-center px-4 py-2.5 hover:bg-gray-50 text-gray-700 hover:text-emerald-600 transition-colors"
                     href="{{ url_for('auth.profile') }}"
                   >
                     <i class="fas fa-user mr-3 w-4 text-gray-400"></i>
-                    <span>Profil</span>
+                    <span>Profil Saya</span>
                   </a>
                   <div class="border-t border-gray-200"></div>
                   <a
-                    class="flex items-center px-4 py-2.5 hover:bg-gray-50 text-red-600 transition-colors"
+                    class="logout-btn flex items-center px-4 py-2.5 hover:bg-gray-50 text-red-600 transition-colors"
                     href="{{ url_for('auth.logout') }}"
                   >
                     <i class="fas fa-sign-out-alt mr-3 w-4"></i>
-                    <span>Logout</span>
+                    <span>Keluar</span>
                   </a>
                 </div>
               </div>
@@ -304,7 +474,7 @@
         </nav>
 
         <!-- Flash Messages -->
-        <div class="px-4 lg:px-6 mt-3">
+        <div class="px-4 lg:px-6 mt-3 flex-shrink-0">
           {% with messages = get_flashed_messages(with_categories=true) %} {% if
           messages %} {% for category, message in messages %}
           <div
@@ -335,25 +505,66 @@
         </div>
 
         <!-- Page Content -->
-        <div class="p-4 pb-20">{% block content %}{% endblock %}</div>
+        <div class="p-4 pb-20 flex-1">
+            {% if page_icon or page_description %}
+            <!-- Consistent Page Header -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl shadow-sm border border-emerald-100 mb-6 overflow-hidden">
+                <div class="relative">
+                    <!-- Decorative background pattern -->
+                    <div class="absolute top-0 right-0 w-64 h-64 opacity-5 text-emerald-600">
+                        <svg viewBox="0 0 200 200" class="w-full h-full">
+                            <path fill="currentColor" d="M44.7,-76.4C58.9,-69.2,71.8,-59.1,79.6,-46.9C87.4,-34.7,90.1,-20.4,86.8,-7.3C83.5,5.8,74.2,17.7,65.8,28.8C57.4,39.9,49.9,50.2,40.4,58.6C30.9,67,19.4,73.5,6.8,75.8C-5.8,78.1,-19.5,76.2,-31.7,70.5C-43.9,64.8,-54.6,55.3,-63.4,44.2C-72.2,33.1,-79.1,20.4,-80.9,7.2C-82.7,-6,-79.4,-19.7,-71.5,-31.2C-63.6,-42.7,-51.1,-52,-38.8,-59.6C-26.5,-67.2,-14.4,-73.1,-0.6,-72.1C13.2,-71.1,26.4,-63.2,30.5,-83.6L44.7,-76.4Z" transform="translate(100 100)" />
+                        </svg>
+                    </div>
+
+                    <div class="relative p-6 md:p-8">
+                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <!-- Left side: Title and description -->
+                            <div class="flex items-center gap-4 flex-1">
+                                {% if page_icon %}
+                                <div class="flex-shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-md flex items-center justify-center">
+                                    <i class="{{ page_icon }} text-white text-xl"></i>
+                                </div>
+                                {% endif %}
+
+                                <div class="flex-1">
+                                    <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+                                        {{ self.page_title() if self.page_title else 'Beranda' }}
+                                    </h1>
+                                    {% if page_description %}
+                                    <p class="text-sm text-gray-600">
+                                        {{ page_description }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Right side: Action buttons -->
+                            {% block page_header_actions %}{% endblock %}
+                        </div>
+                    </div>
+
+                    <!-- Bottom accent line -->
+                    <div class="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
 
         <!-- Footer -->
-        <footer class="bg-white border-t border-gray-200 mt-auto">
+        <footer class="bg-white border-t border-gray-200 mt-auto flex-shrink-0">
           <div class="w-full px-4 lg:px-6 py-4">
             <div
               class="flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0"
             >
               <div class="flex items-center space-x-2 text-sm text-gray-600">
-                <i class="fas fa-graduation-cap text-emerald-600"></i>
+                <i class="fas fa-boxes text-emerald-600"></i>
                 <span
-                  >&copy; 2024 Smart Geo Inventory - Universitas Sumatera
+                  >&copy; 2026 LOKASET - Universitas Sumatera
                   Utara</span
                 >
-              </div>
-              <div class="flex items-center space-x-2 text-sm text-gray-500">
-                <span>Dibuat dengan</span>
-                <i class="fas fa-heart text-red-400"></i>
-                <span>untuk KP USU</span>
               </div>
             </div>
           </div>
@@ -378,42 +589,45 @@
     <!-- Custom JavaScript -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
-    <!-- Sidebar Toggle Script -->
+    <!-- Confirm Helper -->
+    <script src="{{ url_for('static', filename='js/confirm.js') }}"></script>
+
+    <!-- Table Pagination Helper -->
+    <script src="{{ url_for('static', filename='js/pagination.js') }}"></script>
+
+    <!-- Auto-scroll sidebar to active menu -->
     <script>
-      // Toggle Distribusi submenu
-      function toggleDistribusiMenu() {
-        const submenu = document.getElementById("distribusi-submenu");
-        const icon = document.getElementById("distribusi-icon");
+    document.addEventListener('DOMContentLoaded', function() {
+        // Scroll sidebar to active menu item
+        setTimeout(function() {
+            const activeMenu = document.querySelector('#sidebar a[class*="bg-emerald-50"]');
+            if (activeMenu) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                    // Calculate the position to center the active menu
+                    const sidebarHeight = sidebar.clientHeight;
+                    const activeMenuTop = activeMenu.offsetTop;
+                    const activeMenuHeight = activeMenu.clientHeight;
 
-        if (submenu.classList.contains("hidden")) {
-          submenu.classList.remove("hidden");
-          icon.classList.add("rotate-180");
-        } else {
-          submenu.classList.add("hidden");
-          icon.classList.remove("rotate-180");
-        }
-      }
+                    // Scroll to position the active menu in the center of sidebar
+                    sidebar.scrollTo({
+                        top: activeMenuTop - (sidebarHeight / 2) + (activeMenuHeight / 2),
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }, 100);
 
-      // Auto-open submenu if user is on installations or assets page
-      document.addEventListener("DOMContentLoaded", function () {
-        const currentEndpoint = "{{ request.endpoint }}";
-
-        // Check if current page is under Distribusi submenu
-        const isDistribusiPage =
-          currentEndpoint &&
-          (currentEndpoint.includes("installations") ||
-            currentEndpoint.includes("assets") ||
-            currentEndpoint.includes("distribution"));
-
-        if (isDistribusiPage) {
-          const submenu = document.getElementById("distribusi-submenu");
-          const icon = document.getElementById("distribusi-icon");
-          if (submenu) {
-            submenu.classList.remove("hidden");
-            icon.classList.add("rotate-180");
-          }
-        }
-      });
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdowns = document.querySelectorAll('[class*="z-[60]"]');
+            dropdowns.forEach(function(dropdown) {
+                if (!dropdown.previousElementSibling.contains(event.target) && !dropdown.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
+    });
     </script>
 
     {% block extra_js %}{% endblock %}

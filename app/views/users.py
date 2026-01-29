@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.models import User, Warehouse, UserWarehouse
-from app.forms.user_forms import UserForm, UserWarehouseAssignmentForm
+from app.models import User, Warehouse, UserWarehouse, Unit, UserUnit
+from app.forms.user_forms import UserForm, UserWarehouseAssignmentForm, UserUnitAssignmentForm
 from app.utils.decorators import role_required
 from sqlalchemy import or_
 
@@ -45,10 +45,16 @@ def index():
     for user in users:
         user_warehouses[user.id] = [uw.warehouse for uw in user.user_warehouses.all()]
 
+    # Get unit assignments for each user
+    user_units = {}
+    for user in users:
+        user_units[user.id] = [uu.unit for uu in user.user_units.all()]
+
     return render_template('admin/users/index.html',
                          users=users,
                          warehouses=warehouses,
                          user_warehouses=user_warehouses,
+                         user_units=user_units,
                          search=search,
                          role_filter=role_filter,
                          warehouse_filter=warehouse_filter)
@@ -103,10 +109,16 @@ def detail(id):
     warehouse_assignments = user.user_warehouses.all()
     warehouses = [uw.warehouse for uw in warehouse_assignments]
 
+    # Get unit assignments (for unit_staff)
+    unit_assignments = user.user_units.all() if user.role == 'unit_staff' else []
+    units = [uu.unit for uu in unit_assignments]
+
     return render_template('admin/users/detail.html',
                          user=user,
                          warehouse_assignments=warehouse_assignments,
-                         warehouses=warehouses)
+                         warehouses=warehouses,
+                         unit_assignments=unit_assignments,
+                         units=units)
 
 
 @bp.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -180,6 +192,14 @@ def assign_warehouses(id):
                 )
                 db.session.add(user_warehouse)
 
+                # Also update the user's warehouse_id for warehouse_staff
+                if user.role == 'warehouse_staff':
+                    user.warehouse_id = selected_warehouse_id
+            else:
+                # If no warehouse selected, clear the warehouse_id
+                if user.role == 'warehouse_staff':
+                    user.warehouse_id = None
+
             db.session.commit()
             flash(f'Warehouse assignment untuk {user.name} berhasil diupdate!', 'success')
             return redirect(url_for('users.detail', id=id))
@@ -197,26 +217,101 @@ def assign_warehouses(id):
                          warehouses=warehouses)
 
 
-@bp.route('/<int:id>/delete', methods=['POST'])
+@bp.route('/<int:id>/activate', methods=['POST'])
 @login_required
 @role_required('admin')
-def delete(id):
-    """Delete user"""
+def activate(id):
+    """Activate user"""
     user = User.query.get_or_404(id)
 
-    # Prevent deleting self
+    # Prevent activating self (already active)
     if user.id == current_user.id:
-        flash('Tidak bisa menghapus user yang sedang login!', 'danger')
+        flash('Tidak bisa mengubah status user yang sedang login!', 'danger')
         return redirect(url_for('users.index'))
 
     try:
-        # Delete warehouse assignments
-        UserWarehouse.query.filter_by(user_id=id).delete()
-
-        # Delete user
-        user.delete()
-        flash(f'User {user.name} berhasil dihapus!', 'success')
+        user.is_active = True
+        user.save()
+        flash(f'User {user.name} berhasil diaktifkan!', 'success')
     except Exception as e:
         flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
     return redirect(url_for('users.index'))
+
+
+@bp.route('/<int:id>/deactivate', methods=['POST'])
+@login_required
+@role_required('admin')
+def deactivate(id):
+    """Deactivate user"""
+    user = User.query.get_or_404(id)
+
+    # Prevent deactivating self
+    if user.id == current_user.id:
+        flash('Tidak bisa menonaktifkan user yang sedang login!', 'danger')
+        return redirect(url_for('users.index'))
+
+    try:
+        user.is_active = False
+        user.save()
+        flash(f'User {user.name} berhasil dinonaktifkan!', 'success')
+    except Exception as e:
+        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return redirect(url_for('users.index'))
+
+
+@bp.route('/<int:id>/assign-units', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def assign_units(id):
+    """Assign unit to unit staff (single unit)"""
+    user = User.query.get_or_404(id)
+    form = UserUnitAssignmentForm()
+
+    # Only unit_staff can be assigned to units
+    if user.role != 'unit_staff':
+        flash('Hanya user dengan role unit_staff yang bisa diassign ke unit!', 'danger')
+        return redirect(url_for('users.detail', id=id))
+
+    # Populate unit choices
+    units = Unit.query.all()
+    form.unit_id.choices = [(0, '-- Pilih Unit --')] + [(u.id, u.name) for u in units]
+
+    # Get current assignment
+    current_assignment = user.user_units.first()
+    current_unit_id = current_assignment.unit_id if current_assignment else None
+
+    if form.validate_on_submit():
+        try:
+            # Get selected unit
+            selected_unit_id = form.unit_id.data
+
+            # Remove old assignments
+            UserUnit.query.filter_by(user_id=id).delete()
+
+            # Add new assignment if unit is selected
+            if selected_unit_id and selected_unit_id != 0:
+                user_unit = UserUnit(
+                    user_id=id,
+                    unit_id=selected_unit_id,
+                    assigned_by=current_user.id
+                )
+                db.session.add(user_unit)
+
+            db.session.commit()
+            flash(f'Unit assignment untuk {user.name} berhasil diupdate!', 'success')
+            return redirect(url_for('users.detail', id=id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    # Pre-select current assignment
+    form.unit_id.data = current_unit_id or 0
+
+    return render_template('admin/users/assign_units.html',
+                         user=user,
+                         form=form,
+                         units=units)
+

@@ -162,11 +162,13 @@
                             </label>
                             <input type="number"
                                    name="quantity_{{ proc_item.id }}"
+                                   id="quantity_{{ proc_item.id }}"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
                                    placeholder="0"
                                    min="0"
                                    max="{{ proc_item.remaining_quantity }}"
                                    value="{% if proc_item.remaining_quantity > 0 %}{{ proc_item.remaining_quantity }}{% endif %}"
+                                   onchange="updateSerialUnits({{ proc_item.id }}, '{{ proc_item.item.item_code if proc_item.item else 'N/A' }}')"
                                    {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}>
                             {% if proc_item.remaining_quantity == 0 %}
                             <p class="mt-1 text-xs text-green-600">
@@ -176,17 +178,35 @@
                             {% endif %}
                         </div>
 
-                        <!-- Serial Numbers for this item -->
-                        <div>
+                        <!-- Serial Numbers (ONLY for Networking/Server) -->
+                        <div id="serial_number_div_{{ proc_item.id }}" style="{% if proc_item.item and proc_item.item.category and ('jaringan' in proc_item.item.category.name.lower() or 'network' in proc_item.item.category.name.lower() or 'server' in proc_item.item.category.name.lower()) %}display:block;{% else %}display:none;{% endif %}">
                             <label class="block text-xs font-semibold text-gray-700 mb-1">
-                                Serial Numbers (Opsional)
+                                Serial Number <span class="text-red-500">*</span>
                             </label>
                             <textarea name="serial_numbers_{{ proc_item.id }}"
+                                      id="serial_numbers_{{ proc_item.id }}"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm"
                                       rows="3"
-                                      placeholder="Satu serial number per baris"
+                                      placeholder="Contoh:&#13;&#10;SN-001&#13;&#10;SN-002&#13;&#10;SN-003"
+                                      oninput="updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }})"
                                       {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}></textarea>
+                            <div class="mt-1 flex items-center justify-between">
+                                <p class="text-xs text-gray-500">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Wajib untuk kategori Jaringan/Network/Server
+                                </p>
+                                <p id="sn_counter_{{ proc_item.id }}" class="text-xs font-semibold">
+                                    <span id="sn_count_{{ proc_item.id }}" class="text-amber-600">0</span> / {{ proc_item.remaining_quantity }}
+                                </p>
+                            </div>
+                            <p id="sn_warning_{{ proc_item.id }}" class="mt-1 text-xs hidden">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                <span></span>
+                            </p>
                         </div>
+
+                        <!-- Serial Units - Hidden field only -->
+                        <input type="hidden" name="serial_units_{{ proc_item.id }}" id="serial_units_{{ proc_item.id }}">
                     </div>
                 </div>
                 {% endfor %}
@@ -195,7 +215,7 @@
             <div class="mt-3 p-3 bg-purple-50 rounded-lg">
                 <p class="text-xs text-purple-800">
                     <i class="fas fa-info-circle mr-1"></i>
-                    <strong>Petunjuk:</strong> Isi jumlah barang yang diterima untuk setiap item. Serial numbers bersifat opsional.
+                    <strong>Petunjuk:</strong> Isi jumlah barang yang diterima untuk setiap item.
                 </p>
             </div>
         </div>
@@ -206,9 +226,9 @@
                 <i class="fas fa-arrow-left mr-2"></i>
                 Kembali
             </a>
-            <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">
-                <i class="fas fa-save mr-2"></i>
-                Konfirmasi Penerimaan
+            <button type="button" onclick="showConfirmModal()" id="submitBtn" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed">
+                <i class="fas fa-save mr-2 submit-icon"></i>
+                <span class="submit-text">Konfirmasi Penerimaan</span>
             </button>
         </div>
     </form>
@@ -225,11 +245,335 @@
             <ul class="text-sm text-blue-800 space-y-1">
                 <li><i class="fas fa-check-circle mr-2"></i>Pastikan nomor tanda terima sesuai dengan dokumen dari supplier</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Cek kembali jumlah barang yang diterima untuk setiap item</li>
-                <li><i class="fas fa-check-circle mr-2"></i>Serial numbers bersifat opsional, tapi sangat disarankan untuk tracking</li>
+                <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Number</strong>: Wajib diisi untuk kategori Jaringan/Network/Server (satu per baris)</li>
+                <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Unit</strong>: Otomatis di-generate oleh sistem untuk semua barang</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Anda bisa menerima barang sebagian (partial receiving)</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Setelah semua barang lengkap, pengadaan siap diselesaikan</li>
             </ul>
         </div>
     </div>
 </div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-xl animate-fade-in">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-file-invoice text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Konfirmasi Penerimaan Barang</h3>
+                        <p class="text-sm text-gray-500">Pastikan data sudah benar</p>
+                    </div>
+                </div>
+                <button onclick="closeConfirmModal()" class="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times text-gray-600 text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="px-6 py-5">
+                <p class="text-gray-700 mb-4">Apakah data penerimaan barang berikut sudah benar?</p>
+
+                <!-- Summary -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h6 class="font-semibold text-gray-800 mb-3">Ringkasan Penerimaan:</h6>
+
+                    <div class="space-y-2 text-sm">
+                        <div class="flex">
+                            <span class="w-40 text-gray-600">No. Invoice:</span>
+                            <span class="font-medium text-gray-800" id="summaryInvoice">-</span>
+                        </div>
+                        <div class="flex">
+                            <span class="w-40 text-gray-600">Pengadaan #:</span>
+                            <span class="font-medium text-gray-800">{{ procurement.id }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <span class="text-sm text-gray-600">Barang yang diterima:</span>
+                        <div id="summaryItems" class="mt-2 space-y-1 text-sm">
+                            <!-- Items will be listed here -->
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <div class="flex">
+                            <span class="w-40 text-gray-600">Total Diterima:</span>
+                            <span class="font-bold text-blue-600" id="summaryTotal">0 unit</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end gap-3 px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm inline-flex items-center gap-2">
+                    <i class="fas fa-times"></i>
+                    <span>Batal</span>
+                </button>
+                <button onclick="submitForm()" id="modalSubmitBtn" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm inline-flex items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-check modal-submit-icon"></i>
+                    <span class="modal-submit-text">Ya, Konfirmasi</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fade-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fade-in 0.2s ease-out;
+}
+</style>
+
+<script>
+// Store the starting number for each procurement item
+const serialUnitCounters = {};
+
+function updateSerialUnits(procurementItemId, itemCode) {
+    const quantityInput = document.getElementById('quantity_' + procurementItemId);
+    const quantity = parseInt(quantityInput.value) || 0;
+
+    // Initialize counter if not exists
+    if (!serialUnitCounters[procurementItemId]) {
+        serialUnitCounters[procurementItemId] = 1;
+    }
+
+    if (quantity > 0) {
+        // Generate serial units (will be submitted as hidden field)
+        const serialUnits = [];
+        for (let i = 0; i < quantity; i++) {
+            const numStr = String(serialUnitCounters[procurementItemId] + i).padStart(3, '0');
+            serialUnits.push(`${itemCode}-${numStr}`);
+        }
+
+        // Update the hidden field with newline-separated values
+        const hiddenField = document.getElementById('serial_units_' + procurementItemId);
+        if (hiddenField) {
+            hiddenField.value = serialUnits.join('\n');
+        }
+    }
+}
+
+function updateSerialNumberCounter(procurementItemId, expectedCount) {
+    const textarea = document.getElementById('serial_numbers_' + procurementItemId);
+    const countSpan = document.getElementById('sn_count_' + procurementItemId);
+    const warningP = document.getElementById('sn_warning_' + procurementItemId);
+
+    if (!textarea || !countSpan) return;
+
+    // Get all lines and trim whitespace
+    const lines = textarea.value.split('\n').map(line => line.trim()).filter(line => line !== '');
+    const count = lines.length;
+
+    // Check for duplicates within the same textarea
+    const uniqueLines = [...new Set(lines)];
+    const hasDuplicates = uniqueLines.length < count;
+
+    // Update counter display
+    countSpan.textContent = count;
+
+    // Update color based on count and duplicates
+    countSpan.classList.remove('text-amber-600', 'text-green-600', 'text-red-600');
+    if (hasDuplicates) {
+        countSpan.classList.add('text-red-600');
+    } else if (count === 0) {
+        countSpan.classList.add('text-amber-600');
+    } else if (count === expectedCount) {
+        countSpan.classList.add('text-green-600');
+    } else if (count < expectedCount) {
+        countSpan.classList.add('text-amber-600');
+    } else {
+        countSpan.classList.add('text-red-600');
+    }
+
+    // Show/hide warning message
+    if (warningP) {
+        if (hasDuplicates) {
+            warningP.classList.remove('hidden', 'text-amber-600');
+            warningP.classList.add('text-red-600');
+            const duplicateCount = count - uniqueLines.length;
+            warningP.querySelector('span').innerHTML = `<strong>Ada ${duplicateCount} serial number duplikat!</strong> Setiap serial number harus unik.`;
+        } else if (count > expectedCount) {
+            warningP.classList.remove('hidden', 'text-amber-600');
+            warningP.classList.add('text-red-600');
+            warningP.querySelector('span').textContent = `Terlalu banyak! Harap masukkan tepat ${expectedCount} serial number.`;
+        } else if (count > 0 && count < expectedCount) {
+            warningP.classList.remove('hidden', 'text-red-600');
+            warningP.classList.add('text-amber-600');
+            warningP.querySelector('span').textContent = `Masih kurang ${expectedCount - count} serial number lagi.`;
+        } else {
+            warningP.classList.add('hidden');
+        }
+    }
+}
+
+// Call on page load to initialize serial units for ALL items
+document.addEventListener('DOMContentLoaded', function() {
+    {% for proc_item in procurement.items %}
+    {% if proc_item.item %}
+    // Initialize serial units on page load
+    updateSerialUnits({{ proc_item.id }}, '{{ proc_item.item.item_code }}');
+
+    // Initialize serial number counter for networking items
+    {% if proc_item.item and proc_item.item.category and ('jaringan' in proc_item.item.category.name.lower() or 'network' in proc_item.item.category.name.lower() or 'server' in proc_item.item.category.name.lower()) %}
+    updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }});
+    {% endif %}
+    {% endif %}
+    {% endfor %}
+});
+
+// Modal Functions
+function showConfirmModal() {
+    const form = document.querySelector('form');
+
+    // Check form validation first
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const invoiceField = document.querySelector('[name="receipt_number"]');
+    const invoiceValue = invoiceField ? invoiceField.value.trim() : '{{ procurement.receipt_number or "" }}';
+
+    if (!invoiceValue) {
+        alert('Harap isi nomor invoice/tanda terima!');
+        if (invoiceField) {
+            invoiceField.focus();
+        }
+        return;
+    }
+
+    // Check for duplicate serial numbers in networking items
+    const serialNumberTextareas = document.querySelectorAll('[id^="serial_numbers_"]');
+    for (let textarea of serialNumberTextareas) {
+        if (!textarea.disabled && textarea.value.trim()) {
+            const lines = textarea.value.split('\n').map(line => line.trim()).filter(line => line !== '');
+            const uniqueLines = [...new Set(lines)];
+
+            if (uniqueLines.length < lines.length) {
+                const procItemId = textarea.id.replace('serial_numbers_', '');
+                const itemCard = textarea.closest('.bg-gray-50');
+                const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
+
+                alert(`Serial number duplikat ditemukan untuk "${itemName}"!\n\nSetiap serial number harus unik. Mohon periksa kembali input Anda.`);
+                textarea.focus();
+                return;
+            }
+
+            // Also check if count matches expected quantity
+            const procItemId = textarea.id.replace('serial_numbers_', '');
+            const quantityInput = document.getElementById('quantity_' + procItemId);
+            const expectedCount = parseInt(quantityInput?.value) || 0;
+
+            if (lines.length !== expectedCount) {
+                const itemCard = textarea.closest('.bg-gray-50');
+                const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
+
+                alert(`Jumlah serial number (${lines.length}) tidak sesuai dengan jumlah barang (${expectedCount}) untuk "${itemName}"!\n\nUntuk kategori Jaringan/Network/Server, jumlah serial number harus sama dengan jumlah barang yang diterima.`);
+                textarea.focus();
+                return;
+            }
+        }
+    }
+
+    // Get all procurement items
+    const itemCards = document.querySelectorAll('[id^="quantity_"]');
+    let totalReceived = 0;
+    let hasItem = false;
+
+    // Populate summary items
+    const summaryItems = document.getElementById('summaryItems');
+    summaryItems.innerHTML = '';
+
+    itemCards.forEach(input => {
+        const procItemId = input.id.replace('quantity_', '');
+        const quantity = parseInt(input.value) || 0;
+
+        if (quantity > 0) {
+            hasItem = true;
+            totalReceived += quantity;
+
+            // Find item name (need to get from the DOM)
+            const itemCard = input.closest('.bg-gray-50');
+            const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item Unknown';
+            const requestedQty = itemCard.querySelector('.bg-blue-100')?.textContent.trim() || '';
+
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'flex items-start justify-between bg-white p-2 rounded';
+            itemDiv.innerHTML = `
+                <div class="flex-1">
+                    <span class="font-medium text-gray-800">${itemName}</span>
+                    <span class="text-gray-500 text-xs ml-2">(${requestedQty})</span>
+                </div>
+                <span class="font-bold text-blue-600">+${quantity} unit</span>
+            `;
+            summaryItems.appendChild(itemDiv);
+        }
+    });
+
+    if (!hasItem) {
+        alert('Harap isi minimal satu barang yang diterima!');
+        return;
+    }
+
+    // Update summary
+    document.getElementById('summaryInvoice').textContent = invoiceValue;
+    document.getElementById('summaryTotal').textContent = totalReceived + ' unit';
+
+    // Show modal
+    document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    document.getElementById('confirmModal').classList.add('hidden');
+}
+
+function submitForm() {
+    const submitBtn = document.getElementById('submitBtn');
+    const modalSubmitBtn = document.getElementById('modalSubmitBtn');
+    const icon = submitBtn.querySelector('.submit-icon');
+    const text = submitBtn.querySelector('.submit-text');
+    const modalIcon = modalSubmitBtn.querySelector('.modal-submit-icon');
+    const modalText = modalSubmitBtn.querySelector('.modal-submit-text');
+
+    submitBtn.disabled = true;
+    modalSubmitBtn.disabled = true;
+    if (icon) icon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+    if (text) text.textContent = 'Memproses...';
+    if (modalIcon) modalIcon.className = 'fas fa-spinner fa-spin modal-submit-icon';
+    if (modalText) modalText.textContent = 'Memproses...';
+
+    document.querySelector('form').submit();
+}
+
+// Close modal on outside click
+document.getElementById('confirmModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeConfirmModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeConfirmModal();
+    }
+});
+</script>
 {% endblock %}

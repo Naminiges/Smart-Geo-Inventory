@@ -3,7 +3,8 @@ from flask_login import login_required, current_user
 from sqlalchemy import func
 from geoalchemy2.functions import ST_AsGeoJSON
 from app import db
-from app.models import Warehouse, Unit, Distribution, ItemDetail
+from app.models import Warehouse, Unit, Distribution, ItemDetail, Building
+from app.utils.helpers import get_user_warehouse_id
 
 bp = Blueprint('api_map', __name__)
 
@@ -89,7 +90,7 @@ def api_distributions():
     # Filter by user role
     if current_user.is_warehouse_staff():
         distributions = Distribution.query.filter(
-            Distribution.warehouse_id == current_user.warehouse_id
+            Distribution.warehouse_id == get_user_warehouse_id(current_user)
         ).all()
     elif current_user.is_field_staff():
         distributions = Distribution.query.filter(
@@ -192,7 +193,7 @@ def api_all():
         distributions = Distribution.query.all()
     elif current_user.is_warehouse_staff():
         distributions = Distribution.query.filter(
-            Distribution.warehouse_id == current_user.warehouse_id
+            Distribution.warehouse_id == get_user_warehouse_id(current_user)
         ).all()
     else:
         distributions = Distribution.query.filter(
@@ -274,4 +275,54 @@ def api_nearby():
         'success': True,
         'warehouses': warehouse_data,
         'units': unit_data
+    })
+
+
+@bp.route('/buildings')
+@login_required
+def api_buildings():
+    """Get all buildings with their zones and unit details (rooms) as GeoJSON"""
+    buildings = Building.query.all()
+
+    features = []
+    for building in buildings:
+        # Get unit details (rooms) in this building
+        from app.models import UnitDetail
+        unit_details_list = UnitDetail.query.filter_by(building_id=building.id).all()
+        units_data = [{'id': u.id, 'name': u.room_name} for u in unit_details_list]
+
+        # Get coordinates if available
+        coords = building.get_coordinates()
+
+        # Use zone_json if available, otherwise skip
+        if building.zone_json:
+            import json
+            try:
+                zone_data = json.loads(building.zone_json)
+
+                # Only add if geometry exists and is valid
+                if zone_data.get('geometry'):
+                    features.append({
+                        'type': 'Feature',
+                        'geometry': zone_data.get('geometry'),
+                        'properties': {
+                            'id': building.id,
+                            'code': building.code,
+                            'name': building.name,
+                            'address': building.address,
+                            'floor_count': building.floor_count,
+                            'units': units_data,
+                            'units_count': len(units_data),
+                            'latitude': coords['latitude'] if coords else None,
+                            'longitude': coords['longitude'] if coords else None,
+                            'layer': 'building_zone'
+                        }
+                    })
+            except json.JSONDecodeError as e:
+                print(f"Error parsing zone_json for building {building.code}: {e}")
+                continue
+
+    return jsonify({
+        'type': 'FeatureCollection',
+        'features': features
     })

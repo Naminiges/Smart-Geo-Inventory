@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}Terima Distribusi - Smart Geo Inventory{% endblock %}
+{% block page_title %}Terima Distribusi{% endblock %}
+{% set page_icon = 'fas fa-plus-circle' %}
+{% set page_description = 'Terima barang menuju unit Anda' %}
+{% block page_header_actions %}
+<a href="{{ url_for('distributions.receive_history') }}" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all font-semibold shadow-md hover:shadow-lg inline-flex items-center">
+  <i class="fas fa-history mr-2"></i>Riwayat Terima
+</a>
+{% endblock %}
+{% block content %}
+
+<!-- Info Banner -->
+<div class="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+    <div class="flex items-start">
+        <div class="bg-blue-100 rounded-lg p-2 mr-4">
+            <i class="fas fa-truck-loading text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-900 mb-2">Batch Distribusi Yang Perlu Diterima</h4>
+            <p class="text-sm text-blue-800">
+                Berikut adalah daftar batch distribusi yang sedang dalam perjalanan menuju unit Anda.
+                Setiap batch berisi beberapa barang yang dikirim bersamaan dari warehouse.
+                Silakan konfirmasi penerimaan dan upload bukti foto setelah barang diterima.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Distribution Batches -->
+{% if batch_list and batch_list|length > 0 %}
+<div class="space-y-6">
+    {% for batch in batch_list %}
+    <div class="bg-white rounded-xl shadow-md">
+        <!-- Batch Header -->
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-green-100 rounded-lg p-3">
+                        <i class="fas fa-layer-group text-green-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <span class="text-lg font-bold text-gray-800">
+                            {{ batch.group.batch_code }}
+                        </span>
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold ml-2">
+                            <i class="fas fa-boxes mr-1"></i>Batch
+                        </span>
+
+                        <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                            <span>
+                                <i class="fas fa-warehouse mr-1"></i>
+                                {{ batch.warehouse.name if batch.warehouse else 'Warehouse Tidak Diketahui' }}
+                            </span>
+                            <span>
+                                <i class="fas fa-boxes mr-1"></i>
+                                {{ batch.total_items }} Barang
+                            </span>
+                            <span>
+                                <i class="fas fa-clock mr-1"></i>
+                                {{ batch.group.verified_at|format_wib_datetime }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <a href="{{ url_for('distributions.receive_detail', id=batch.distributions[0].id) }}"
+                   class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold inline-flex items-center">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    Terima Batch
+                </a>
+            </div>
+        </div>
+
+        <!-- Items in this batch -->
+        <div class="p-6 bg-gray-50">
+            <h4 class="text-sm font-semibold text-gray-700 mb-4">
+                <i class="fas fa-boxes mr-1"></i>
+                Daftar Barang dalam Batch Ini ({{ batch.total_items }} item)
+            </h4>
+            <div class="overflow-x-auto">
+                <table class="w-full divide-y divide-gray-200 paginated-table">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barang</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial Number</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lokasi Tujuan</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipe</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for dist in batch.distributions %}
+                        <tr>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ dist.item_detail.item.name if dist.item_detail and dist.item_detail.item else 'Item Tidak Diketahui' }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">
+                                    <i class="fas fa-barcode mr-1"></i>
+                                    {{ dist.item_detail.serial_number if dist.item_detail else '-' }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>
+                                    {{ dist.unit_detail.room_name if dist.unit_detail else 'Main Location' }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                {% if dist.status == 'installing' %}
+                                <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-semibold">
+                                    <i class="fas fa-tools mr-1"></i>Instalasi
+                                </span>
+                                {% elif dist.status == 'in_transit' %}
+                                <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-semibold">
+                                    <i class="fas fa-truck mr-1"></i>Transit
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">
+                                    {% if dist.task_type == 'installation' %}
+                                    <i class="fas fa-tools text-indigo-600 mr-1"></i>Instalasi
+                                    {% else %}
+                                    <i class="fas fa-truck text-green-600 mr-1"></i>Pengiriman
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<!-- Empty State -->
+<div class="bg-white rounded-xl shadow-md p-6 text-center">
+    <i class="fas fa-check-circle text-green-500 text-6xl mb-4"></i>
+    <h3 class="text-xl font-semibold text-gray-800 mb-2">Tidak Ada Batch Distribusi Pending</h3>
+    <p class="text-gray-600">Semua batch distribusi sudah diterima. Anda akan melihat batch baru di sini ketika ada barang yang dikirim ke unit Anda.</p>
+</div>
+{% endif %}
+{% endblock %}

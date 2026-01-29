@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if action == 'create' %}Tambah Gedung{% else %}Edit Gedung{% endif %} - Smart Geo Inventory
+{% endblock %}
+
+{% block page_title %}
+{% if action == 'create' %}Tambah Gedung{% else %}Edit Gedung{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="flex items-center gap-2 text-sm text-gray-600">
+        <a href="{{ url_for('buildings.index') }}" class="hover:text-emerald-600">
+            <i class="fas fa-building"></i> Gedung
+        </a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span>{% if action == 'create' %}Tambah Gedung{% else %}Edit Gedung{% endif %}</span>
+    </div>
+</div>
+
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <form method="POST" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Kode Gedung <span class="text-red-500">*</span></label>
+                    <input type="text" name="code" value="{{ form.code.data or '' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                           placeholder="Contoh: GD.A" required>
+                    {% if form.code.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.code.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nama Gedung <span class="text-red-500">*</span></label>
+                    <input type="text" name="name" value="{{ form.name.data or '' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                           placeholder="Contoh: Gedung A" required>
+                    {% if form.name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.name.errors[0] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Alamat <span class="text-red-500">*</span></label>
+                <textarea name="address" rows="3"
+                          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                          placeholder="Alamat lengkap gedung" required>{{ form.address.data or '' }}</textarea>
+                {% if form.address.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.address.errors[0] }}</p>
+                {% endif %}
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Jumlah Lantai</label>
+                    <input type="number" name="floor_count" value="{{ form.floor_count.data or '' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                           placeholder="1" min="1">
+                    {% if form.floor_count.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.floor_count.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <div></div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
+                    <input type="number" step="any" name="latitude" value="{{ form.latitude.data or '' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                           placeholder="Contoh: 3.5952">
+                    {% if form.latitude.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.latitude.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
+                    <input type="number" step="any" name="longitude" value="{{ form.longitude.data or '' }}"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                           placeholder="Contoh: 98.6722">
+                    {% if form.longitude.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.longitude.errors[0] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t">
+                <a href="{{ url_for('buildings.index') }}"
+                   class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fas fa-times mr-2"></i>Batal
+                </a>
+                <button type="submit"
+                        class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium">
+                    <i class="fas fa-save mr-2"></i>Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

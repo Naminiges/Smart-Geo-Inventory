@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SelectField
 from wtforms.validators import DataRequired, Email, Length, Optional
-from app.models import Warehouse
+from app.models import Warehouse, Unit
 
 
 class UserForm(FlaskForm):
@@ -12,10 +12,16 @@ class UserForm(FlaskForm):
     role = SelectField('Role', choices=[
         ('admin', 'Administrator'),
         ('warehouse_staff', 'Warehouse Staff'),
-        ('field_staff', 'Field Staff')
+        ('field_staff', 'Field Staff'),
+        ('unit_staff', 'Unit Staff')
     ], validators=[DataRequired()])
 
 
 class UserWarehouseAssignmentForm(FlaskForm):
     """Form for assigning warehouse to user (single selection)"""
     warehouse_id = SelectField('Warehouse', choices=[], coerce=int, validators=[Optional()])
+
+
+class UserUnitAssignmentForm(FlaskForm):
+    """Form for assigning unit to user (single selection)"""
+    unit_id = SelectField('Unit', choices=[], coerce=int, validators=[Optional()])

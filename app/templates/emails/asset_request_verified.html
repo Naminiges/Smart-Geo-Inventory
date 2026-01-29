@@ -1,0 +1,25 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Permohonan Aset Terverifikasi - #{{ asset_request.id }}{% endblock %}
+
+{% block content %}
+<h2>Permohonan Aset Terverifikasi</h2>
+
+<p>Halo,</p>
+
+<p>Permohonan aset Anda telah diverifikasi oleh admin:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Permohonan:</span> #{{ asset_request.id }}</p>
+    <p><span class="info-label">Unit:</span> {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+    <p><span class="info-label">Tanggal Verifikasi:</span> {{ asset_request.verified_at.strftime('%d/%m/%Y %H:%M') if asset_request.verified_at else '-' }}</p>
+    <p><span class="info-label">Diverifikasi oleh:</span> {{ asset_request.verifier.name if asset_request.verifier else '-' }}</p>
+    <p><span class="info-label">Status:</span> Terverifikasi - Menunggu Distribusi</p>
+</div>
+
+<p>Permohonan Anda sudah diverifikasi dan sedang dalam antrian untuk diproses oleh warehouse staff.</p>
+
+<a href="{{ base_url }}/asset-requests/{{ asset_request.id }}" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight:        
+         + bold; margin: 20px 0;">Lihat Detail Permohonan</a>
+
+{% endblock %}

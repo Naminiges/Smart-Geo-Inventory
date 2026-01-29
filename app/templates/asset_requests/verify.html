@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Verifikasi Permohonan #{{ asset_request.id }} - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Verifikasi Permohonan Aset{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-4">
+    <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="inline-flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+        <i class="fas fa-arrow-left mr-2"></i>
+        Kembali ke Detail
+    </a>
+</div>
+
+<!-- Page Title -->
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Verifikasi Permohonan Aset #{{ asset_request.id }}</h1>
+    <p class="text-gray-500 text-sm mt-1">Review dan verifikasi permohonan dari Unit: {{ asset_request.unit.name if asset_request.unit else '-' }}</p>
+</div>
+
+<!-- Request Summary -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <div class="flex items-center mb-4">
+        <div class="bg-indigo-100 rounded-lg p-3 mr-4">
+            <i class="fas fa-clipboard-list text-indigo-600 text-2xl"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800">Ringkasan Permohonan</h3>
+            <p class="text-sm text-gray-500">{{ asset_request.request_date.strftime('%d/%m/%Y %H:%M') if asset_request.request_date else '-' }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Unit</span>
+            <span class="text-sm font-semibold text-gray-900">{{ asset_request.unit.name if asset_request.unit else '-' }}</span>
+        </div>
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Diajukan oleh</span>
+            <span class="text-sm font-semibold text-gray-900">{{ asset_request.requester.full_name if asset_request.requester else '-' }}</span>
+        </div>
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Jumlah Item</span>
+            <span class="text-sm font-semibold text-gray-900">{{ asset_request.items|length }} item</span>
+        </div>
+        <div class="flex justify-between p-3 bg-gray-50 rounded-lg">
+            <span class="text-sm text-gray-500">Status</span>
+            <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">Pending</span>
+        </div>
+    </div>
+
+    {% if asset_request.request_notes %}
+    <div class="mt-4">
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">Alasan Permohonan:</h4>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <p class="text-sm text-gray-700">{{ asset_request.request_notes }}</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Requested Items -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+        <i class="fas fa-boxes text-green-600 mr-2"></i>
+        Daftar Aset yang Dimohonkan
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">No</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Aset</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Kategori</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Jumlah</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Lokasi (Ruangan)</th>
+                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Catatan Ruangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in asset_request.items %}
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="py-3 px-4 text-sm font-medium text-gray-900">{{ loop.index }}</td>
+                    <td class="py-3 px-4">
+                        <p class="text-sm font-semibold text-gray-900">{{ item.item.name if item.item else '-' }}</p>
+                        {% if item.item and item.item.description %}
+                        <p class="text-xs text-gray-500">{{ item.item.description }}</p>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                            {{ item.item.category.name if item.item and item.item.category else '-' }}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">{{ item.quantity }}</span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-gray-600">
+                        {{ item.unit_detail.room_name if item.unit_detail else '-' }}
+                        {% if item.unit_detail %}
+                        <span class="text-xs text-gray-400">({{ item.unit_detail.floor }})</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4 text-sm text-gray-600">{{ item.room_notes or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Verification Form -->
+<div class="bg-white rounded-xl shadow-md mb-6 p-6">
+    <div class="flex items-center mb-4">
+        <div class="bg-blue-100 rounded-lg p-3 mr-4">
+            <i class="fas fa-clipboard-check text-blue-600 text-2xl"></i>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold text-gray-800">Form Verifikasi</h3>
+            <p class="text-sm text-gray-500">Review permohonan dan berikan catatan verifikasi</p>
+        </div>
+    </div>
+
+    <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <!-- Warehouse Selection -->
+        <div class="mb-6">
+            <label for="{{ form.warehouse_id.id }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-building mr-1 text-purple-600"></i>
+                {{ form.warehouse_id.label.text }} <span class="text-red-600">*</span>
+            </label>
+            <select name="{{ form.warehouse_id.name }}" id="{{ form.warehouse_id.id }}" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all" onchange="checkStockAvailability()" required>
+                <option value="0">-- Pilih Warehouse --</option>
+                {% for warehouse in warehouses %}
+                <option value="{{ warehouse.id }}" {{ 'selected' if form.warehouse_id.data == warehouse.id|string else '' }}>{{ warehouse.name }}</option>
+                {% endfor %}
+            </select>
+            {% if form.warehouse_id.errors %}
+                {% for error in form.warehouse_id.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Stock Availability Info -->
+        <div id="stockInfo" class="mb-6 hidden">
+            {% for warehouse in warehouses %}
+            <div id="stockInfo_{{ warehouse.id }}" class="warehouse-stock-info hidden">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                    <i class="fas fa-boxes mr-1 text-purple-600"></i>
+                    Ketersediaan Stok di {{ warehouse.name }}
+                </h4>
+                <div class="space-y-2">
+                    {% for item in asset_request.items %}
+                    {% set stock_info = warehouse_stock_info[warehouse.id][item.item_id] %}
+                    <div class="flex items-center justify-between p-3 rounded-lg {% if stock_info.is_sufficient %}bg-green-50 border border-green-200{% else %}bg-red-50 border border-red-200{% endif %}">
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-gray-900">{{ item.item.name if item.item else '-' }}</p>
+                            <p class="text-xs text-gray-600">Diminta: {{ stock_info.requested }} unit</p>
+                        </div>
+                        <div class="text-right">
+                            {% if stock_info.is_sufficient %}
+                            <span class="px-3 py-1 bg-green-600 text-white rounded-full text-xs font-semibold">
+                                <i class="fas fa-check-circle mr-1"></i> Tersedia: {{ stock_info.available }}
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-semibold">
+                                <i class="fas fa-exclamation-triangle mr-1"></i> Kurang: {{ stock_info.available }} (butuh {{ stock_info.requested - stock_info.available }} lagi)
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if not warehouse_stock_info[warehouse.id].values()|selectattr('is_sufficient')|list|length == warehouse_stock_info[warehouse.id]|length %}
+                <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-amber-600 mr-2 mt-0.5"></i>
+                        <p class="text-sm text-amber-800">
+                            <strong>Peringatan:</strong> Beberapa barang memiliki stok yang tidak mencukupi. Anda tetap dapat memverifikasi permohonan ini.
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-6">
+            <label for="{{ form.notes.id }}" class="block text-sm font-semibold text-gray-700 mb-2">
+                <i class="fas fa-comment-alt mr-1 text-blue-600"></i>
+                {{ form.notes.label.text }}
+            </label>
+            {{ form.notes(class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all", rows="4", placeholder="Tambahkan catatan verifikasi jika diperlukan...") }}
+            <p class="mt-1 text-xs text-gray-500">Catatan ini akan terlihat oleh unit staff.</p>
+            {% if form.notes.errors %}
+                {% for error in form.notes.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Info Card -->
+        <div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-600 text-xl mr-3 mt-1"></i>
+                <div>
+                    <h4 class="font-semibold text-blue-900 mb-2">Informasi Penting</h4>
+                    <ul class="text-sm text-blue-800 space-y-1">
+                        <li><i class="fas fa-check-circle mr-2"></i>Setelah diverifikasi, permohonan akan masuk ke status "Terverifikasi"</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Permohonan akan muncul di daftar distribusi untuk warehouse staff yang dipilih</li>
+                        <li><i class="fas fa-check-circle mr-2"></i>Warehouse staff akan memproses dan mengirim barang ke unit</li>
+                        <li><i class="fas fa-exclamation-triangle mr-2 text-amber-600"></i>Peringatan stok akan ditampilkan saat warehouse staff memproses distribusi</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+            <a href="{{ url_for('asset_requests.detail', id=asset_request.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
+                <i class="fas fa-times mr-2"></i>
+                Batal
+            </a>
+            <button type="submit" id="verifySubmitBtn" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-green-400 disabled:cursor-not-allowed">
+                <i class="fas fa-check mr-2 verify-icon"></i>
+                <span class="verify-text">Verifikasi Permohonan</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Quick Actions -->
+<div class="bg-white rounded-xl shadow-md p-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Aksi Cepat</h3>
+    <div class="flex flex-wrap gap-3">
+        <button type="button" onclick="toggleRejectModal()" class="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-semibold">
+            <i class="fas fa-times mr-2"></i>
+            Tolak Permohonan
+        </button>
+        <a href="{{ url_for('asset_requests.index', status='pending') }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-semibold">
+            <i class="fas fa-list mr-2"></i>
+            Lihat Permohonan Lain
+        </a>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="fixed inset-0 backdrop-blur-sm bg-gray-900/40 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+        <form method="POST" action="{{ url_for('asset_requests.reject', id=asset_request.id) }}">
+            <div class="p-6 border-b border-gray-200 bg-red-50">
+                <h3 class="text-lg font-semibold text-red-900">Tolak Permohonan</h3>
+            </div>
+            <div class="p-6">
+                <div class="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-lg mr-2 mt-0.5"></i>
+                        <p class="text-sm text-yellow-800">
+                            <strong>Perhatian:</strong> Permohonan yang ditolak tidak dapat diproses lebih lanjut.
+                        </p>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label for="rejection_reason" class="block text-sm font-semibold text-gray-700 mb-2">
+                        Alasan Penolakan <span class="text-red-600">*</span>
+                    </label>
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <textarea class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500" id="rejection_reason" name="rejection_reason" rows="4" required placeholder="Jelaskan mengapa permohonan ini ditolak..."></textarea>
+                </div>
+            </div>
+            <div class="p-6 border-t border-gray-200 flex justify-end gap-3">
+                <button type="button" onclick="toggleRejectModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
+                    Batal
+                </button>
+                <button type="submit" id="rejectSubmitBtn" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-times mr-2"></i>
+                    <span id="rejectBtnText">Tolak Permohonan</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleRejectModal() {
+    const modal = document.getElementById('rejectModal');
+    if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function checkStockAvailability() {
+    const warehouseSelect = document.getElementById('{{ form.warehouse_id.id }}');
+    const selectedWarehouseId = warehouseSelect.value;
+    const stockInfoDiv = document.getElementById('stockInfo');
+
+    // Hide all warehouse stock info first
+    document.querySelectorAll('.warehouse-stock-info').forEach(function(el) {
+        el.classList.add('hidden');
+    });
+
+    if (selectedWarehouseId) {
+        // Show the stock info for selected warehouse
+        const selectedStockInfo = document.getElementById('stockInfo_' + selectedWarehouseId);
+        if (selectedStockInfo) {
+            stockInfoDiv.classList.remove('hidden');
+            selectedStockInfo.classList.remove('hidden');
+        }
+    } else {
+        stockInfoDiv.classList.add('hidden');
+    }
+}
+
+// Auto-check on page load if warehouse is pre-selected
+document.addEventListener('DOMContentLoaded', function() {
+    const warehouseSelect = document.getElementById('{{ form.warehouse_id.id }}');
+    if (warehouseSelect && warehouseSelect.value) {
+        checkStockAvailability();
+    }
+});
+
+// Add loading state for reject modal form
+const rejectModalForm = document.querySelector('#rejectModal form');
+if (rejectModalForm) {
+    rejectModalForm.addEventListener('submit', function() {
+        const btn = document.getElementById('rejectSubmitBtn');
+        const btnText = document.getElementById('rejectBtnText');
+        btn.disabled = true;
+        btnText.textContent = 'Memproses...';
+    });
+}
+
+// Add loading state for verify form
+const verifyForm = document.querySelector('form[action*="/verify"]');
+if (verifyForm) {
+    verifyForm.addEventListener('submit', function() {
+        const btn = document.getElementById('verifySubmitBtn');
+        const verifyIcon = btn.querySelector('.verify-icon');
+        const verifyText = btn.querySelector('.verify-text');
+        btn.disabled = true;
+        verifyIcon.className = 'fas fa-spinner fa-spin mr-2 verify-icon';
+        verifyText.textContent = 'Memverifikasi...';
+    });
+}
+</script>
+{% endblock %}

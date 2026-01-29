@@ -3,11 +3,14 @@ from flask_login import login_user, logout_user, current_user
 from app import db
 from app.models import User, ActivityLog
 from app.forms import LoginForm
+from app.utils.helpers import get_user_warehouse_id
+from app.utils.rate_limit_helpers import api_auth_limit
 
 bp = Blueprint('api_auth', __name__)
 
 
 @bp.route('/login', methods=['POST'])
+@api_auth_limit  # Apply strict rate limiting for login (10 per minute)
 def api_login():
     """API endpoint for login"""
     form = LoginForm()
@@ -65,6 +68,6 @@ def api_me():
             'name': current_user.name,
             'email': current_user.email,
             'role': current_user.role,
-            'warehouse_id': current_user.warehouse_id
+            'warehouse_id': get_user_warehouse_id(current_user)
         }
     })

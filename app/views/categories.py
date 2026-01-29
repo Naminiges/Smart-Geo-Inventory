@@ -49,11 +49,20 @@ def create():
                 flash('Kategori dengan nama ini sudah ada!', 'danger')
                 return render_template('admin/categories/create.html', form=form)
 
+            # Check if category code already exists
+            if Category.query.filter_by(code=form.code.data.upper()).first():
+                flash('Kategori dengan kode ini sudah ada!', 'danger')
+                return render_template('admin/categories/create.html', form=form)
+
             # Create category
-            category = Category(name=form.name.data)
+            category = Category(
+                name=form.name.data,
+                code=form.code.data.upper(),  # Convert to uppercase
+                description=form.description.data
+            )
             category.save()
 
-            flash(f'Kategori {category.name} berhasil dibuat!', 'success')
+            flash(f'Kategori {category.name} ({category.code}) berhasil dibuat!', 'success')
             return redirect(url_for('categories.index'))
 
         except Exception as e:
@@ -82,11 +91,23 @@ def edit(id):
                 flash('Kategori dengan nama ini sudah ada!', 'danger')
                 return render_template('admin/categories/edit.html', category=category, form=form)
 
+            # Check if category code already exists (excluding current)
+            existing_code = Category.query.filter(
+                Category.code == form.code.data.upper(),
+                Category.id != id
+            ).first()
+
+            if existing_code:
+                flash('Kategori dengan kode ini sudah ada!', 'danger')
+                return render_template('admin/categories/edit.html', category=category, form=form)
+
             # Update category
             category.name = form.name.data
+            category.code = form.code.data.upper()  # Convert to uppercase
+            category.description = form.description.data
             category.save()
 
-            flash(f'Kategori {category.name} berhasil diupdate!', 'success')
+            flash(f'Kategori {category.name} ({category.code}) berhasil diupdate!', 'success')
             return redirect(url_for('categories.index'))
 
         except Exception as e:

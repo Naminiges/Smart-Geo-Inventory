@@ -1,0 +1,678 @@
+{% extends "base.html" %}
+
+{% block title %}Pindahkan Barang - Smart Geo Inventory{% endblock %}
+
+{% block page_title %}Pindahkan Barang{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="flex items-center gap-2 text-sm text-gray-600">
+        <a href="{{ url_for('asset_transfer.index') }}" class="hover:text-emerald-600">
+            <i class="fas fa-exchange-alt"></i> Pemindahan
+        </a>
+        <i class="fas fa-chevron-right text-xs"></i>
+        <span>Form Pemindahan</span>
+    </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="mb-4 p-4 rounded-lg border {% if category == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-800{% elif category == 'danger' %}bg-red-50 border-red-200 text-red-800{% elif category == 'warning' %}bg-yellow-50 border-yellow-200 text-yellow-800{% else %}bg-blue-50 border-blue-200 text-blue-800{% endif %}">
+            <div class="flex items-center">
+                <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-times-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} mr-2"></i>
+                <span>{{ message }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<!-- One form wrapping everything -->
+<form method="POST" action="{{ url_for('asset_transfer.create') }}" id="transferForm">
+    {{ form.hidden_tag() }}
+
+    <!-- Hidden fields for WTForms validation (values will be ignored in backend) -->
+    {{ form.target_unit_id(value="", style="display:none") }}
+    {{ form.target_unit_detail_id(value="", style="display:none") }}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- LEFT COLUMN - Source (Lokasi Saat Ini) -->
+        <div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div class="flex items-center mb-6">
+                    <div class="inline-flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mr-3">
+                        <i class="fas fa-arrow-up text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Lokasi Saat Ini</h3>
+                        <p class="text-sm text-gray-500">Pilih lokasi asal barang</p>
+                    </div>
+                </div>
+
+                <!-- Source Unit -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Unit Asal <span class="text-red-500">*</span>
+                    </label>
+                    {{ form.source_unit_id(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors", id="source_unit_id") }}
+                    {% if form.source_unit_id.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.source_unit_id.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Source Item -->
+                <div class="mb-5">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Barang yang Dipindahkan <span class="text-red-500">*</span>
+                    </label>
+                    <p class="mt-1 text-sm text-gray-500 mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Pilih unit di atas untuk melihat daftar barang. Centang barang yang ingin dipindahkan.
+                    </p>
+
+                    <!-- Items Container -->
+                    <div id="items_container" class="border border-gray-300 rounded-lg p-4 bg-gray-50 max-h-64 overflow-y-auto">
+                        <p class="text-sm text-gray-500 text-center py-4">-- Pilih Unit Terlebih Dahulu --</p>
+                    </div>
+
+                    <!-- Selected Items Summary -->
+                    <div id="selected_items_summary" class="hidden mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-semibold text-blue-900">
+                                    <span id="selected_count">0</span> barang dipilih
+                                </p>
+                            </div>
+                            <button type="button" id="clear_selection" class="text-sm text-red-600 hover:text-red-700 font-medium">
+                                <i class="fas fa-times mr-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if form.source_item_detail_id.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.source_item_detail_id.errors[0] }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Hidden input to store selected item IDs -->
+                <input type="hidden" name="selected_items" id="selected_items" value="">
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN - Target (Lokasi Tujuan) -->
+        <div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center mb-6">
+                <div class="inline-flex items-center justify-center w-10 h-10 bg-emerald-100 rounded-lg mr-3">
+                    <i class="fas fa-arrow-down text-emerald-600"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Lokasi Tujuan</h3>
+                    <p class="text-sm text-gray-500">Pilih lokasi tujuan barang</p>
+                </div>
+            </div>
+
+            <!-- Transfer Type Tabs -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-3">
+                    Jenis Pemindahan <span class="text-red-500">*</span>
+                </label>
+                <div class="flex border border-gray-300 rounded-lg overflow-hidden">
+                    <button type="button" class="transfer-tab flex-1 px-4 py-3 text-sm font-medium transition-colors border-r border-gray-300 last:border-r-0" data-tab="room">
+                        <i class="fas fa-door-open mr-2"></i>Pindah Ruangan
+                    </button>
+                    <button type="button" class="transfer-tab flex-1 px-4 py-3 text-sm font-medium transition-colors border-r border-gray-300 last:border-r-0" data-tab="unit">
+                        <i class="fas fa-building mr-2"></i>Pindah Unit
+                    </button>
+                    <button type="button" class="transfer-tab flex-1 px-4 py-3 text-sm font-medium transition-colors" data-tab="both">
+                        <i class="fas fa-exchange-alt mr-2"></i>Pindah Lengkap
+                    </button>
+                </div>
+                <input type="hidden" name="transfer_type" id="transfer_type" value="room">
+                <p class="mt-2 text-sm text-gray-500" id="tab_help">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <span id="tab_help_text">Pindahkan barang ke ruangan berbeda dalam unit yang sama</span>
+                </p>
+            </div>
+
+            <!-- Target Room Only (for Pindah Ruangan) -->
+            <div class="tab-content mb-5" id="tab_room">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Ruangan Tujuan <span class="text-red-500">*</span>
+                </label>
+                <select id="target_unit_detail_id_room" name="target_unit_detail_id_room" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50" disabled>
+                    <option value="">-- Pilih Ruangan Tujuan --</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Pilih ruangan tujuan (semua ruangan ditampilkan kecuali ruangan asal)
+                </p>
+            </div>
+
+            <!-- Target Unit Only (for Pindah Unit) -->
+            <div class="tab-content mb-5 hidden" id="tab_unit">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Unit Tujuan <span class="text-red-500">*</span>
+                </label>
+                <select id="target_unit_id_unit" name="target_unit_id_unit" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50" disabled>
+                    <option value="">-- Pilih Unit Tujuan --</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Pilih unit tujuan (ruangan barang akan tetap sama)
+                </p>
+            </div>
+
+            <!-- Target Unit and Room (for Pindah Lengkap) -->
+            <div class="tab-content mb-5 hidden" id="tab_both">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Unit Tujuan <span class="text-red-500">*</span>
+                    </label>
+                    <select id="target_unit_id_both" name="target_unit_id_both" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50" disabled>
+                        <option value="">-- Pilih Unit Tujuan --</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Pilih unit tujuan (untuk catatan perpindahan)
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Ruangan Tujuan <span class="text-red-500">*</span>
+                    </label>
+                    <select id="target_unit_detail_id_both" name="target_unit_detail_id_both" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors bg-gray-50" disabled>
+                        <option value="">-- Pilih Ruangan Tujuan --</option>
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Pilih ruangan tujuan (semua ruangan dari semua unit ditampilkan)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="mb-5">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Catatan</label>
+                {{ form.notes(class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors", rows="3", placeholder="Tambahkan catatan jika diperlukan...") }}
+            </div>
+
+            <!-- Submit Buttons -->
+            <div class="flex gap-3 pt-4 border-t">
+                <button type="submit" class="flex-1 px-6 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed" id="submitBtn" disabled>
+                    <i class="fas fa-exchange-alt mr-2"></i>
+                    Pindahkan Barang
+                </button>
+                <a href="{{ url_for('asset_transfer.index') }}" class="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fas fa-times mr-2"></i>
+                    Batal
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceUnitSelect = document.getElementById('source_unit_id');
+    const itemsContainer = document.getElementById('items_container');
+    const selectedItemsSummary = document.getElementById('selected_items_summary');
+    const selectedCount = document.getElementById('selected_count');
+    const clearSelectionBtn = document.getElementById('clear_selection');
+    const selectedItemsInput = document.getElementById('selected_items');
+    const transferTypeInput = document.getElementById('transfer_type');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Tab elements
+    const tabs = document.querySelectorAll('.transfer-tab');
+    const tabContents = {
+        room: document.getElementById('tab_room'),
+        unit: document.getElementById('tab_unit'),
+        both: document.getElementById('tab_both')
+    };
+    const tabHelpText = document.getElementById('tab_help_text');
+
+    // Form fields
+    const targetRoomSelect = document.getElementById('target_unit_detail_id_room');
+    const targetUnitSelect = document.getElementById('target_unit_id_unit');
+    const targetUnitSelectBoth = document.getElementById('target_unit_id_both');
+    const targetRoomSelectBoth = document.getElementById('target_unit_detail_id_both');
+
+    // Help text for each tab
+    const helpTexts = {
+        room: 'Pindahkan barang ke ruangan berbeda (unit tetap sama)',
+        unit: 'Pindahkan barang ke unit berbeda (ruangan tetap sama)',
+        both: 'Pindahkan barang ke unit dan ruangan yang berbeda'
+    };
+
+    // Check if there are form errors (validation failed)
+    var hasErrors = {% if form.source_item_detail_id.errors or form.target_unit_detail_id.errors or form.target_unit_id.errors %}true{% else %}false{% endif %};
+    var previouslySelectedTargetRoom = {% if form.target_unit_detail_id.data %}{{ form.target_unit_detail_id.data }}{% else %}null{% endif %};
+    var previouslySelectedTargetUnit = {% if form.target_unit_id.data %}{{ form.target_unit_id.data }}{% else %}null{% endif %};
+    var previouslySelectedSourceUnit = {% if form.source_unit_id.data %}{{ form.source_unit_id.data }}{% else %}null{% endif %};
+    var previouslySelectedTransferType = {% if request.form.get('transfer_type') %}"{{ request.form.get('transfer_type') }}"{% else %}"room"{% endif %};
+
+    let selectedItems = new Map(); // Store selected items: Map<item_id, item_data>
+    let activeTab = 'room'; // Default tab
+
+    // Initialize fields as disabled via JavaScript (not HTML attribute)
+    targetRoomSelect.disabled = true;
+    targetUnitSelect.disabled = true;
+    targetUnitSelectBoth.disabled = true;
+    targetRoomSelectBoth.disabled = true;
+
+    // Tab switching functionality
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+
+    function switchTab(tabName) {
+        activeTab = tabName;
+        transferTypeInput.value = tabName;
+
+        // Update tab button styles
+        tabs.forEach(tab => {
+            if (tab.dataset.tab === tabName) {
+                tab.classList.remove('bg-white', 'text-gray-700', 'hover:bg-gray-50');
+                tab.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700');
+            } else {
+                tab.classList.remove('bg-emerald-600', 'text-white', 'hover:bg-emerald-700');
+                tab.classList.add('bg-white', 'text-gray-700', 'hover:bg-gray-50');
+            }
+        });
+
+        // Show/hide tab content
+        Object.keys(tabContents).forEach(key => {
+            if (key === tabName) {
+                tabContents[key].classList.remove('hidden');
+            } else {
+                tabContents[key].classList.add('hidden');
+            }
+        });
+
+        // Update help text
+        tabHelpText.textContent = helpTexts[tabName];
+
+        // Reload data if needed based on tab
+        if (tabName === 'room') {
+            if (selectedItems.size > 0) {
+                loadTargetRoomsForSelectedItems();
+            }
+        } else if (tabName === 'unit') {
+            loadTargetUnits();
+        } else if (tabName === 'both') {
+            loadTargetUnits();
+            if (selectedItems.size > 0) {
+                loadTargetRoomsForSelectedItems();
+            } else {
+                // Load all rooms even if no items selected yet
+                loadTargetRooms(targetRoomSelectBoth, []);
+            }
+        }
+    }
+
+    // Initialize first tab as active
+    switchTab(previouslySelectedTransferType || 'room');
+
+    // Clear selection button
+    clearSelectionBtn.addEventListener('click', function() {
+        selectedItems.clear();
+        updateSelectedItemsSummary();
+        updateCheckboxes();
+        submitBtn.disabled = true;
+    });
+
+    // Load items when source unit is selected
+    sourceUnitSelect.addEventListener('change', function() {
+        const unitId = this.value;
+        if (unitId) {
+            fetch(`/asset-transfer/api/unit/${unitId}/items`)
+                .then(response => response.json())
+                .then(data => {
+                    itemsContainer.innerHTML = '';
+                    itemsContainer.classList.remove('bg-gray-50');
+
+                    if (data.success && data.items.length > 0) {
+                        // Group items by room
+                        const itemsByRoom = {};
+                        data.items.forEach(item => {
+                            const room = item.current_room;
+                            if (!itemsByRoom[room]) {
+                                itemsByRoom[room] = [];
+                            }
+                            itemsByRoom[room].push(item);
+                        });
+
+                        // Render items grouped by room
+                        Object.keys(itemsByRoom).forEach(room => {
+                            const roomDiv = document.createElement('div');
+                            roomDiv.className = 'mb-4';
+
+                            const roomLabel = document.createElement('div');
+                            roomLabel.className = 'text-xs font-semibold text-gray-600 mb-2 bg-gray-100 px-2 py-1 rounded';
+                            roomLabel.innerHTML = `<i class="fas fa-door-open mr-1"></i>${room}`;
+                            roomDiv.appendChild(roomLabel);
+
+                            itemsByRoom[room].forEach(item => {
+                                const itemDiv = document.createElement('div');
+                                itemDiv.className = 'flex items-center p-2 hover:bg-gray-50 rounded mb-1';
+                                itemDiv.innerHTML = `
+                                    <input type="checkbox" id="item_${item.id}" value="${item.id}"
+                                        class="item-checkbox w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
+                                        data-item-id="${item.id}"
+                                        data-item-name="${item.item_name}"
+                                        data-serial-number="${item.serial_number}"
+                                        data-current-room="${item.current_room}"
+                                        data-unit-detail-id="${item.unit_detail_id}">
+                                    <label for="item_${item.id}" class="ml-3 text-sm text-gray-700 cursor-pointer flex-1">
+                                        <span class="font-medium">${item.item_name}</span>
+                                        <span class="text-gray-500 ml-2">(${item.serial_number})</span>
+                                    </label>
+                                `;
+                                roomDiv.appendChild(itemDiv);
+
+                                // Add checkbox event listener
+                                const checkbox = itemDiv.querySelector('.item-checkbox');
+                                checkbox.addEventListener('change', function() {
+                                    handleItemSelection(this);
+                                });
+                            });
+
+                            itemsContainer.appendChild(roomDiv);
+                        });
+
+                        // Update submit button state
+                        if (selectedItems.size > 0) {
+                            submitBtn.disabled = false;
+                        }
+                    } else {
+                        itemsContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">-- Tidak ada barang --</p>';
+                        itemsContainer.classList.add('bg-gray-50');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading items:', error);
+                    itemsContainer.innerHTML = '<p class="text-sm text-red-500 text-center py-4">-- Error memuat data --</p>';
+                    itemsContainer.classList.add('bg-gray-50');
+                });
+        } else {
+            itemsContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">-- Pilih Unit Terlebih Dahulu --</p>';
+            itemsContainer.classList.add('bg-gray-50');
+        }
+
+        // Clear selected items when unit changes
+        selectedItems.clear();
+        updateSelectedItemsSummary();
+        submitBtn.disabled = true;
+    });
+
+    // Handle item selection
+    function handleItemSelection(checkbox) {
+        const itemId = parseInt(checkbox.dataset.itemId);
+        const itemName = checkbox.dataset.itemName;
+        const serialNumber = checkbox.dataset.serialNumber;
+        const currentRoom = checkbox.dataset.currentRoom;
+        const unitDetailId = parseInt(checkbox.dataset.unitDetailId);
+
+        if (checkbox.checked) {
+            selectedItems.set(itemId, {
+                id: itemId,
+                name: itemName,
+                serialNumber: serialNumber,
+                currentRoom: currentRoom,
+                unitDetailId: unitDetailId
+            });
+        } else {
+            selectedItems.delete(itemId);
+        }
+
+        updateSelectedItemsSummary();
+        loadTargetRoomsForSelectedItems();
+        updateSubmitButton();
+    }
+
+    // Update selected items summary
+    function updateSelectedItemsSummary() {
+        const count = selectedItems.size;
+        selectedCount.textContent = count;
+
+        if (count > 0) {
+            selectedItemsSummary.classList.remove('hidden');
+        } else {
+            selectedItemsSummary.classList.add('hidden');
+        }
+
+        // Update hidden input
+        selectedItemsInput.value = Array.from(selectedItems.keys()).join(',');
+    }
+
+    // Update checkboxes based on selected items
+    function updateCheckboxes() {
+        const checkboxes = itemsContainer.querySelectorAll('.item-checkbox');
+        checkboxes.forEach(checkbox => {
+            const itemId = parseInt(checkbox.dataset.itemId);
+            checkbox.checked = selectedItems.has(itemId);
+        });
+    }
+
+    // Update submit button state
+    function updateSubmitButton() {
+        // Check if we have selected items and target location is selected
+        let hasTargetLocation = false;
+
+        if (activeTab === 'room') {
+            hasTargetLocation = targetRoomSelect.value !== '';
+        } else if (activeTab === 'unit') {
+            hasTargetLocation = targetUnitSelect.value !== '';
+        } else if (activeTab === 'both') {
+            hasTargetLocation = targetRoomSelectBoth.value !== '';
+        }
+
+        submitBtn.disabled = !(selectedItems.size > 0 && hasTargetLocation);
+    }
+
+    // Load target rooms when items are selected
+    function loadTargetRoomsForSelectedItems() {
+        if (selectedItems.size === 0) return;
+
+        // Collect all unit detail IDs from selected items
+        const excludedRoomIds = Array.from(selectedItems.values()).map(item => item.unitDetailId);
+        console.log('Loading rooms, excluding:', excludedRoomIds);
+
+        // Load rooms for all active tabs
+        if (activeTab === 'room') {
+            loadTargetRooms(targetRoomSelect, excludedRoomIds);
+        } else if (activeTab === 'both') {
+            loadTargetRooms(targetRoomSelectBoth, excludedRoomIds);
+        }
+    }
+
+    // Load target rooms
+    function loadTargetRooms(selectElement, excludedRoomIds = []) {
+        fetch('/asset-transfer/api/rooms')
+            .then(response => response.json())
+            .then(data => {
+                selectElement.innerHTML = '<option value="">-- Pilih Ruangan Tujuan --</option>';
+                selectElement.classList.remove('bg-gray-50');
+                selectElement.disabled = false;
+                if (data.success && data.rooms.length > 0) {
+                    data.rooms.forEach(room => {
+                        // Skip the excluded rooms (source rooms of selected items)
+                        if (excludedRoomIds.includes(room.id)) {
+                            console.log('Skipping room:', room.id, room.label);
+                            return;
+                        }
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = room.label;
+                        selectElement.appendChild(option);
+                    });
+
+                    // Restore previously selected value if exists
+                    if (previouslySelectedTargetRoom) {
+                        selectElement.value = previouslySelectedTargetRoom;
+                    }
+                } else {
+                    selectElement.innerHTML = '<option value="">-- Tidak ada ruangan --</option>';
+                    selectElement.classList.add('bg-gray-50');
+                }
+                updateSubmitButton();
+            })
+            .catch(error => {
+                console.error('Error loading rooms:', error);
+                selectElement.innerHTML = '<option value="">-- Error memuat data --</option>';
+                selectElement.classList.add('bg-gray-50');
+                updateSubmitButton();
+            });
+    }
+
+    // Load target units
+    function loadTargetUnits() {
+        console.log('[loadTargetUnits] targetUnitSelect:', targetUnitSelect, 'targetUnitSelectBoth:', targetUnitSelectBoth);
+
+        fetch('/asset-transfer/api/units')
+            .then(response => response.json())
+            .then(data => {
+                console.log('[loadTargetUnits] Data received:', data);
+
+                // Update both unit selects
+                [targetUnitSelect, targetUnitSelectBoth].forEach(selectElement => {
+                    if (!selectElement) {
+                        console.log('[loadTargetUnits] Skipping null element');
+                        return;
+                    }
+
+                    console.log(`[loadTargetUnits] Populating ${selectElement.id}`);
+
+                    selectElement.innerHTML = '<option value="">-- Pilih Unit Tujuan --</option>';
+                    selectElement.classList.remove('bg-gray-50');
+                    selectElement.disabled = false;
+
+                    if (data.success && data.units.length > 0) {
+                        data.units.forEach(unit => {
+                            // Skip the source unit
+                            if (unit.id == sourceUnitSelect.value) return;
+
+                            const option = document.createElement('option');
+                            option.value = unit.id;
+                            option.textContent = unit.name;
+                            selectElement.appendChild(option);
+                        });
+
+                        console.log(`[loadTargetUnits] ${selectElement.id} now has ${selectElement.options.length} options`);
+
+                        // Restore previously selected value if exists
+                        if (previouslySelectedTargetUnit) {
+                            selectElement.value = previouslySelectedTargetUnit;
+                        }
+                    } else {
+                        selectElement.innerHTML = '<option value="">-- Tidak ada unit tersedia --</option>';
+                        selectElement.classList.add('bg-gray-50');
+                    }
+                });
+
+                submitBtn.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error loading units:', error);
+                [targetUnitSelect, targetUnitSelectBoth].forEach(selectElement => {
+                    if (!selectElement) return;
+                    selectElement.innerHTML = '<option value="">-- Error memuat data --</option>';
+                    selectElement.classList.add('bg-gray-50');
+                });
+                submitBtn.disabled = true;
+            });
+    }
+
+    // Event listeners for target unit changes (for "both" tab)
+    // Note: We don't need to reload rooms when unit changes in "both" tab
+    // because we show ALL rooms anyway
+
+    // Load all rooms for "both" tab
+    // Add event listeners for target changes to enable submit
+    console.log('Setting up event listeners...');
+    console.log('targetRoomSelect:', targetRoomSelect);
+    console.log('targetUnitSelect:', targetUnitSelect);
+    console.log('targetRoomSelectBoth:', targetRoomSelectBoth);
+    console.log('targetUnitSelectBoth:', targetUnitSelectBoth);
+
+    if (targetRoomSelect) {
+        targetRoomSelect.addEventListener('change', function() {
+            console.log('targetRoomSelect changed to:', this.value);
+            updateSubmitButton();
+        });
+    }
+
+    if (targetUnitSelect) {
+        targetUnitSelect.addEventListener('change', function() {
+            console.log('targetUnitSelect changed to:', this.value);
+            updateSubmitButton();
+        });
+    }
+
+    if (targetRoomSelectBoth) {
+        targetRoomSelectBoth.addEventListener('change', function() {
+            console.log('targetRoomSelectBoth changed to:', this.value);
+            updateSubmitButton();
+        });
+    }
+
+    if (targetUnitSelectBoth) {
+        targetUnitSelectBoth.addEventListener('change', function() {
+            console.log('targetUnitSelectBoth changed to:', this.value);
+            updateSubmitButton();
+        });
+    }
+
+    // CRITICAL: Enable ALL disabled fields right before form submission
+    // This ensures disabled fields' values are included in the form submission
+    document.getElementById('transferForm').addEventListener('submit', function(e) {
+        console.log('=== FORM SUBMIT DEBUG ===');
+        console.log('Active tab:', activeTab);
+        console.log('Selected items:', Array.from(selectedItems.keys()));
+
+        // Log all field values before enabling
+        console.log('BEFORE enable:');
+        console.log('targetRoomSelect.value:', targetRoomSelect ? targetRoomSelect.value : 'null');
+        console.log('targetUnitSelect.value:', targetUnitSelect ? targetUnitSelect.value : 'null');
+        console.log('targetUnitSelectBoth.value:', targetUnitSelectBoth ? targetUnitSelectBoth.value : 'null');
+        console.log('targetRoomSelectBoth.value:', targetRoomSelectBoth ? targetRoomSelectBoth.value : 'null');
+        console.log('transferTypeInput.value:', transferTypeInput.value);
+
+        // Enable ALL fields so their values are submitted
+        const allSelects = [
+            targetRoomSelect,
+            targetUnitSelect,
+            targetUnitSelectBoth,
+            targetRoomSelectBoth
+        ];
+
+        allSelects.forEach(select => {
+            if (select) {
+                console.log(`Enabling ${select.id}, current value: ${select.value}`);
+                select.disabled = false;
+            }
+        });
+
+        console.log('AFTER enable:');
+        console.log('targetRoomSelect.value:', targetRoomSelect ? targetRoomSelect.value : 'null');
+        console.log('targetUnitSelect.value:', targetUnitSelect ? targetUnitSelect.value : 'null');
+        console.log('targetUnitSelectBoth.value:', targetUnitSelectBoth ? targetUnitSelectBoth.value : 'null');
+        console.log('targetRoomSelectBoth.value:', targetRoomSelectBoth ? targetRoomSelectBoth.value : 'null');
+        console.log('========================');
+    });
+
+    // If form has errors, reload data on page load
+    if (hasErrors) {
+        if (previouslySelectedSourceUnit) {
+            // Trigger source unit change to load items
+            sourceUnitSelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
+{% endblock %}

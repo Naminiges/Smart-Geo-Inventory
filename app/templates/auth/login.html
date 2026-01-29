@@ -1,74 +1,52 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="overflow-x-hidden">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Smart Geo Inventory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Login - SAPA PSI</title>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#047857',
-                        secondary: '#64748b',
-                    }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        @media (max-width: 768px) {
-            .main-container {
-                flex-direction: column !important;
-            }
-            #map {
-                flex: 1;
-                min-height: 40vh;
-            }
-            .sidebar {
-                flex: 2;
-                padding: 20px !important;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png"/>
 </head>
-<body>
-    <div class="main-container flex h-screen w-full overflow-hidden">
-        <div id="map" class="flex-3 h-full z-10"></div>
+<body class="bg-gradient-to-br from-white via-emerald-50 to-white overflow-x-hidden min-h-screen">
 
-        <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-10 bg-primary shadow-2xl border-l border-white/10 z-20 overflow-hidden">
-            <!-- Overlay for blur effect -->
-            <div class="absolute inset-0 bg-black/20 backdrop-blur-sm z-0"></div>
-
-            <div class="sidebar-content relative z-10 text-center w-full max-w-md">
-                <div class="logo-section mb-6">
-                    <h2 class="text-white text-2xl font-bold mb-2">
-                        <i class="fas fa-boxes"></i> Smart Geo Inventory
-                    </h2>
-                    <p class="text-gray-200">Sistem Manajemen Aset Universitas Sumatera Utara</p>
+    <div class="main-container flex w-full overflow-y-auto overflow-x-hidden relative z-10">
+        <!-- Login Section -->
+        <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-6 md:p-8 lg:p-12 bg-gradient-to-br from-white via-emerald-50 to-white backdrop-blur-xl min-h-full">
+            <div class="sidebar-content relative z-10 w-full max-w-md py-4">
+                <!-- Logo Section -->
+                <div class="logo-section flex items-center justify-center gap-3 mb-6">
+                    <div class="flex items-center justify-center w-32 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg flex-shrink-0 px-2">
+                        <img src="{{ url_for('static', filename='img/logo-panjang.png') }}" alt="Logo" class="w-full h-full object-contain">
+                    </div>
+                    <div class="text-left">
+                        <h2 class="text-xl font-bold text-gray-800 leading-tight">
+                            SAPA PSI
+                        </h2>
+                        <p class="text-emerald-600 text-xs leading-tight font-medium">Smart Geo Inventory System</p>
+                    </div>
                 </div>
 
-                <div class="login-card bg-white/95 rounded-2xl p-8 shadow-2xl">
-                    <h4 class="mb-6 text-center text-xl font-bold text-gray-800">Login</h4>
+                <!-- Login Card -->
+                <div class="login-card bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-emerald-100">
+                    <h4 class="mb-4 text-center text-xl font-bold text-gray-800">
+                        Selamat Datang
+                    </h4>
+                    <p class="text-center text-gray-500 text-sm mb-5">
+                        Silakan login untuk mengakses sistem
+                    </p>
 
                     <!-- Flash Messages -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
                             {% for category, message in messages %}
-                                <div class="alert {{ 'bg-green-100 border-green-400 text-green-700' if category == 'success' else 'bg-red-100 border-red-400 text-red-700' if category == 'danger' else 'bg-yellow-100 border-yellow-400 text-yellow-700' if category == 'warning' else 'bg-blue-100 border-blue-400 text-blue-700' }} border rounded-lg p-4 mb-4 flex items-center justify-between" role="alert">
-                                    <div>{{ message }}</div>
-                                    <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()">
+                                <div class="alert {{ 'bg-emerald-50 border-emerald-400 text-emerald-700' if category == 'success' else 'bg-red-50 border-red-400 text-red-700' if category == 'danger' else 'bg-amber-50 border-amber-400 text-amber-700' if category == 'warning' else 'bg-blue-50 border-blue-400 text-blue-700' }} border-l-4 rounded-xl p-4 mb-6 flex items-center justify-between shadow-lg" role="alert">
+                                    <div class="flex items-center gap-3">
+                                        <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-triangle' if category == 'danger' else 'fa-exclamation-circle' if category == 'warning' else 'fa-info-circle' }} text-lg"></i>
+                                        <span class="text-sm font-medium">{{ message }}</span>
+                                    </div>
+                                    <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="this.parentElement.remove()">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 </div>
@@ -76,61 +54,106 @@
                         {% endif %}
                     {% endwith %}
 
-                    <form method="POST" action="{{ url_for('auth.login') }}">
+                    <!-- Login Form -->
+                    <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-4">
                         {{ form.hidden_tag() }}
 
-                        <div class="mb-4">
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                        <!-- Email Field -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="email">
+                                <i class="fas fa-envelope mr-2 text-emerald-500"></i>
                                 {{ form.email.label.text }}
                             </label>
-                            <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                                   id="email"
-                                   type="email"
-                                   name="email"
-                                   placeholder="Email"
-                                   required>
+                            <input
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 text-gray-800 placeholder-gray-400"
+                                id="email"
+                                type="email"
+                                name="email"
+                                placeholder="Masukkan email"
+                                required>
                             {% if form.email.errors %}
-                                <div class="text-red-500 mt-1">
+                                <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
+                                    <i class="fas fa-exclamation-circle"></i>
                                     {% for error in form.email.errors %}
-                                        <small class="text-xs">{{ error }}</small>
+                                        <span>{{ error }}</span>
                                     {% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
-                        <div class="mb-6">
-                            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                        <!-- Password Field -->
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">
+                                <i class="fas fa-lock mr-2 text-emerald-500"></i>
                                 {{ form.password.label.text }}
                             </label>
-                            <input class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
-                                   id="password"
-                                   type="password"
-                                   name="password"
-                                   placeholder="Password"
-                                   required>
+                            <div class="relative">
+                                <input
+                                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 text-gray-800 placeholder-gray-400"
+                                    id="password"
+                                    type="password"
+                                    name="password"
+                                    placeholder="Masukkan password"
+                                    required>
+                                <button
+                                    type="button"
+                                    class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    onclick="togglePassword()">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
                             {% if form.password.errors %}
-                                <div class="text-red-500 mt-1">
+                                <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
+                                    <i class="fas fa-exclamation-circle"></i>
                                     {% for error in form.password.errors %}
-                                        <small class="text-xs">{{ error }}</small>
+                                        <span>{{ error }}</span>
                                     {% endfor %}
                                 </div>
                             {% endif %}
                         </div>
 
-                        <button type="submit" class="w-full bg-primary text-white font-bold py-3 px-4 rounded-lg hover:opacity-90 transition-all duration-300">
-                            <i class="fas fa-sign-in-alt mr-2"></i> Masuk
+                        <!-- Submit Button -->
+                        <button
+                            type="submit"
+                            class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 mt-6 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/30">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Masuk
                         </button>
                     </form>
 
-                    <hr class="my-6 border-gray-300">
+                    <!-- Divider -->
+                    <div class="flex items-center gap-4 my-5">
+                        <div class="flex-1 h-px bg-gray-200"></div>
+                        <span class="text-gray-400 text-xs">atau</span>
+                        <div class="flex-1 h-px bg-gray-200"></div>
+                    </div>
 
+                    <!-- Back to Home -->
                     <div class="text-center">
-                        <small class="text-gray-500">
-                            <i class="fas fa-info-circle mr-1"></i>
-                            Hubungi Niki Nami Perry untuk mendapatkan akun
-                        </small>
+                        <a href="{{ url_for('main.landing') }}" class="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium text-sm transition-colors">
+                            <i class="fas fa-arrow-left"></i>
+                            Kembali ke Beranda
+                        </a>
+                    </div>
+
+                    <!-- Help Text -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex items-start gap-3 p-3 bg-emerald-50 rounded-xl">
+                            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-info-circle text-emerald-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-gray-700 text-xs font-medium">Butuh bantuan?</p>
+                                <p class="text-gray-500 text-xs">Hubungi Admin (Reyhan) untuk mendapatkan akun</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Copyright -->
+                <p class="text-center text-gray-500 text-xs mt-6">
+                    &copy; 2026 SAPA PSI - Pusat Sistem Informasi Universitas Sumatera Utara
+                </p>
             </div>
         </div>
     </div>
@@ -139,28 +162,27 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <script>
-        var map = L.map('map', {
-            zoomControl: false
-        }).setView([3.561676, 98.6563423], 16);
+        // Toggle password visibility
+        function togglePassword() {
+            const password = document.getElementById('password');
+            const toggleIcon = document.getElementById('toggleIcon');
 
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-
-        L.marker([3.561676, 98.6563423]).addTo(map)
-            .bindPopup('<b>Universitas Sumatera Utara</b><br>Sistem Manajemen Aset')
-            .openPopup();
+            if (password.type === 'password') {
+                password.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                password.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
 
         // Auto-dismiss alerts
         setTimeout(function() {
             const alerts = document.querySelectorAll('.alert');
             alerts.forEach(function(alert) {
-                alert.style.transition = 'opacity 1s';
-                alert.style.opacity = '0';
-                setTimeout(function() {
-                    alert.remove();
-                }, 1000);
+                alert.remove();
             });
         }, 5000);
     </script>

@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build:css": "tailwindcss -i app/static/css/style.css -o app/static/css/output.css",
+    "watch:css": "tailwindcss -i app/static/css/style.css -o app/static/css/output.css --watch"
+  },
   "dependencies": {
     "@tailwindcss/cli": "^4.1.18",
     "tailwindcss": "^4.1.18"

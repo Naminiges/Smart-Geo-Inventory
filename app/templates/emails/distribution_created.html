@@ -1,0 +1,24 @@
+{% extends "emails/base.html" %}
+
+{% block title %}Distribusi Baru Diajukan - {{ distribution_code }}{% endblock %}
+
+{% block content %}
+<h2>Distribusi Baru Diajukan</h2>
+
+<p>Halo Admin,</p>
+
+<p>Warehouse staff telah mengajukan permohonan distribusi barang ke unit:</p>
+
+<div class="info-box">
+    <p><span class="info-label">No. Distribusi:</span> {{ distribution_code }}</p>
+    <p><span class="info-label">Diajukan oleh:</span> {{ distribution.draft_creator.name if distribution.draft_creator else '-' }}</p>
+    <p><span class="info-label">Unit Tujuan:</span> {{ distribution.unit.name if distribution.unit else '-' }}</p>
+    <p><span class="info-label">Tanggal:</span> {{ distribution.created_at.strftime('%d/%m/%Y %H:%M') if distribution.created_at else '-' }}</p>
+    <p><span class="info-label">Status:</span> Draft - Menunggu Verifikasi</p>
+</div>
+
+<p>Silakan login ke sistem untuk memverifikasi dan menyetujui distribusi ini.</p>
+
+<a href="{{ base_url }}/installations/" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">Lihat Detail Distribusi</a>
+
+{% endblock %}
