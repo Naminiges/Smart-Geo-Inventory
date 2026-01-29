@@ -42,10 +42,16 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_NAME = 'smart_geo_session'  # Custom session cookie name
+    SESSION_COOKIE_PATH = '/'  # Cookie available for all paths
 
     # Session type for multi-worker environments (gunicorn)
-    # Use Redis for session sharing across workers, fallback to filesystem
-    SESSION_TYPE = os.environ.get('SESSION_TYPE', 'filesystem')  # 'redis' or 'filesystem'
+    # IMPORTANT: If using gunicorn with workers > 1, MUST use Redis or filesystem
+    # For single worker, can use default (client-side cookie)
+    SESSION_TYPE = os.environ.get('SESSION_TYPE', None)  # None = default client-side
+    if SESSION_TYPE == 'filesystem':
+        # Get the project root directory
+        BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        SESSION_FILE_DIR = os.path.join(BASE_DIR, 'flask_session')
     SESSION_REDIS = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
     # File Upload
