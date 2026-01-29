@@ -12,7 +12,7 @@ backlog = 2048
 
 # Worker processes
 # Reduced workers to prevent database connection overflow
-workers = 2  # Start with 2 workers only
+workers = 1  # Use 1 worker to avoid session sharing issues with multiple workers
 worker_class = "sync"  # Can use 'gevent' or 'gthread' for async workers
 worker_connections = 1000
 max_requests = 1000  # Restart workers after this many requests to prevent memory leaks

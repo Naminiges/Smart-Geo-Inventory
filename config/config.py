@@ -43,6 +43,11 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_NAME = 'smart_geo_session'  # Custom session cookie name
 
+    # Session type for multi-worker environments (gunicorn)
+    # Use Redis for session sharing across workers, fallback to filesystem
+    SESSION_TYPE = os.environ.get('SESSION_TYPE', 'filesystem')  # 'redis' or 'filesystem'
+    SESSION_REDIS = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
     # File Upload
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'app', 'static', 'uploads')

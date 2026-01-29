@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db, login_manager
 from app.models import User, ActivityLog
@@ -80,5 +80,12 @@ def logout():
 def profile():
     """Display user profile"""
     return render_template('auth/profile.html', user=current_user)
+
+
+@bp.route('/test-csrf')
+def test_csrf():
+    """Test CSRF token generation and session configuration"""
+    form = LoginForm()
+    return render_template('test_csrf.html', form=form, config=current_app.config)
 
 
