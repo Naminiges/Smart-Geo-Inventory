@@ -40,10 +40,15 @@ class Config:
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_TYPE = 'filesystem'  # Explicitly set session type
-    SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')  # Session file directory
-    SESSION_FILE_THRESHOLD = 500  # Maximum number of session files
-    SESSION_FILE_MODE = 0o600  # File permissions for session files
+
+    # Use filesystem-based session for better compatibility with gunicorn
+    SESSION_TYPE = 'filesystem'
+    # Get the project root directory (config/ parent directory)
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    SESSION_FILE_DIR = os.path.join(BASE_DIR, 'flask_session')
+    SESSION_FILE_THRESHOLD = 500
+    SESSION_FILE_MODE = 0o600
+    SESSION_PERMANENT = False
 
     # File Upload
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size

@@ -9,3 +9,7 @@ node_modules/
 package-lock.json
 
 .claude/
+
+# Session files
+config/sessions/
+flask_session/
