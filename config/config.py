@@ -12,6 +12,7 @@ class Config:
     SECURITY_PASSWORD_SALT = os.environ.get('SECURITY_PASSWORD_SALT') or 'security-salt'
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
+    WTF_CSRF_SSL_STRICT = False  # Disable SSL strict for CSRF
 
     # Database
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
@@ -40,15 +41,7 @@ class Config:
     SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-
-    # Use filesystem-based session for better compatibility with gunicorn
-    SESSION_TYPE = 'filesystem'
-    # Get the project root directory (config/ parent directory)
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    SESSION_FILE_DIR = os.path.join(BASE_DIR, 'flask_session')
-    SESSION_FILE_THRESHOLD = 500
-    SESSION_FILE_MODE = 0o600
-    SESSION_PERMANENT = False
+    SESSION_COOKIE_NAME = 'smart_geo_session'  # Custom session cookie name
 
     # File Upload
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
@@ -84,8 +77,6 @@ class Config:
         """Initialize application with this configuration"""
         # Create upload folder if it doesn't exist
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-        # Create session folder if it doesn't exist
-        os.makedirs(Config.SESSION_FILE_DIR, exist_ok=True)
 
 
 class DevelopmentConfig(Config):
