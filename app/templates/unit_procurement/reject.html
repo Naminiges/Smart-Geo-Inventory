@@ -144,9 +144,9 @@
                 <i class="fas fa-arrow-left mr-2"></i>
                 Batal
             </a>
-            <button type="submit" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold" onclick="return confirm('Apakah Anda yakin ingin menolak permohonan ini?')">
-                <i class="fas fa-times mr-2"></i>
-                Tolak Permohonan
+            <button type="submit" id="submitBtn" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed" onclick="return confirm('Apakah Anda yakin ingin menolak permohonan ini?')">
+                <i class="fas fa-times mr-2 submit-icon"></i>
+                <span class="submit-text">Tolak Permohonan</span>
             </button>
         </div>
     </form>
@@ -158,6 +158,18 @@ function copyRejectionReason(button) {
     const reason = button.textContent.trim();
     textarea.value = reason;
     textarea.focus();
+}
+
+const form = document.querySelector('form');
+const submitBtn = document.getElementById('submitBtn');
+if (form && submitBtn) {
+    form.addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        const icon = submitBtn.querySelector('.submit-icon');
+        const text = submitBtn.querySelector('.submit-text');
+        if (icon) icon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+        if (text) text.textContent = 'Memproses...';
+    });
 }
 </script>
 {% endblock %}

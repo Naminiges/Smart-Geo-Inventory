@@ -7,10 +7,10 @@ from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from flask_mail import Mail
 from config.config import config
 from app.utils.datetime_helper import format_wib_datetime
 from app.utils.status_helper import translate_status, get_status_color, get_status_icon
+from app.utils.mail_helper import SSLMail
 
 # Initialize extensions
 db = SQLAlchemy()
@@ -24,7 +24,7 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://"
 )
-mail = Mail()
+mail = SSLMail()
 
 
 def create_app(config_name='default'):

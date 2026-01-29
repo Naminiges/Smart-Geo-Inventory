@@ -125,9 +125,9 @@
 
             <!-- Submit Buttons -->
             <div class="flex gap-3">
-                <button type="submit" class="flex-1 inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
-                    <i class="fas fa-paper-plane mr-2"></i>
-                    Kirim Verifikasi
+                <button type="submit" id="submitBtn" class="flex-1 inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-paper-plane mr-2 submit-icon"></i>
+                    <span class="submit-text">Kirim Verifikasi</span>
                 </button>
                 <a href="{{ url_for('field_tasks.detail', id=task.id) }}" class="inline-flex items-center justify-center px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
                     <i class="fas fa-times mr-2"></i>
@@ -176,5 +176,18 @@ dropZone.addEventListener('drop', function(e) {
         previewImage(event);
     }
 });
+
+// Add loading state for form submission
+const form = document.querySelector('form');
+const submitBtn = document.getElementById('submitBtn');
+if (form && submitBtn) {
+    form.addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        const icon = submitBtn.querySelector('.submit-icon');
+        const text = submitBtn.querySelector('.submit-text');
+        if (icon) icon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+        if (text) text.textContent = 'Memproses...';
+    });
+}
 </script>
 {% endblock %}

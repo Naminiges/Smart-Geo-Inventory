@@ -535,6 +535,11 @@
             alert('Silakan pilih minimal satu barang dan serial number');
             return false;
         }
+
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
     });
 </script>
 {% endblock %}

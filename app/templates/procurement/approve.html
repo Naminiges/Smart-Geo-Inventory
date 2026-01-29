@@ -110,18 +110,18 @@
 
         <!-- Action Buttons -->
         <div class="flex items-center justify-between pt-6 border-t border-gray-200">
-            <button type="button" onclick="confirmReject()" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold">
-                <i class="fas fa-times-circle mr-2"></i>
-                Tolak Permohonan
+            <button type="button" onclick="confirmReject()" id="rejectBtn" class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:bg-red-400 disabled:cursor-not-allowed">
+                <i class="fas fa-times-circle mr-2 reject-icon"></i>
+                <span class="reject-text">Tolak Permohonan</span>
             </button>
             <div class="flex space-x-3">
                 <a href="{{ url_for('procurement.detail', id=procurement.id) }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-semibold">
                     <i class="fas fa-arrow-left mr-2"></i>
                     Kembali
                 </a>
-                <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold">
-                    <i class="fas fa-check-circle mr-2"></i>
-                    Setujui Permohonan
+                <button type="submit" id="approveSubmitBtn" class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-semibold disabled:bg-green-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-check-circle mr-2 approve-icon"></i>
+                    <span class="approve-text">Setujui Permohonan</span>
                 </button>
             </div>
         </div>
@@ -181,6 +181,34 @@ function confirmReject() {
 function closeRejectModal() {
     document.getElementById('rejectModal').classList.add('hidden');
     document.getElementById('rejectModal').classList.remove('flex');
+}
+
+// Add loading state for approve form
+const approveForm = document.querySelector('form[action*="/approve"]');
+if (approveForm) {
+    approveForm.addEventListener('submit', function() {
+        const btn = document.getElementById('approveSubmitBtn');
+        const icon = btn.querySelector('.approve-icon');
+        const text = btn.querySelector('.approve-text');
+        btn.disabled = true;
+        icon.className = 'fas fa-spinner fa-spin mr-2 approve-icon';
+        text.textContent = 'Memproses...';
+    });
+}
+
+// Add loading state for reject button
+const rejectBtn = document.getElementById('rejectBtn');
+if (rejectBtn) {
+    const rejectForm = document.getElementById('rejectForm');
+    if (rejectForm) {
+        rejectForm.addEventListener('submit', function() {
+            const icon = rejectBtn.querySelector('.reject-icon');
+            const text = rejectBtn.querySelector('.reject-text');
+            rejectBtn.disabled = true;
+            icon.className = 'fas fa-spinner fa-spin mr-2 reject-icon';
+            text.textContent = 'Memproses...';
+        });
+    }
 }
 
 // Close modal when clicking outside

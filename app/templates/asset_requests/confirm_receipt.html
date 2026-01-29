@@ -250,10 +250,16 @@ function formatFileSize(bytes) {
 }
 
 // Add loading state for form submission
-document.querySelector('form').addEventListener('submit', function() {
-    submitBtn.disabled = true;
-    submitIcon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
-    submitText.textContent = 'Memproses...';
-});
+const form = document.querySelector('form');
+const submitBtn = document.getElementById('submitBtn');
+if (form && submitBtn) {
+    form.addEventListener('submit', function() {
+        submitBtn.disabled = true;
+        const icon = submitBtn.querySelector('.submit-icon');
+        const text = submitBtn.querySelector('.submit-text');
+        if (icon) icon.className = 'fas fa-spinner fa-spin mr-2 submit-icon';
+        if (text) text.textContent = 'Memproses...';
+    });
+}
 </script>
 {% endblock %}

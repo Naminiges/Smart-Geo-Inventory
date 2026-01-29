@@ -11,7 +11,15 @@ def get_base_url():
         scheme = 'https' if current_app.config.get('SESSION_COOKIE_SECURE') else 'http'
         return f"{scheme}://{server_name}"
     # Fallback for development
-    return 'http://192.168.100.17:5000'
+    return 'http://172.20.10.3:5000'
+
+
+def get_distribution_code(distribution):
+    """Get distribution code - either from batch or generated from ID"""
+    if distribution.distribution_group:
+        return distribution.distribution_group.batch_code
+    else:
+        return f'DIST-{distribution.id:06d}'
 
 
 def send_email(to, subject, template, **kwargs):
@@ -39,6 +47,8 @@ def send_email(to, subject, template, **kwargs):
                 return f"{base_url}/distributions/"
             elif endpoint == 'distributions.detail' and 'id' in values:
                 return f"{base_url}/distributions/{values['id']}"
+            elif endpoint == 'asset_requests.detail' and 'id' in values:
+                return f"{base_url}/asset-requests/{values['id']}"
             return f"{base_url}/"
 
         kwargs['url_for'] = email_url
@@ -84,6 +94,8 @@ def send_email_to_multiple(recipients, subject, template, **kwargs):
                 return f"{base_url}/distributions/"
             elif endpoint == 'distributions.detail' and 'id' in values:
                 return f"{base_url}/distributions/{values['id']}"
+            elif endpoint == 'asset_requests.detail' and 'id' in values:
+                return f"{base_url}/asset-requests/{values['id']}"
             return f"{base_url}/"
 
         kwargs['url_for'] = email_url
@@ -229,16 +241,15 @@ def notify_distribution_created(distribution):
 
     recipients = [admin.email for admin in admins]
 
-    # Get distribution group info if available
-    batch_code = ''
-    if distribution.distribution_group:
-        batch_code = distribution.distribution_group.batch_code
+    # Get distribution code
+    distribution_code = get_distribution_code(distribution)
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Distribusi Baru Diajukan - {batch_code or distribution.distribution_code}',
+        subject=f'[SAPA PSI] Distribusi Baru Diajukan - {distribution_code}',
         template='distribution_created',
-        distribution=distribution
+        distribution=distribution,
+        distribution_code=distribution_code
     )
 
 
@@ -263,11 +274,15 @@ def notify_distribution_sent(distribution):
 
     recipients = [user.email for user in unit_users]
 
+    # Get distribution code
+    distribution_code = get_distribution_code(distribution)
+
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Barang Ditujukan Ke Unit Anda - {distribution.distribution_code}',
+        subject=f'[SAPA PSI] Barang Ditujukan Ke Unit Anda - {distribution_code}',
         template='distribution_sent',
-        distribution=distribution
+        distribution=distribution,
+        distribution_code=distribution_code
     )
 
 
@@ -285,11 +300,15 @@ def notify_distribution_received(distribution):
 
     recipients = [admin.email for admin in admins]
 
+    # Get distribution code
+    distribution_code = get_distribution_code(distribution)
+
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Barang Diterima Unit - {distribution.distribution_code}',
+        subject=f'[SAPA PSI] Barang Diterima Unit - {distribution_code}',
         template='distribution_received',
-        distribution=distribution
+        distribution=distribution,
+        distribution_code=distribution_code
     )
 
 
@@ -301,13 +320,15 @@ def notify_distribution_rejected(distribution, rejection_reason=None):
     if not creator or not creator.should_receive_email_notifications():
         return False
 
-    batch_code = distribution.distribution_group.batch_code if distribution.distribution_group else distribution.distribution_code
+    # Get distribution code
+    distribution_code = get_distribution_code(distribution)
 
     return send_email(
         to=creator.email,
-        subject=f'[SAPA PSI] Distribusi Ditolak - {batch_code}',
+        subject=f'[SAPA PSI] Distribusi Ditolak - {distribution_code}',
         template='distribution_rejected',
         distribution=distribution,
+        distribution_code=distribution_code,
         rejection_reason=rejection_reason
     )
 

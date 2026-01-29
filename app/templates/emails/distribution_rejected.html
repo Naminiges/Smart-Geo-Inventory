@@ -1,6 +1,6 @@
 {% extends "emails/base.html" %}
 
-{% block title %}Distribusi Ditolak - {{ distribution.distribution_group.batch_code if distribution.distribution_group else distribution.distribution_code }}{% endblock %}
+{% block title %}Distribusi Ditolak - {{ distribution_code }}{% endblock %}
 
 {% block content %}
 <h2>Distribusi Ditolak</h2>
@@ -14,11 +14,9 @@
 </div>
 
 <div class="info-box">
-    {% if distribution.distribution_group %}
-    <p><span class="info-label">No. Batch:</span> {{ distribution.distribution_group.batch_code }}</p>
-    {% endif %}
+    <p><span class="info-label">No. Distribusi:</span> {{ distribution_code }}</p>
     <p><span class="info-label">Unit Tujuan:</span> {{ distribution.unit.name if distribution.unit else '-' }}</p>
-    <p><span class="info-label">Tanggal Penolakan:</span> {{ distribution.distribution_group.rejection_date.strftime('%d/%m/%Y %H:%M') if distribution.distribution_group and distribution.distribution_group.rejection_date else '-' }}</p>
+    <p><span class="info-label">Tanggal Penolakan:</span> {{ distribution.draft_rejected_at.strftime('%d/%m/%Y %H:%M') if distribution.draft_rejected_at else '-' }}</p>
 </div>
 
 {% if rejection_reason %}
@@ -30,6 +28,6 @@
 
 <p>Silakan periksa kembali permohonan Anda atau hubungi admin untuk informasi lebih lanjut.</p>
 
-<a href="{{ base_url }}/installations/" class="btn">Lihat Draft Distribusi</a>
+<a href="{{ base_url }}/installations/" style="display: inline-block; padding: 12px 24px; background-color: #059669; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">Lihat Draft Distribusi</a>
 
 {% endblock %}
