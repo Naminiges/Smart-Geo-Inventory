@@ -56,6 +56,7 @@
 
                     <!-- Login Form -->
                     <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         {{ form.hidden_tag() }}
 
                         <!-- Email Field -->

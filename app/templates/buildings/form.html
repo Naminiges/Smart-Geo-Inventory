@@ -22,6 +22,7 @@
 <div class="max-w-2xl mx-auto">
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <form method="POST" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Kode Gedung <span class="text-red-500">*</span></label>

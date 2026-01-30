@@ -44,6 +44,7 @@
         <h5 class="text-lg font-semibold text-gray-900 mb-4">Informasi Gedung</h5>
 
         <form method="POST" id="buildingForm" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             {{ form.hidden_tag() }}
 
             <div>

@@ -30,6 +30,7 @@
 
 <!-- One form wrapping everything -->
 <form method="POST" action="{{ url_for('asset_transfer.create') }}" id="transferForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     {{ form.hidden_tag() }}
 
     <!-- Hidden fields for WTForms validation (values will be ignored in backend) -->

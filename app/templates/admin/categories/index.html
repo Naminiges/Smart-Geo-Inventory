@@ -73,6 +73,7 @@
                             </a>
                             {% if category_item_counts.get(category.id, 0) == 0 %}
                             <form action="{{ url_for('categories.delete', id=category.id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus kategori {{ category.name }}?');" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                 <button type="submit" class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Hapus">
                                     <i class="fas fa-trash"></i>
                                 </button>
