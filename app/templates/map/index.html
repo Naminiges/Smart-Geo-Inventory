@@ -6,21 +6,6 @@
 {% set page_icon = 'fas fa-map-marked-alt' %}
 {% set page_description = 'Visualisasi lokasi gudang dan ruangan secara real-time' %}
 
-{% block page_header_actions %}
-<div class="flex gap-2">
-  <button onclick="locateUser()"
-          class="flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-700 rounded-xl font-medium hover:bg-emerald-50 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 border border-emerald-200">
-    <i class="fas fa-location-arrow"></i>
-    Lokasi Saya
-  </button>
-  <button onclick="refreshMap()"
-          class="flex items-center gap-2 px-4 py-2.5 bg-white text-emerald-700 rounded-xl font-medium hover:bg-emerald-50 transition-all duration-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 border border-emerald-200">
-    <i class="fas fa-sync-alt"></i>
-    Refresh
-  </button>
-</div>
-{% endblock %}
-
 {% block extra_css %}
 <style>
     /* Custom popup styles */
@@ -241,16 +226,6 @@ function toggleCheckbox(checkboxId) {
     var checkbox = document.getElementById(checkboxId);
     checkbox.checked = !checkbox.checked;
     $(checkbox).trigger('change');
-}
-
-// Refresh map
-function refreshMap() {
-    loadMapData();
-}
-
-// Locate user
-function locateUser() {
-    map.locate({setView: true, maxZoom: 16});
 }
 
 map.on('locationfound', function(e) {
