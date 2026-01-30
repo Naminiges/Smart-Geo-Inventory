@@ -20,6 +20,29 @@ import io
 bp = Blueprint('stock', __name__, url_prefix='/stock')
 
 
+def format_date_indonesian(date_obj, format_str='%d %B %Y'):
+    """Format date to Indonesian locale"""
+    month_mapping = {
+        'January': 'Januari',
+        'February': 'Februari',
+        'March': 'Maret',
+        'April': 'April',
+        'May': 'Mei',
+        'June': 'Juni',
+        'July': 'Juli',
+        'August': 'Agustus',
+        'September': 'September',
+        'October': 'Oktober',
+        'November': 'November',
+        'December': 'Desember'
+    }
+
+    formatted = date_obj.strftime(format_str)
+    for eng, indo in month_mapping.items():
+        formatted = formatted.replace(eng, indo)
+    return formatted
+
+
 @bp.route('/')
 @login_required
 @role_required('admin')
@@ -487,7 +510,7 @@ def recap_pdf():
             self.setFillColor(colors.grey)
             
             # Tanggal dan jam cetak (kiri)
-            footer_left = f"Dicetak pada: {now.strftime('%d %B %Y, %H:%M')} WIB"
+            footer_left = f"Dicetak pada: {format_date_indonesian(now, '%d %B %Y, %H:%M')} WIB"
             self.drawString(1*cm, 0.6*cm, footer_left)
             
             # Nomor halaman (kanan)
@@ -600,7 +623,7 @@ def recap_pdf():
         # Define styles for wrapping text
         normal_text_style = ParagraphStyle('NormalText', fontSize=7, leading=9, alignment=1)  # Center-aligned for wrapping
 
-        proc_data = [['No', 'Tanggal', 'No. Pengadaan', 'Nama Barang', 'Qty', 'Gudang', 'Supplier']]
+        proc_data = [['No', 'Tanggal', 'No. Pengadaan', 'Nama Barang', 'Qty', 'Gudang']]
 
         item_no = 1
         for proc in procurements:
@@ -614,20 +637,19 @@ def recap_pdf():
                     f"PR-{proc.id}",
                     Paragraph(f"{item_name}<br/><font size=6 color='#666'>{item_code}</font>", ParagraphStyle('ItemName', fontSize=7, leading=9)),
                     str(item.quantity),
-                    Paragraph(proc.warehouse.name if proc.warehouse else '-', normal_text_style),
-                    Paragraph(proc.supplier.name if proc.supplier else '-', normal_text_style)
+                    Paragraph(proc.warehouse.name if proc.warehouse else '-', normal_text_style)
                 ])
                 item_no += 1
 
         proc_data.append([
             '', '', '',
             Paragraph('TOTAL PENGADAAN', ParagraphStyle('tot', fontSize=8, alignment=1, fontName='Helvetica-Bold')),
-            str(total_procurement), '', ''
+            str(total_procurement), ''
         ])
 
         proc_table = Table(
             proc_data,
-            colWidths=[0.8*cm, 2.5*cm, 2.2*cm, 9*cm, 1.2*cm, 3.5*cm, 3.5*cm],
+            colWidths=[0.8*cm, 2.5*cm, 2.2*cm, 9*cm, 1.2*cm, 3.5*cm],
             repeatRows=1
         )
         proc_table.setStyle(TableStyle([
@@ -853,13 +875,13 @@ def recap_pdf():
 
     sig_data = [
         ['Mengetahui,', '', 'Kepala Gudang,'],
-        [f'{now.strftime("%d %B %Y")}', '', f'{now.strftime("%d %B %Y")}'],
+        [f'{format_date_indonesian(now)}', '', f'{format_date_indonesian(now)}'],
         ['', '', ''],
         ['', '', ''],
         ['', '', ''],
         ['( .............................. )', '', '( .............................. )'],
-        ['Kepala Divisi Logistik', '', 'Kepala Gudang'],
-        ['NIP. ..............................', '', 'NIP. ..............................'],
+        ['..............................', '', '..............................'],
+        ['NIP. ..............................', '', 'NIP. ....  ..........................'],
     ]
 
     sig_table = Table(sig_data, colWidths=[6*cm, 4*cm, 6*cm])

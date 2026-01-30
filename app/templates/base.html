@@ -234,11 +234,11 @@
           <!-- Unit (Admin Only) -->
           {% if current_user.is_admin() %}
           <a
-            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if ('units' in request.endpoint and 'loans' not in request.endpoint) or '/stock/per-unit' in request.path else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint == 'units.index' or request.endpoint == 'units.create' or request.endpoint == 'units.edit' or '/stock/per-unit' in request.path else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
             href="{{ url_for('units.index') }}"
           >
             <i
-              class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if ('units' in request.endpoint and 'loans' not in request.endpoint) or '/stock/per-unit' in request.path else 'text-gray-400' }}"
+              class="fas fa-building w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint == 'units.index' or request.endpoint == 'units.create' or request.endpoint == 'units.edit' or '/stock/per-unit' in request.path else 'text-gray-400' }}"
             ></i>
             <span class="font-medium">Daftar Divisi</span>
           </a>
