@@ -8,7 +8,7 @@ bp = Blueprint('main', __name__)
 
 @bp.route('/')
 def landing():
-    """Landing page for LOKASET"""
+    """Landing page for SAPA PSI"""
     return render_template('landing.html')
 
 
