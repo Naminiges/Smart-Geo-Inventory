@@ -77,12 +77,15 @@
                                title="Edit Gedung">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <button data-building-id="{{ building.id }}" data-building-name="{{ building.name }}"
-                                    onclick="confirmDelete(this)"
-                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                            {% if building_stats[building.id]['room_count'] == 0 %}
+                            <button type="button"
+                                    class="delete-building-btn p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                                    data-building-id="{{ building.id }}"
+                                    data-building-name="{{ building.name | e }}"
                                     title="Hapus Gedung">
                                 <i class="fas fa-trash"></i>
                             </button>
+                            {% endif %}
                             <a href="{{ url_for('buildings.edit_zone', building_id=building.id) }}"
                                class="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors duration-150"
                                title="Edit Zona Spasial">
@@ -106,19 +109,26 @@
 </div>
 
 {% if current_user.is_admin() %}
-<form id="deleteForm" method="POST" style="display: none;">
+<form id="deleteBuildingForm" method="POST" style="display: none;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 </form>
 <script>
-function confirmDelete(button) {
-    const buildingId = button.getAttribute('data-building-id');
-    const buildingName = button.getAttribute('data-building-name');
-    if (confirm(`Apakah Anda yakin ingin menghapus gedung "${buildingName}"?`)) {
-        const form = document.getElementById('deleteForm');
-        form.action = `/buildings/${buildingId}/delete`;
-        form.submit();
-    }
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.delete-building-btn');
+    deleteButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const buildingId = this.getAttribute('data-building-id');
+            const buildingName = this.getAttribute('data-building-name');
+            if (confirm('Apakah Anda yakin ingin menghapus gedung "' + buildingName + '"?')) {
+                const form = document.getElementById('deleteBuildingForm');
+                form.action = '/buildings/' + buildingId + '/delete';
+                form.submit();
+            }
+        });
+    });
+});
 </script>
 {% endif %}
 {% endblock %}

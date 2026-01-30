@@ -11,7 +11,7 @@ def get_base_url():
         scheme = 'https' if current_app.config.get('SESSION_COOKIE_SECURE') else 'http'
         return f"{scheme}://{server_name}"
     # Fallback for development
-    return 'http://172.20.10.3:5000'
+    return 'https://172.30.95.249'
 
 
 def get_distribution_code(distribution):
