@@ -131,12 +131,15 @@
                                title="Edit Ruangan">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            <button data-room-id="{{ room.id }}" data-room-name="{{ room.room_name }}"
-                                    onclick="confirmDeleteRoom(this)"
-                                    class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
+                            {% if room_items_count[room.id] == 0 %}
+                            <button type="button"
+                                    data-room-id="{{ room.id }}"
+                                    data-room-name="{{ room.room_name }}"
+                                    class="delete-room-btn p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-150"
                                     title="Hapus Ruangan">
                                 <i class="fas fa-trash"></i>
                             </button>
+                            {% endif %}
                         </div>
                         {% else %}
                         <span class="text-sm text-gray-400">-</span>
@@ -287,15 +290,23 @@
 {% endif %}
 
 <script>
-function confirmDeleteRoom(button) {
-    const roomId = button.getAttribute('data-room-id');
-    const roomName = button.getAttribute('data-room-name');
-    if (confirm(`Apakah Anda yakin ingin menghapus ruangan "${roomName}"?`)) {
-        const form = document.getElementById('deleteRoomForm');
-        form.action = `/buildings/rooms/${roomId}/delete`;
-        form.submit();
-    }
-}
+// Delete room functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteButtons = document.querySelectorAll('.delete-room-btn');
+    deleteButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const roomId = this.getAttribute('data-room-id');
+            const roomName = this.getAttribute('data-room-name');
+            if (confirm('Apakah Anda yakin ingin menghapus ruangan "' + roomName + '"?')) {
+                const form = document.getElementById('deleteRoomForm');
+                form.action = '/buildings/rooms/' + roomId + '/delete';
+                form.submit();
+            }
+        });
+    });
+});
 
 // Function to view items in a room
 function viewRoomItems(roomId, roomName) {

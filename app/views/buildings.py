@@ -106,7 +106,7 @@ def delete(id):
     room_count = UnitDetail.query.filter_by(building_id=id).count()
     if room_count > 0:
         flash(f'Tidak dapat menghapus gedung {building.name} karena masih memiliki {room_count} ruangan. Silakan hapus ruangan terlebih dahulu.', 'warning')
-        return redirect(url_for('buildings.detail', building_id=id))
+        return redirect(url_for('buildings.index'))
 
     try:
         building.delete()
@@ -129,7 +129,13 @@ def detail(building_id):
     # Get all rooms in this building
     rooms = UnitDetail.query.filter_by(building_id=building_id).order_by(UnitDetail.room_name).all()
 
-    return render_template('buildings/detail.html', building=building, rooms=rooms, units=[])
+    # Get items count for each room
+    room_items_count = {}
+    for room in rooms:
+        room_items_count[room.id] = room.distributions.count()
+
+    return render_template('buildings/detail.html', building=building, rooms=rooms, units=[],
+                          room_items_count=room_items_count)
 
 
 @bp.route('/<int:building_id>/rooms/create', methods=['GET', 'POST'])
@@ -144,6 +150,9 @@ def create_room(building_id):
 
     # Set building_id as default and only choice
     form.building_id.choices = [(building.id, building.name)]
+
+    # Set max_floor_count for floor validation
+    form.max_floor_count = building.floor_count
 
     if form.validate_on_submit():
         try:
@@ -172,10 +181,19 @@ def edit_room(room_id):
 
     room = UnitDetail.query.get_or_404(room_id)
     building = Building.query.get_or_404(room.building_id)
+
+    # Get all buildings first
+    buildings = Building.query.order_by(Building.code).all()
+
+    # Create form with room data
     form = UnitDetailForm(obj=room)
 
     # Set building choices
-    form.building_id.choices = [(b.id, b.name) for b in Building.query.order_by(Building.code).all()]
+    form.building_id.choices = [(b.id, b.name) for b in buildings]
+
+    # Create a mapping of building_id to floor_count for validation
+    # This must be set BEFORE validation for POST requests
+    form.building_floor_counts = {b.id: b.floor_count for b in buildings}
 
     if form.validate_on_submit():
         try:
