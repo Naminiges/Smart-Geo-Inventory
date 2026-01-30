@@ -40,6 +40,10 @@ def validate_floor_number(form, field):
     except ValueError:
         raise ValidationError('Nomor lantai harus berupa angka.')
 
+    # Floor number must be at least 1
+    if floor_num < 1:
+        raise ValidationError('Nomor lantai tidak boleh kurang dari 1.')
+
     # Get max_floor_count from form (set by route handler)
     building_floor_counts = getattr(form, 'building_floor_counts', None)
     if building_floor_counts:
@@ -92,6 +96,6 @@ class UnitDetailForm(FlaskForm):
         Length(min=2, max=200),
         validate_room_name_format
     ])
-    floor = StringField('Lantai', validators=[DataRequired(), Length(max=50), validate_floor_number])
+    floor = StringField('Lantai', validators=[Optional(), Length(max=50), validate_floor_number])
     description = TextAreaField('Deskripsi', validators=[Optional()])
     submit = SubmitField('Simpan')
