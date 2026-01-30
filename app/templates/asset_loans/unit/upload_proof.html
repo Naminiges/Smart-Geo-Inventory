@@ -53,6 +53,7 @@
         <h3 class="text-lg font-semibold text-gray-800">Upload Foto</h3>
     </div>
     <form method="POST" enctype="multipart/form-data" class="p-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         {{ form.hidden_tag() }}
 
         <div class="mb-6">

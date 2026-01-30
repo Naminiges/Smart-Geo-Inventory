@@ -24,6 +24,7 @@
         </div>
         <div class="p-6">
             <form method="POST" id="warehouseForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 {{ form.hidden_tag() }}
 
                 <!-- Informasi Dasar -->
