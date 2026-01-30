@@ -543,7 +543,7 @@ def recap_pdf():
                   ParagraphStyle('Logo', alignment=1, leading=22)),
         Paragraph(
             '<b><font size=13>SAPA PSI</font></b><br/>'
-            '<font size=8 color="#64748b">Universitas Sumatera Utara, Jl. Universitas No.9, Padang Bulan, Medan Baru, Medan City, North Sumatra 20155 | Telp: (061) 8222129 </font>',
+            '<font size=8 color="#64748b">Pusat Sistem Informasi Universitas Sumatera Utara, Jl. Universitas No.9, Padang Bulan, Medan Baru, Medan City, North Sumatra 20155 | Telp: (061) 8222129 </font>',
             ParagraphStyle('LH', leading=11, leftIndent=5)
         )
     ]]
