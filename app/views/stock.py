@@ -623,7 +623,7 @@ def recap_pdf():
         # Define styles for wrapping text
         normal_text_style = ParagraphStyle('NormalText', fontSize=7, leading=9, alignment=1)  # Center-aligned for wrapping
 
-        proc_data = [['No', 'Tanggal', 'No. Pengadaan', 'Nama Barang', 'Qty', 'Gudang']]
+        proc_data = [['No', 'Tanggal', 'Invoice', 'Nama Barang', 'Qty', 'Gudang']]
 
         item_no = 1
         for proc in procurements:
@@ -631,10 +631,13 @@ def recap_pdf():
                 item_name = item.item.name if item.item else '-'
                 item_code = f"Kode: {item.item.item_code if item.item else ''}"
 
+                # Use receipt_number from procurement table
+                invoice_num = proc.receipt_number if proc.receipt_number else '-'
+
                 proc_data.append([
                     str(item_no),
                     proc.completion_date.strftime('%d/%m/%Y') if proc.completion_date else proc.created_at.strftime('%d/%m/%Y'),
-                    f"PR-{proc.id}",
+                    invoice_num,
                     Paragraph(f"{item_name}<br/><font size=6 color='#666'>{item_code}</font>", ParagraphStyle('ItemName', fontSize=7, leading=9)),
                     str(item.quantity),
                     Paragraph(proc.warehouse.name if proc.warehouse else '-', normal_text_style)
@@ -649,7 +652,7 @@ def recap_pdf():
 
         proc_table = Table(
             proc_data,
-            colWidths=[0.8*cm, 2.5*cm, 2.2*cm, 9*cm, 1.2*cm, 3.5*cm],
+            colWidths=[0.8*cm, 2.5*cm, 2.5*cm, 9*cm, 1.2*cm, 3.5*cm],
             repeatRows=1
         )
         proc_table.setStyle(TableStyle([

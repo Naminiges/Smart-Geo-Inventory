@@ -58,7 +58,8 @@ def create():
             category = Category(
                 name=form.name.data,
                 code=form.code.data.upper(),  # Convert to uppercase
-                description=form.description.data
+                description=form.description.data,
+                require_serial_number=form.require_serial_number.data == 'True'
             )
             category.save()
 
@@ -68,7 +69,11 @@ def create():
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('admin/categories/create.html', form=form)
+    # Get all categories for validation
+    categories = Category.query.all()
+    categories_data = [{'id': c.id, 'name': c.name, 'code': c.code} for c in categories]
+
+    return render_template('admin/categories/create.html', form=form, categories=categories_data)
 
 
 @bp.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -78,6 +83,10 @@ def edit(id):
     """Edit category"""
     category = Category.query.get_or_404(id)
     form = CategoryForm(obj=category)
+
+    # Set require_serial_number value manually for RadioField
+    if not form.is_submitted():
+        form.require_serial_number.data = 'True' if category.require_serial_number else 'False'
 
     if form.validate_on_submit():
         try:
@@ -105,6 +114,7 @@ def edit(id):
             category.name = form.name.data
             category.code = form.code.data.upper()  # Convert to uppercase
             category.description = form.description.data
+            category.require_serial_number = form.require_serial_number.data == 'True'
             category.save()
 
             flash(f'Kategori {category.name} ({category.code}) berhasil diupdate!', 'success')
@@ -113,7 +123,11 @@ def edit(id):
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('admin/categories/edit.html', category=category, form=form)
+    # Get all categories for validation
+    categories = Category.query.all()
+    categories_data = [{'id': c.id, 'name': c.name, 'code': c.code} for c in categories]
+
+    return render_template('admin/categories/edit.html', category=category, form=form, categories=categories_data)
 
 
 @bp.route('/<int:id>/delete', methods=['POST'])

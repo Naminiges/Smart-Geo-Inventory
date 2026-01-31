@@ -267,3 +267,39 @@ def search():
     ).all()
 
     return render_template('items/search.html', items=items, query=query)
+
+
+@bp.route('/<int:item_id>/details/<int:detail_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin', 'warehouse_staff')
+def delete_detail(item_id, detail_id):
+    """Delete an item detail (serial number)"""
+    item = Item.query.get_or_404(item_id)
+    item_detail = ItemDetail.query.get_or_404(detail_id)
+
+    # Verify the item detail belongs to the item
+    if item_detail.item_id != item_id:
+        flash('Item detail tidak ditemukan untuk barang ini!', 'danger')
+        return redirect(url_for('items.details', id=item_id))
+
+    try:
+        # Update stock if item detail has warehouse
+        if item_detail.warehouse_id:
+            from app.models import Stock
+            stock = Stock.query.filter_by(
+                item_id=item_id,
+                warehouse_id=item_detail.warehouse_id
+            ).first()
+
+            if stock and stock.quantity > 0:
+                stock.remove_stock(1)
+
+        # Delete the item detail
+        item_detail.delete()
+
+        flash(f'Serial number {item_detail.serial_number} berhasil dihapus!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Terjadi kesalahan: {str(e)}', 'danger')
+
+    return redirect(url_for('items.details', id=item_id))

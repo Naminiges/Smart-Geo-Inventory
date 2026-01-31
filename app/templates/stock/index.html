@@ -90,7 +90,7 @@
                         {% set trans = entry.data %}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-gray-600 text-sm">
-                                {{ trans.transaction_date.strftime('%d/%m/%Y %H:%M') }}
+                                {{ trans.transaction_date|format_wib_datetime }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
@@ -118,7 +118,7 @@
                         {% set batch, item = entry.data %}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-gray-600 text-sm">
-                                {{ batch.confirmed_at.strftime('%d/%m/%Y %H:%M') if batch.confirmed_at else batch.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ batch.confirmed_at|format_wib_datetime if batch.confirmed_at else batch.created_at|format_wib_datetime }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
@@ -148,7 +148,7 @@
                         {% set proc, item = entry.data %}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-gray-600 text-sm">
-                                {{ proc.completion_date.strftime('%d/%m/%Y %H:%M') if proc.completion_date else proc.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ proc.completion_date|format_wib_datetime if proc.completion_date else proc.created_at|format_wib_datetime }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
@@ -178,7 +178,7 @@
                         {% set group, dist = entry.data %}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-gray-600 text-sm">
-                                {{ group.verified_at.strftime('%d/%m/%Y %H:%M') if group.verified_at else group.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ group.verified_at|format_wib_datetime if group.verified_at else group.created_at|format_wib_datetime }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
@@ -208,7 +208,7 @@
                         {% set dist = entry.data %}
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-gray-600 text-sm">
-                                {{ dist.created_at.strftime('%d/%m/%Y %H:%M') }}
+                                {{ dist.created_at|format_wib_datetime }}
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center">
