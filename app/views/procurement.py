@@ -446,8 +446,26 @@ def receive_goods(id):
                         flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Serial number sudah terdaftar: {", ".join(existing_list)}', 'warning')
                         return render_template('procurement/receive.html', procurement=procurement, form=form)
                 else:
-                    # For items that don't require serial number: use serial_units as serial_numbers (both fields same)
-                    serial_numbers = serial_units
+                    # For items that don't require serial number:
+                    # If user provided manual serial numbers, use them
+                    # Otherwise, use serial_units as serial_numbers (both fields same)
+                    if serial_numbers_str and serial_numbers_str.strip():
+                        serial_numbers = [sn.strip() for sn in serial_numbers_str.split('\n') if sn.strip()]
+                        # Validate quantity matches serial numbers count (if provided)
+                        if len(serial_numbers) != quantity_received:
+                            flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) tidak sesuai dengan jumlah barang ({quantity_received}). Jika mengisi serial number opsional, jumlahnya harus sama.', 'warning')
+                            return render_template('procurement/receive.html', procurement=procurement, form=form)
+                        # Check for duplicate serial numbers
+                        existing_serials = ItemDetail.query.filter(
+                            ItemDetail.serial_number.in_(serial_numbers)
+                        ).all()
+                        if existing_serials:
+                            existing_list = [sn.serial_number for sn in existing_serials]
+                            flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Serial number sudah terdaftar: {", ".join(existing_list)}', 'warning')
+                            return render_template('procurement/receive.html', procurement=procurement, form=form)
+                    else:
+                        # No manual serial numbers provided - use auto-generated serial_units
+                        serial_numbers = serial_units
 
                 items_data.append({
                     'procurement_item_id': procurement_item.id,
