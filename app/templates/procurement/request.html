@@ -215,7 +215,13 @@
                 {% endfor %}
                 <option value="-1" data-search-text="lainnya barang baru">Lainnya (Barang Baru)</option>
             </select>
-            <div class="item-search-results bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto hidden shadow-lg"></div>
+
+            <!-- Scrollable Item List Card -->
+            <div class="item-search-results bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden">
+                <div class="item-list-container p-1">
+                    <!-- Items will be populated here -->
+                </div>
+            </div>
         </div>
 
         <!-- New Item Fields (Hidden by default) -->
@@ -240,7 +246,14 @@
                         <option value="{{ category.id }}" data-search-text="{{ category.name }}">{{ category.name }}</option>
                         {% endfor %}
                     </select>
-                    <div class="category-search-results bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto hidden shadow-lg"></div>
+
+                    <!-- Scrollable Category List Card -->
+                    <div class="category-search-results bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden">
+                        <div class="category-list-container p-1">
+                            <!-- Categories will be populated here -->
+                        </div>
+                    </div>
+                    <div class="category-warning mt-1 text-xs text-amber-600 hidden"></div>
                 </div>
 
                 <!-- New Item Unit -->
@@ -392,9 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const categorySearch = itemCard.querySelector('.category-search');
         const categorySelect = itemCard.querySelector('.new-item-category');
         const categorySearchResults = itemCard.querySelector('.category-search-results');
+        const categoryWarning = itemCard.querySelector('.category-warning');
 
         if (categorySearch && categorySelect && categorySearchResults) {
-            setupCategorySearch(categorySearch, categorySelect, categorySearchResults);
+            setupCategorySearch(categorySearch, categorySelect, categorySearchResults, categoryWarning);
         }
 
         // Setup item name validation (check for existing items)
@@ -421,17 +435,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function setupItemSearch(searchInput, selectElement, resultsDiv, newItemFields) {
         let selectedIndex = -1;
+        const listContainer = resultsDiv.querySelector('.item-list-container');
 
         searchInput.addEventListener('focus', function() {
-            if (this.value === '') {
-                showAllOptions();
-            }
+            // Show all items when focused
+            showAllOptions();
+            resultsDiv.classList.remove('hidden');
         });
 
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
             filterOptions(searchTerm);
             selectedIndex = -1;
+            resultsDiv.classList.remove('hidden');
         });
 
         searchInput.addEventListener('keydown', function(e) {
@@ -451,12 +467,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     options[selectedIndex].click();
                 }
             } else if (e.key === 'Escape') {
+                this.value = '';
                 resultsDiv.classList.add('hidden');
             }
         });
 
         searchInput.addEventListener('blur', function() {
-            // Only hide results with delay to allow click events
+            // Hide the list after delay to allow click events
             setTimeout(() => {
                 resultsDiv.classList.add('hidden');
             }, 200);
@@ -464,7 +481,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function filterOptions(searchTerm) {
             const options = selectElement.querySelectorAll('option');
-            resultsDiv.innerHTML = '';
+            listContainer.innerHTML = '';
 
             let hasResults = false;
             let hasNewItemOption = false;
@@ -472,17 +489,16 @@ document.addEventListener('DOMContentLoaded', function() {
             options.forEach(option => {
                 const searchText = option.getAttribute('data-search-text')?.toLowerCase() || option.textContent.toLowerCase();
 
-                // Always show "Lainnya (Barang Baru)" option
+                // Always show "Lainnya (Barang Baru)" option at the top
                 if (option.value === '-1') {
                     hasNewItemOption = true;
                     const div = document.createElement('div');
-                    div.className = 'search-option px-3 py-2 cursor-pointer hover:bg-green-50 transition-colors bg-green-50 font-semibold text-green-800';
+                    div.className = 'search-option px-3 py-1.5 cursor-pointer hover:bg-green-50 transition-colors bg-green-50 font-semibold text-green-800 text-sm';
                     div.textContent = option.textContent;
                     div.dataset.value = option.value;
                     div.addEventListener('click', function() {
                         selectElement.value = this.dataset.value;
                         searchInput.value = option.textContent;
-                        resultsDiv.classList.add('hidden');
 
                         // Trigger change event
                         selectElement.dispatchEvent(new Event('change'));
@@ -493,17 +509,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             newItemFields.classList.add('hidden');
                         }
                     });
-                    resultsDiv.appendChild(div);
+                    listContainer.appendChild(div);
                 } else if (searchText.includes(searchTerm)) {
                     hasResults = true;
                     const div = document.createElement('div');
-                    div.className = 'search-option px-3 py-2 cursor-pointer hover:bg-blue-50 transition-colors';
+                    div.className = 'search-option px-3 py-1.5 cursor-pointer hover:bg-blue-50 transition-colors text-sm';
                     div.textContent = option.textContent;
                     div.dataset.value = option.value;
                     div.addEventListener('click', function() {
                         selectElement.value = this.dataset.value;
                         searchInput.value = option.textContent;
-                        resultsDiv.classList.add('hidden');
 
                         // Trigger change event
                         selectElement.dispatchEvent(new Event('change'));
@@ -514,19 +529,27 @@ document.addEventListener('DOMContentLoaded', function() {
                             newItemFields.classList.add('hidden');
                         }
                     });
-                    resultsDiv.appendChild(div);
+                    listContainer.appendChild(div);
                 }
             });
 
             // Show no results message if no matches found (but still show "Barang Baru" option)
             if (!hasResults && searchTerm !== '') {
                 const noResultsDiv = document.createElement('div');
-                noResultsDiv.className = 'search-option px-3 py-2 text-gray-500 text-sm italic cursor-default';
+                noResultsDiv.className = 'search-option px-3 py-1.5 text-gray-500 text-sm italic cursor-default';
                 noResultsDiv.textContent = `Tidak ditemukan: "${searchInput.value}"`;
-                resultsDiv.insertBefore(noResultsDiv, resultsDiv.firstChild);
+                listContainer.insertBefore(noResultsDiv, listContainer.firstChild);
             }
 
-            resultsDiv.classList.remove('hidden');
+            // Dynamic height: if items > 6, set max height with scroll, otherwise fit content
+            const itemCount = listContainer.children.length;
+            if (itemCount > 6) {
+                resultsDiv.style.height = '160px';
+                resultsDiv.style.overflowY = 'auto';
+            } else {
+                resultsDiv.style.height = 'auto';
+                resultsDiv.style.overflowY = 'visible';
+            }
         }
 
         function showAllOptions() {
@@ -543,28 +566,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-
-        // Hide results when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
-                resultsDiv.classList.add('hidden');
-            }
-        });
     }
 
-    function setupCategorySearch(searchInput, selectElement, resultsDiv) {
+    function setupCategorySearch(searchInput, selectElement, resultsDiv, warningDiv) {
         let selectedIndex = -1;
+        let isClickingOption = false;
+        const listContainer = resultsDiv.querySelector('.category-list-container');
 
         searchInput.addEventListener('focus', function() {
-            if (this.value === '') {
-                showAllOptions();
-            }
+            // Show all categories when focused
+            showAllOptions();
+            resultsDiv.classList.remove('hidden');
         });
 
         searchInput.addEventListener('input', function() {
             const searchTerm = this.value.toLowerCase().trim();
             filterOptions(searchTerm);
             selectedIndex = -1;
+            resultsDiv.classList.remove('hidden');
+
+            // Clear warning while typing
+            if (warningDiv && !warningDiv.classList.contains('hidden')) {
+                warningDiv.classList.add('hidden');
+                warningDiv.innerHTML = '';
+                searchInput.classList.remove('border-amber-400', 'bg-amber-50');
+            }
         });
 
         searchInput.addEventListener('keydown', function(e) {
@@ -584,35 +610,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     options[selectedIndex].click();
                 }
             } else if (e.key === 'Escape') {
+                this.value = '';
                 resultsDiv.classList.add('hidden');
             }
         });
 
         searchInput.addEventListener('blur', function() {
-            // Check if user has typed something but not selected an option
-            const inputValue = this.value.trim();
-            const selectedValue = selectElement.value;
-
-            // If user typed something but no valid selection was made
-            if (inputValue !== '' && (selectedValue === '0' || selectedValue === '')) {
-                // Show alert to force selection
-                setTimeout(() => {
-                    alert('Kategori yang Anda cari tidak ditemukan di daftar.\n\nSilakan periksa kembali pencarian Anda atau pilih dari daftar yang tersedia.');
-                    this.value = '';
-                    this.focus();
-                    resultsDiv.classList.remove('hidden');
-                }, 200);
-            }
-
-            // Delay hiding results to allow click events to fire
+            // Delay to allow click event on options to fire first
             setTimeout(() => {
+                // Check if user has clicked on an option
+                if (isClickingOption) {
+                    isClickingOption = false;
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+
+                // Hide the list
                 resultsDiv.classList.add('hidden');
+
+                // Check if user has typed something but not selected an option
+                const inputValue = this.value.trim();
+                const selectedValue = selectElement.value;
+
+                // If user typed something but no valid selection was made
+                if (inputValue !== '' && (selectedValue === '0' || selectedValue === '')) {
+                    // Show warning instead of alert
+                    if (warningDiv) {
+                        warningDiv.classList.remove('hidden');
+                        warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>Kategori "${inputValue}" tidak ditemukan di daftar. Silakan pilih dari daftar atau tambah kategori baru di menu "Kategori Barang".`;
+                        searchInput.classList.add('border-amber-400', 'bg-amber-50');
+                    }
+                }
             }, 200);
         });
 
         function filterOptions(searchTerm) {
             const options = selectElement.querySelectorAll('option');
-            resultsDiv.innerHTML = '';
+            listContainer.innerHTML = '';
 
             let hasResults = false;
 
@@ -621,25 +655,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (searchText.includes(searchTerm)) {
                     hasResults = true;
                     const div = document.createElement('div');
-                    div.className = 'search-option px-3 py-2 cursor-pointer hover:bg-green-50 transition-colors';
+                    div.className = 'search-option px-3 py-1.5 cursor-pointer hover:bg-green-50 transition-colors text-sm';
                     div.textContent = option.textContent;
                     div.dataset.value = option.value;
+                    div.addEventListener('mousedown', function() {
+                        // Set flag to prevent blur warning
+                        isClickingOption = true;
+                    });
                     div.addEventListener('click', function() {
                         selectElement.value = this.dataset.value;
                         searchInput.value = option.textContent;
-                        resultsDiv.classList.add('hidden');
+
+                        // Clear warning when valid category is selected
+                        if (warningDiv) {
+                            warningDiv.classList.add('hidden');
+                            warningDiv.innerHTML = '';
+                            searchInput.classList.remove('border-amber-400', 'bg-amber-50');
+                        }
 
                         // Trigger change event
                         selectElement.dispatchEvent(new Event('change'));
                     });
-                    resultsDiv.appendChild(div);
+                    listContainer.appendChild(div);
                 }
             });
 
-            if (hasResults) {
-                resultsDiv.classList.remove('hidden');
+            // Show no results message with "Add Category" link if no matches found
+            if (!hasResults && searchTerm !== '') {
+                const noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'search-option px-3 py-2 text-gray-600 text-sm cursor-default';
+                noResultsDiv.innerHTML = `
+                    <div class="text-amber-600 mb-2"><i class="fas fa-exclamation-triangle mr-1"></i>Tidak ditemukan: "${searchInput.value}"</div>
+                    <a href="{{ url_for('categories.create') }}" class="inline-flex items-center bg-green-50 text-green-700 hover:bg-green-100 hover:shadow-md hover:-translate-y-0.5 font-semibold text-xs px-3 py-2 rounded-lg transition-all cursor-pointer">
+                        <i class="fas fa-plus mr-1"></i>
+                        Tambah Kategori "${searchInput.value}"
+                    </a>
+                `;
+                listContainer.appendChild(noResultsDiv);
+            }
+
+            // Dynamic height: if items > 6, set max height with scroll, otherwise fit content
+            const itemCount = listContainer.children.length;
+            if (itemCount > 6) {
+                resultsDiv.style.height = '160px';
+                resultsDiv.style.overflowY = 'auto';
             } else {
-                resultsDiv.classList.add('hidden');
+                resultsDiv.style.height = 'auto';
+                resultsDiv.style.overflowY = 'visible';
             }
         }
 
@@ -657,13 +719,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-
-        // Hide results when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
-                resultsDiv.classList.add('hidden');
-            }
-        });
     }
 
     function setupItemNameCheck(nameInput, warningDiv, itemSelect) {

@@ -149,7 +149,7 @@ def index():
                              'received': received_count,
                              'completed': completed_count
                          },
-                         current_filter=status_filter,
+                         status_filter=status_filter,
                          search=search)
 
 
