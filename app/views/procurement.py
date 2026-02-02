@@ -69,6 +69,9 @@ def generate_item_code(category_id):
 def index():
     """List all procurements - filtered by warehouse for warehouse staff"""
     status_filter = request.args.get('status', '')
+    search = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     query = Procurement.query
 
     # Filter by warehouse for warehouse staff
@@ -85,7 +88,32 @@ def index():
     if status_filter:
         query = query.filter_by(status=status_filter)
 
-    procurements = query.order_by(Procurement.created_at.desc()).all()
+    # Search by item name (join with procurement items)
+    if search:
+        from app.models.procurement import ProcurementItem
+        # Get procurement IDs that have items matching the search term
+        matching_procurement_ids = db.session.query(ProcurementItem.procurement_id).join(
+            Item, ProcurementItem.item_id == Item.id
+        ).filter(
+            Item.name.ilike(f'%{search}%')
+        ).distinct().all()
+
+        matching_ids = [pid[0] for pid in matching_procurement_ids]
+
+        if matching_ids:
+            query = query.filter(Procurement.id.in_(matching_ids))
+        else:
+            # No matches, return empty result
+            query = query.filter(Procurement.id == -1)
+
+    # Server-side pagination
+    pagination = query.order_by(Procurement.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    procurements = pagination.items
 
     # Get statistics - also filtered for warehouse staff
     if not current_user.is_admin():
@@ -113,6 +141,7 @@ def index():
 
     return render_template('procurement/index.html',
                          procurements=procurements,
+                         pagination=pagination,
                          stats={
                              'total': total_procurements,
                              'pending': pending_count,
@@ -120,7 +149,8 @@ def index():
                              'received': received_count,
                              'completed': completed_count
                          },
-                         current_filter=status_filter)
+                         current_filter=status_filter,
+                         search=search)
 
 
 @bp.route('/request', methods=['GET', 'POST'])
@@ -401,11 +431,10 @@ def receive_goods(id):
                 if not quantity_received or quantity_received <= 0:
                     continue
 
-                # Determine if this is networking/server category
-                category_name = procurement_item.item.category.name.lower() if procurement_item.item and procurement_item.item.category else ''
-                is_networking = any(keyword in category_name for keyword in ['jaringan', 'network', 'server'])
+                # Check if category requires serial number
+                require_serial = procurement_item.item.category.require_serial_number if procurement_item.item and procurement_item.item.category else False
 
-                # Auto-generate serial units for ALL items (both networking and non-networking)
+                # Auto-generate serial units for ALL items
                 item_code = procurement_item.item.item_code if procurement_item.item else 'ITEM'
 
                 # Get the last serial unit for this item to continue the sequence
@@ -427,15 +456,15 @@ def receive_goods(id):
                     serial_unit = f"{item_code}-{str(start_num + i).zfill(3)}"
                     serial_units.append(serial_unit)
 
-                # For networking items: require manual serial numbers
-                if is_networking:
+                # For items that require serial number: use manual input
+                if require_serial:
                     serial_numbers = []
                     if serial_numbers_str:
                         serial_numbers = [sn.strip() for sn in serial_numbers_str.split('\n') if sn.strip()]
 
-                    # Validate quantity matches serial numbers count for networking items
+                    # Validate quantity matches serial numbers count
                     if len(serial_numbers) != quantity_received:
-                        flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) harus sama dengan jumlah barang ({quantity_received}) untuk kategori jaringan!', 'warning')
+                        flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) harus sama dengan jumlah barang ({quantity_received}) untuk kategori ini!', 'warning')
                         return render_template('procurement/receive.html', procurement=procurement, form=form)
 
                     # Check for duplicate serial numbers
@@ -447,8 +476,26 @@ def receive_goods(id):
                         flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Serial number sudah terdaftar: {", ".join(existing_list)}', 'warning')
                         return render_template('procurement/receive.html', procurement=procurement, form=form)
                 else:
-                    # For non-networking items: use serial_units as serial_numbers (both fields same)
-                    serial_numbers = serial_units
+                    # For items that don't require serial number:
+                    # If user provided manual serial numbers, use them
+                    # Otherwise, use serial_units as serial_numbers (both fields same)
+                    if serial_numbers_str and serial_numbers_str.strip():
+                        serial_numbers = [sn.strip() for sn in serial_numbers_str.split('\n') if sn.strip()]
+                        # Validate quantity matches serial numbers count (if provided)
+                        if len(serial_numbers) != quantity_received:
+                            flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Jumlah serial number ({len(serial_numbers)}) tidak sesuai dengan jumlah barang ({quantity_received}). Jika mengisi serial number opsional, jumlahnya harus sama.', 'warning')
+                            return render_template('procurement/receive.html', procurement=procurement, form=form)
+                        # Check for duplicate serial numbers
+                        existing_serials = ItemDetail.query.filter(
+                            ItemDetail.serial_number.in_(serial_numbers)
+                        ).all()
+                        if existing_serials:
+                            existing_list = [sn.serial_number for sn in existing_serials]
+                            flash(f'{procurement_item.item.name if procurement_item.item else "Item"}: Serial number sudah terdaftar: {", ".join(existing_list)}', 'warning')
+                            return render_template('procurement/receive.html', procurement=procurement, form=form)
+                    else:
+                        # No manual serial numbers provided - use auto-generated serial_units
+                        serial_numbers = serial_units
 
                 items_data.append({
                     'procurement_item_id': procurement_item.id,

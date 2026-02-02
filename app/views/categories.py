@@ -15,6 +15,8 @@ bp = Blueprint('categories', __name__, url_prefix='/admin/categories')
 def index():
     """List all categories"""
     search = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
 
     query = Category.query
 
@@ -22,7 +24,14 @@ def index():
     if search:
         query = query.filter(Category.name.ilike(f'%{search}%'))
 
-    categories = query.order_by(Category.name).all()
+    # Server-side pagination
+    pagination = query.order_by(Category.name).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    categories = pagination.items
 
     # Get item count for each category
     category_item_counts = {}
@@ -32,7 +41,8 @@ def index():
     return render_template('admin/categories/index.html',
                          categories=categories,
                          category_item_counts=category_item_counts,
-                         search=search)
+                         search=search,
+                         pagination=pagination)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
@@ -58,7 +68,8 @@ def create():
             category = Category(
                 name=form.name.data,
                 code=form.code.data.upper(),  # Convert to uppercase
-                description=form.description.data
+                description=form.description.data,
+                require_serial_number=form.require_serial_number.data == 'True'
             )
             category.save()
 
@@ -68,7 +79,11 @@ def create():
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('admin/categories/create.html', form=form)
+    # Get all categories for validation
+    categories = Category.query.all()
+    categories_data = [{'id': c.id, 'name': c.name, 'code': c.code} for c in categories]
+
+    return render_template('admin/categories/create.html', form=form, categories=categories_data)
 
 
 @bp.route('/<int:id>/edit', methods=['GET', 'POST'])
@@ -78,6 +93,10 @@ def edit(id):
     """Edit category"""
     category = Category.query.get_or_404(id)
     form = CategoryForm(obj=category)
+
+    # Set require_serial_number value manually for RadioField
+    if not form.is_submitted():
+        form.require_serial_number.data = 'True' if category.require_serial_number else 'False'
 
     if form.validate_on_submit():
         try:
@@ -105,6 +124,7 @@ def edit(id):
             category.name = form.name.data
             category.code = form.code.data.upper()  # Convert to uppercase
             category.description = form.description.data
+            category.require_serial_number = form.require_serial_number.data == 'True'
             category.save()
 
             flash(f'Kategori {category.name} ({category.code}) berhasil diupdate!', 'success')
@@ -113,7 +133,11 @@ def edit(id):
         except Exception as e:
             flash(f'Terjadi kesalahan: {str(e)}', 'danger')
 
-    return render_template('admin/categories/edit.html', category=category, form=form)
+    # Get all categories for validation
+    categories = Category.query.all()
+    categories_data = [{'id': c.id, 'name': c.name, 'code': c.code} for c in categories]
+
+    return render_template('admin/categories/edit.html', category=category, form=form, categories=categories_data)
 
 
 @bp.route('/<int:id>/delete', methods=['POST'])

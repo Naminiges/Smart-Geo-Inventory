@@ -179,22 +179,25 @@
                             {% endif %}
                         </div>
 
-                        <!-- Serial Numbers (ONLY for Networking/Server) -->
-                        <div id="serial_number_div_{{ proc_item.id }}" style="{% if proc_item.item and proc_item.item.category and ('jaringan' in proc_item.item.category.name.lower() or 'network' in proc_item.item.category.name.lower() or 'server' in proc_item.item.category.name.lower()) %}display:block;{% else %}display:none;{% endif %}">
+                        <!-- Serial Numbers (berdasarkan kategori require_serial_number) -->
+                        {% set require_sn = proc_item.item and proc_item.item.category and proc_item.item.category.require_serial_number %}
+                        <div id="serial_number_div_{{ proc_item.id }}" data-require-sn="{{ require_sn|lower }}">
                             <label class="block text-xs font-semibold text-gray-700 mb-1">
-                                Serial Number <span class="text-red-500">*</span>
+                                Serial Number {% if require_sn %}<span class="text-red-500">*</span>{% else %}<span class="text-gray-400">(Opsional)</span>{% endif %}
                             </label>
                             <textarea name="serial_numbers_{{ proc_item.id }}"
                                       id="serial_numbers_{{ proc_item.id }}"
+                                      data-require-sn="{{ require_sn|lower }}"
+                                      data-remaining-qty="{{ proc_item.remaining_quantity }}"
                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-mono text-sm"
                                       rows="3"
-                                      placeholder="Contoh:&#13;&#10;SN-001&#13;&#10;SN-002&#13;&#10;SN-003"
-                                      oninput="updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }})"
+                                      placeholder="{% if require_sn %}Contoh:&#13;&#10;SN-001&#13;&#10;SN-002&#13;&#10;SN-003{% else %}Opsional - Isi serial number jika ada&#13;&#10;(Kosongkan untuk auto-generate){% endif %}"
+                                      oninput="updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }}, {{ require_sn|lower }})"
                                       {% if proc_item.remaining_quantity == 0 %}disabled{% endif %}></textarea>
                             <div class="mt-1 flex items-center justify-between">
                                 <p class="text-xs text-gray-500">
                                     <i class="fas fa-info-circle mr-1"></i>
-                                    Wajib untuk kategori Jaringan/Network/Server
+                                    {% if require_sn %}Wajib untuk kategori ini{% else %}Opsional - Jika kosong akan digenerate otomatis{% endif %}
                                 </p>
                                 <p id="sn_counter_{{ proc_item.id }}" class="text-xs font-semibold">
                                     <span id="sn_count_{{ proc_item.id }}" class="text-amber-600">0</span> / {{ proc_item.remaining_quantity }}
@@ -246,7 +249,7 @@
             <ul class="text-sm text-blue-800 space-y-1">
                 <li><i class="fas fa-check-circle mr-2"></i>Pastikan nomor tanda terima sesuai dengan dokumen dari supplier</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Cek kembali jumlah barang yang diterima untuk setiap item</li>
-                <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Number</strong>: Wajib diisi untuk kategori Jaringan/Network/Server (satu per baris)</li>
+                <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Number</strong>: Wajib diisi untuk kategori yang ditandai wajib serial number (satu per baris)</li>
                 <li><i class="fas fa-check-circle mr-2"></i><strong>Serial Unit</strong>: Otomatis di-generate oleh sistem untuk semua barang</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Anda bisa menerima barang sebagian (partial receiving)</li>
                 <li><i class="fas fa-check-circle mr-2"></i>Setelah semua barang lengkap, pengadaan siap diselesaikan</li>
@@ -287,10 +290,6 @@
                         <div class="flex">
                             <span class="w-40 text-gray-600">No. Invoice:</span>
                             <span class="font-medium text-gray-800" id="summaryInvoice">-</span>
-                        </div>
-                        <div class="flex">
-                            <span class="w-40 text-gray-600">Pengadaan #:</span>
-                            <span class="font-medium text-gray-800">{{ procurement.id }}</span>
                         </div>
                     </div>
 
@@ -371,7 +370,7 @@ function updateSerialUnits(procurementItemId, itemCode) {
     }
 }
 
-function updateSerialNumberCounter(procurementItemId, expectedCount) {
+function updateSerialNumberCounter(procurementItemId, expectedCount, requireSn) {
     const textarea = document.getElementById('serial_numbers_' + procurementItemId);
     const countSpan = document.getElementById('sn_count_' + procurementItemId);
     const warningP = document.getElementById('sn_warning_' + procurementItemId);
@@ -394,7 +393,12 @@ function updateSerialNumberCounter(procurementItemId, expectedCount) {
     if (hasDuplicates) {
         countSpan.classList.add('text-red-600');
     } else if (count === 0) {
-        countSpan.classList.add('text-amber-600');
+        // For non-required SN, empty is OK (green), for required SN, empty is warning
+        if (requireSn) {
+            countSpan.classList.add('text-amber-600');
+        } else {
+            countSpan.classList.add('text-green-600');
+        }
     } else if (count === expectedCount) {
         countSpan.classList.add('text-green-600');
     } else if (count < expectedCount) {
@@ -431,10 +435,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize serial units on page load
     updateSerialUnits({{ proc_item.id }}, '{{ proc_item.item.item_code }}');
 
-    // Initialize serial number counter for networking items
-    {% if proc_item.item and proc_item.item.category and ('jaringan' in proc_item.item.category.name.lower() or 'network' in proc_item.item.category.name.lower() or 'server' in proc_item.item.category.name.lower()) %}
-    updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }});
-    {% endif %}
+    // Initialize serial number counter for ALL items (both required and optional)
+    {% set require_sn = proc_item.item and proc_item.item.category and proc_item.item.category.require_serial_number %}
+    updateSerialNumberCounter({{ proc_item.id }}, {{ proc_item.remaining_quantity }}, {{ require_sn|lower }});
     {% endif %}
     {% endfor %}
 });
@@ -463,11 +466,15 @@ function showConfirmModal() {
     // Check for duplicate serial numbers in networking items
     const serialNumberTextareas = document.querySelectorAll('[id^="serial_numbers_"]');
     for (let textarea of serialNumberTextareas) {
-        if (!textarea.disabled && textarea.value.trim()) {
+        const requireSn = textarea.getAttribute('data-require-sn') === 'true';
+
+        // Only validate if textarea is not disabled
+        if (!textarea.disabled) {
             const lines = textarea.value.split('\n').map(line => line.trim()).filter(line => line !== '');
             const uniqueLines = [...new Set(lines)];
 
-            if (uniqueLines.length < lines.length) {
+            // Check for duplicates (always check, regardless of require_sn)
+            if (lines.length > 0 && uniqueLines.length < lines.length) {
                 const procItemId = textarea.id.replace('serial_numbers_', '');
                 const itemCard = textarea.closest('.bg-gray-50');
                 const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
@@ -477,18 +484,46 @@ function showConfirmModal() {
                 return;
             }
 
-            // Also check if count matches expected quantity
-            const procItemId = textarea.id.replace('serial_numbers_', '');
-            const quantityInput = document.getElementById('quantity_' + procItemId);
-            const expectedCount = parseInt(quantityInput?.value) || 0;
+            // For REQUIRED serial number items: check if filled and count matches
+            if (requireSn) {
+                const procItemId = textarea.id.replace('serial_numbers_', '');
+                const quantityInput = document.getElementById('quantity_' + procItemId);
+                const expectedCount = parseInt(quantityInput?.value) || 0;
 
-            if (lines.length !== expectedCount) {
-                const itemCard = textarea.closest('.bg-gray-50');
-                const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
+                // Must be filled for required SN items
+                if (lines.length === 0) {
+                    const itemCard = textarea.closest('.bg-gray-50');
+                    const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
 
-                alert(`Jumlah serial number (${lines.length}) tidak sesuai dengan jumlah barang (${expectedCount}) untuk "${itemName}"!\n\nUntuk kategori Jaringan/Network/Server, jumlah serial number harus sama dengan jumlah barang yang diterima.`);
-                textarea.focus();
-                return;
+                    alert(`Serial number WAJIB diisi untuk "${itemName}"!\n\nKategori ini memerlukan serial number untuk setiap barang.`);
+                    textarea.focus();
+                    return;
+                }
+
+                // Count must match for required SN items
+                if (lines.length !== expectedCount) {
+                    const itemCard = textarea.closest('.bg-gray-50');
+                    const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
+
+                    alert(`Jumlah serial number (${lines.length}) tidak sesuai dengan jumlah barang (${expectedCount}) untuk "${itemName}"!\n\nUntuk kategori ini, jumlah serial number harus sama dengan jumlah barang yang diterima.`);
+                    textarea.focus();
+                    return;
+                }
+            }
+            // For OPTIONAL serial number items: if filled, count must match (but empty is OK)
+            else if (lines.length > 0) {
+                const procItemId = textarea.id.replace('serial_numbers_', '');
+                const quantityInput = document.getElementById('quantity_' + procItemId);
+                const expectedCount = parseInt(quantityInput?.value) || 0;
+
+                if (lines.length !== expectedCount) {
+                    const itemCard = textarea.closest('.bg-gray-50');
+                    const itemName = itemCard.querySelector('h5')?.textContent.trim() || 'Item';
+
+                    alert(`Jumlah serial number (${lines.length}) tidak sesuai dengan jumlah barang (${expectedCount}) untuk "${itemName}"!\n\nJika Anda mengisi serial number opsional, jumlahnya harus sama dengan jumlah barang. Kosongkan untuk auto-generate.`);
+                    textarea.focus();
+                    return;
+                }
             }
         }
     }

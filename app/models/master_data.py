@@ -10,6 +10,7 @@ class Category(BaseModel):
     name = db.Column(db.String(100), nullable=False, unique=True)
     code = db.Column(db.String(10), nullable=False, unique=True)  # Category code for item_code prefix (e.g., JAR, ELE, SRV)
     description = db.Column(db.Text)
+    require_serial_number = db.Column(db.Boolean, default=False, nullable=False)  # Wajib serial number atau tidak
 
     # Relationships
     items = db.relationship('Item', back_populates='category', lazy='dynamic')

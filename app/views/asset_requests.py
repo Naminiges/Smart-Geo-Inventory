@@ -25,6 +25,8 @@ def index():
     from app.models import UserUnit
 
     status_filter = request.args.get('status', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
 
     # Filter based on role
     if current_user.is_unit_staff():
@@ -55,10 +57,14 @@ def index():
         else:
             query = query.filter_by(status=status_filter)
 
-    asset_requests = query.order_by(AssetRequest.created_at.desc()).all()
+    # Server-side pagination
+    pagination = query.order_by(AssetRequest.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
 
-    # Convert to list to avoid len() error
-    asset_requests_list = list(asset_requests)
+    asset_requests = pagination.items
 
     # Get statistics based on role
     if current_user.is_unit_staff():
@@ -81,7 +87,8 @@ def index():
         completed_count = AssetRequest.query.filter_by(status='completed').count()
 
     return render_template('asset_requests/index.html',
-                         asset_requests=asset_requests_list,
+                         asset_requests=asset_requests,
+                         pagination=pagination,
                          stats={
                              'total': total_requests,
                              'pending': pending_count,

@@ -113,7 +113,7 @@
                 <i class="fas fa-boxes mr-2 text-emerald-600"></i>
                 Detail Barang
             </h4>
-            <p class="text-sm text-gray-600">Pilih barang yang akan di-procurement</p>
+            <p class="text-sm text-gray-600">Pilih barang yang akan diadakan</p>
         </div>
         {% endif %}
 
@@ -206,14 +206,16 @@
 
         <!-- Item Selection -->
         <div class="mb-3" style="position: relative; z-index: 10;">
-            <label class="block text-xs font-semibold text-gray-700 mb-1">Pilih Barang</label>
-            <select class="item-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" style="min-height: 42px;">
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Pilih Barang (Pilih "Barang Baru" jika tidak menemukan)</label>
+            <input type="text" class="item-search w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" placeholder="Cari barang..." autocomplete="off">
+            <select class="item-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm hidden" style="min-height: 42px;" tabindex="-1">
                 <option value="0">-- Pilih dari daftar barang --</option>
                 {% for item in items %}
-                <option value="{{ item.id }}">{{ item.item_code }} - {{ item.name }}</option>
+                <option value="{{ item.id }}" data-search-text="{{ item.item_code }} {{ item.name }}">{{ item.item_code }} - {{ item.name }}</option>
                 {% endfor %}
-                <option value="-1">Lainnya (Barang Baru)</option>
+                <option value="-1" data-search-text="lainnya barang baru">Lainnya (Barang Baru)</option>
             </select>
+            <div class="item-search-results bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto hidden shadow-lg"></div>
         </div>
 
         <!-- New Item Fields (Hidden by default) -->
@@ -225,17 +227,20 @@
                 <div class="mb-2">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Barang</label>
                     <input type="text" class="new-item-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" placeholder="Contoh: Laptop Dell Latitude 5420">
+                    <div class="item-name-warning mt-1 text-xs text-amber-600 hidden"></div>
                 </div>
 
                 <!-- New Item Category -->
                 <div class="mb-2" style="position: relative; z-index: 10;">
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Kategori Barang</label>
-                    <select class="new-item-category w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" style="min-height: 42px;">
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Kategori Barang (Tambah baru di "Kategori Barang" jika tidak menemukan)</label>
+                    <input type="text" class="category-search w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" placeholder="Cari kategori..." autocomplete="off">
+                    <select class="new-item-category w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm hidden" style="min-height: 42px;" tabindex="-1">
                         <option value="0">-- Pilih Kategori --</option>
                         {% for category in categories %}
-                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        <option value="{{ category.id }}" data-search-text="{{ category.name }}">{{ category.name }}</option>
                         {% endfor %}
                     </select>
+                    <div class="category-search-results bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto hidden shadow-lg"></div>
                 </div>
 
                 <!-- New Item Unit -->
@@ -363,8 +368,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Add event listeners for this item
         const itemSelect = itemCard.querySelector('.item-select');
+        const itemSearch = itemCard.querySelector('.item-search');
+        const itemSearchResults = itemCard.querySelector('.item-search-results');
         const newItemFields = itemCard.querySelector('.new-item-fields');
         const removeBtn = itemCard.querySelector('.remove-item-btn');
+
+        // Setup search functionality for item selection
+        setupItemSearch(itemSearch, itemSelect, itemSearchResults, newItemFields);
 
         // Show/hide new item fields
         itemSelect.addEventListener('change', function() {
@@ -378,6 +388,23 @@ document.addEventListener('DOMContentLoaded', function() {
             checkDuplicateItems();
         });
 
+        // Setup category search
+        const categorySearch = itemCard.querySelector('.category-search');
+        const categorySelect = itemCard.querySelector('.new-item-category');
+        const categorySearchResults = itemCard.querySelector('.category-search-results');
+
+        if (categorySearch && categorySelect && categorySearchResults) {
+            setupCategorySearch(categorySearch, categorySelect, categorySearchResults);
+        }
+
+        // Setup item name validation (check for existing items)
+        const newItemName = itemCard.querySelector('.new-item-name');
+        const itemNameWarning = itemCard.querySelector('.item-name-warning');
+
+        if (newItemName && itemNameWarning) {
+            setupItemNameCheck(newItemName, itemNameWarning, itemSelect);
+        }
+
         // Remove item button
         removeBtn.addEventListener('click', function() {
             if (itemsContainer.children.length > 1) {
@@ -390,6 +417,299 @@ document.addEventListener('DOMContentLoaded', function() {
 
         itemsContainer.appendChild(itemCard);
         itemCount++;
+    }
+
+    function setupItemSearch(searchInput, selectElement, resultsDiv, newItemFields) {
+        let selectedIndex = -1;
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value === '') {
+                showAllOptions();
+            }
+        });
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            filterOptions(searchTerm);
+            selectedIndex = -1;
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            const options = resultsDiv.querySelectorAll('.search-option');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, options.length - 1);
+                updateSelectedOption(options);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                updateSelectedOption(options);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0 && selectedIndex < options.length) {
+                    options[selectedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                resultsDiv.classList.add('hidden');
+            }
+        });
+
+        searchInput.addEventListener('blur', function() {
+            // Only hide results with delay to allow click events
+            setTimeout(() => {
+                resultsDiv.classList.add('hidden');
+            }, 200);
+        });
+
+        function filterOptions(searchTerm) {
+            const options = selectElement.querySelectorAll('option');
+            resultsDiv.innerHTML = '';
+
+            let hasResults = false;
+            let hasNewItemOption = false;
+
+            options.forEach(option => {
+                const searchText = option.getAttribute('data-search-text')?.toLowerCase() || option.textContent.toLowerCase();
+
+                // Always show "Lainnya (Barang Baru)" option
+                if (option.value === '-1') {
+                    hasNewItemOption = true;
+                    const div = document.createElement('div');
+                    div.className = 'search-option px-3 py-2 cursor-pointer hover:bg-green-50 transition-colors bg-green-50 font-semibold text-green-800';
+                    div.textContent = option.textContent;
+                    div.dataset.value = option.value;
+                    div.addEventListener('click', function() {
+                        selectElement.value = this.dataset.value;
+                        searchInput.value = option.textContent;
+                        resultsDiv.classList.add('hidden');
+
+                        // Trigger change event
+                        selectElement.dispatchEvent(new Event('change'));
+
+                        if (selectElement.value === '-1') {
+                            newItemFields.classList.remove('hidden');
+                        } else {
+                            newItemFields.classList.add('hidden');
+                        }
+                    });
+                    resultsDiv.appendChild(div);
+                } else if (searchText.includes(searchTerm)) {
+                    hasResults = true;
+                    const div = document.createElement('div');
+                    div.className = 'search-option px-3 py-2 cursor-pointer hover:bg-blue-50 transition-colors';
+                    div.textContent = option.textContent;
+                    div.dataset.value = option.value;
+                    div.addEventListener('click', function() {
+                        selectElement.value = this.dataset.value;
+                        searchInput.value = option.textContent;
+                        resultsDiv.classList.add('hidden');
+
+                        // Trigger change event
+                        selectElement.dispatchEvent(new Event('change'));
+
+                        if (selectElement.value === '-1') {
+                            newItemFields.classList.remove('hidden');
+                        } else {
+                            newItemFields.classList.add('hidden');
+                        }
+                    });
+                    resultsDiv.appendChild(div);
+                }
+            });
+
+            // Show no results message if no matches found (but still show "Barang Baru" option)
+            if (!hasResults && searchTerm !== '') {
+                const noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'search-option px-3 py-2 text-gray-500 text-sm italic cursor-default';
+                noResultsDiv.textContent = `Tidak ditemukan: "${searchInput.value}"`;
+                resultsDiv.insertBefore(noResultsDiv, resultsDiv.firstChild);
+            }
+
+            resultsDiv.classList.remove('hidden');
+        }
+
+        function showAllOptions() {
+            filterOptions('');
+        }
+
+        function updateSelectedOption(options) {
+            options.forEach((opt, index) => {
+                if (index === selectedIndex) {
+                    opt.classList.add('bg-blue-100');
+                    opt.scrollIntoView({ block: 'nearest' });
+                } else {
+                    opt.classList.remove('bg-blue-100');
+                }
+            });
+        }
+
+        // Hide results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.classList.add('hidden');
+            }
+        });
+    }
+
+    function setupCategorySearch(searchInput, selectElement, resultsDiv) {
+        let selectedIndex = -1;
+
+        searchInput.addEventListener('focus', function() {
+            if (this.value === '') {
+                showAllOptions();
+            }
+        });
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            filterOptions(searchTerm);
+            selectedIndex = -1;
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            const options = resultsDiv.querySelectorAll('.search-option');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, options.length - 1);
+                updateSelectedOption(options);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                updateSelectedOption(options);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0 && selectedIndex < options.length) {
+                    options[selectedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                resultsDiv.classList.add('hidden');
+            }
+        });
+
+        searchInput.addEventListener('blur', function() {
+            // Check if user has typed something but not selected an option
+            const inputValue = this.value.trim();
+            const selectedValue = selectElement.value;
+
+            // If user typed something but no valid selection was made
+            if (inputValue !== '' && (selectedValue === '0' || selectedValue === '')) {
+                // Show alert to force selection
+                setTimeout(() => {
+                    alert('Kategori yang Anda cari tidak ditemukan di daftar.\n\nSilakan periksa kembali pencarian Anda atau pilih dari daftar yang tersedia.');
+                    this.value = '';
+                    this.focus();
+                    resultsDiv.classList.remove('hidden');
+                }, 200);
+            }
+
+            // Delay hiding results to allow click events to fire
+            setTimeout(() => {
+                resultsDiv.classList.add('hidden');
+            }, 200);
+        });
+
+        function filterOptions(searchTerm) {
+            const options = selectElement.querySelectorAll('option');
+            resultsDiv.innerHTML = '';
+
+            let hasResults = false;
+
+            options.forEach(option => {
+                const searchText = option.getAttribute('data-search-text')?.toLowerCase() || option.textContent.toLowerCase();
+                if (searchText.includes(searchTerm)) {
+                    hasResults = true;
+                    const div = document.createElement('div');
+                    div.className = 'search-option px-3 py-2 cursor-pointer hover:bg-green-50 transition-colors';
+                    div.textContent = option.textContent;
+                    div.dataset.value = option.value;
+                    div.addEventListener('click', function() {
+                        selectElement.value = this.dataset.value;
+                        searchInput.value = option.textContent;
+                        resultsDiv.classList.add('hidden');
+
+                        // Trigger change event
+                        selectElement.dispatchEvent(new Event('change'));
+                    });
+                    resultsDiv.appendChild(div);
+                }
+            });
+
+            if (hasResults) {
+                resultsDiv.classList.remove('hidden');
+            } else {
+                resultsDiv.classList.add('hidden');
+            }
+        }
+
+        function showAllOptions() {
+            filterOptions('');
+        }
+
+        function updateSelectedOption(options) {
+            options.forEach((opt, index) => {
+                if (index === selectedIndex) {
+                    opt.classList.add('bg-green-100');
+                    opt.scrollIntoView({ block: 'nearest' });
+                } else {
+                    opt.classList.remove('bg-green-100');
+                }
+            });
+        }
+
+        // Hide results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                resultsDiv.classList.add('hidden');
+            }
+        });
+    }
+
+    function setupItemNameCheck(nameInput, warningDiv, itemSelect) {
+        nameInput.addEventListener('blur', function() {
+            const inputName = this.value.trim().toLowerCase();
+
+            if (inputName === '') {
+                warningDiv.classList.add('hidden');
+                warningDiv.innerHTML = '';
+                return;
+            }
+
+            // Check against all existing items in the dropdown
+            const options = itemSelect.querySelectorAll('option');
+            let foundMatch = null;
+
+            options.forEach(option => {
+                if (option.value && option.value !== '0' && option.value !== '-1') {
+                    const optionText = option.textContent.toLowerCase();
+                    const searchText = option.getAttribute('data-search-text')?.toLowerCase() || optionText;
+
+                    // Check if input name matches existing item name (case-insensitive)
+                    if (searchText.includes(inputName) || inputName.includes(searchText.split(' - ')[1] || searchText)) {
+                        foundMatch = option.textContent;
+                    }
+                }
+            });
+
+            if (foundMatch) {
+                warningDiv.classList.remove('hidden');
+                warningDiv.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i>Barang dengan nama mirip sudah terdaftar: "${foundMatch}". Pastikan Anda tidak membuat duplikat.`;
+                nameInput.classList.add('border-amber-400', 'bg-amber-50');
+            } else {
+                warningDiv.classList.add('hidden');
+                warningDiv.innerHTML = '';
+                nameInput.classList.remove('border-amber-400', 'bg-amber-50');
+            }
+        });
+
+        nameInput.addEventListener('input', function() {
+            // Clear warning while typing
+            if (warningDiv.classList.contains('hidden') === false) {
+                warningDiv.classList.add('hidden');
+                nameInput.classList.remove('border-amber-400', 'bg-amber-50');
+            }
+        });
     }
 
     function updateItemNumbers() {
@@ -409,12 +729,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const itemId = itemSelect.value;
 
             if (itemId && itemId !== '0' && itemId !== '-1') {
-                const itemName = itemSelect.options[itemSelect.selectedIndex].text;
+                const itemSearch = card.querySelector('.item-search');
+                const itemName = itemSearch ? itemSearch.value : itemSelect.options[itemSelect.selectedIndex].text;
 
                 if (selectedItems.includes(itemId)) {
                     // Duplicate found!
                     alert(`Barang "${itemName}" sudah dipilih!\n\nSilakan pilih barang yang lain atau hapus salah satu dari daftar.`);
-                    itemSelect.value = '0'; // Reset selection
+                    itemSelect.value = '0';
+                    if (itemSearch) itemSearch.value = '';
                     return;
                 }
 

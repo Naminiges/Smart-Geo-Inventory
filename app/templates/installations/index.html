@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/pagination.html" import render_pagination %}
 
 {% block title %}Distribusi Aset Umum - Smart Geo Inventory{% endblock %}
 {% block page_title %}Distribusi Aset Umum{% endblock %}
@@ -84,4 +85,7 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Pagination -->
+{{ render_pagination(pagination, 'installations.index', {}) }}
 {% endblock %}
