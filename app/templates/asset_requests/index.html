@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/pagination.html" import render_pagination %}
 
 {% block title %}Permohonan Aset - Smart Geo Inventory{% endblock %}
 
@@ -101,7 +102,7 @@
 <!-- Asset Requests Table -->
 <div class="bg-white rounded-xl shadow-md overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full paginated-table">
+        <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tanggal</th>
@@ -179,6 +180,10 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Pagination -->
+{% set query_params = {'status': current_filter} %}
+{{ render_pagination(pagination, 'asset_requests.index', query_params) }}
 
 <!-- Delete Confirmation Modal -->
 <div id="deleteModal" class="fixed inset-0 hidden items-center justify-center z-50 backdrop-blur-sm bg-gray-900/40">

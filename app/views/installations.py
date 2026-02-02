@@ -161,6 +161,8 @@ def index():
 
     # Get task type filter from URL parameter
     task_type_filter = request.args.get('task_type', '')  # 'installation' or 'delivery' or empty for all
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
 
     # Initialize accessible_warehouse_ids for warehouse staff
     accessible_warehouse_ids = []
@@ -186,7 +188,14 @@ def index():
         )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.order_by(Distribution.draft_verified_at.desc()).all()
+
+        # Server-side pagination for installations
+        pagination = installations_query.order_by(Distribution.draft_verified_at.desc()).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        installations = pagination.items
 
         # Get draft distributions from accessible warehouses only, newest first
         draft_query = Distribution.query.filter(
@@ -207,7 +216,14 @@ def index():
         )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.all()
+
+        # Server-side pagination for installations
+        pagination = installations_query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        installations = pagination.items
 
         drafts = []  # Field staff doesn't see drafts
         units = []
@@ -222,7 +238,14 @@ def index():
         )
         if task_type_filter:
             installations_query = installations_query.filter_by(task_type=task_type_filter)
-        installations = installations_query.order_by(Distribution.draft_verified_at.desc()).all()
+
+        # Server-side pagination for installations
+        pagination = installations_query.order_by(Distribution.draft_verified_at.desc()).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+        installations = pagination.items
 
         # Get all draft distributions, newest first
         drafts = Distribution.query.filter_by(is_draft=True).order_by(Distribution.created_at.desc()).all()
@@ -322,7 +345,8 @@ def index():
                          active_batches=active_batches,
                          units=units,
                          field_staffs=field_staffs,
-                         task_type_filter=task_type_filter)
+                         task_type_filter=task_type_filter,
+                         pagination=pagination)
 
 
 @bp.route('/create', methods=['GET', 'POST'])

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/pagination.html" import render_pagination %}
 
 {% block title %}Daftar Divisi - Smart Geo Inventory{% endblock %}
 {% block page_title %}Daftar Divisi{% endblock %}
@@ -64,7 +65,7 @@
 <!-- Units Table -->
 <div class="bg-white rounded-xl shadow-md overflow-hidden">
   <div class="overflow-x-auto">
-    <table class="w-full paginated-table">
+    <table class="w-full">
       <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Divisi</th>
@@ -161,4 +162,7 @@ function confirmDeleteUnit(button) {
 }
 </script>
 {% endif %}
+
+<!-- Pagination -->
+{{ render_pagination(pagination, 'units.index', {}) }}
 {% endblock %}

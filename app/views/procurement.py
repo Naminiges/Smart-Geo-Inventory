@@ -69,6 +69,9 @@ def generate_item_code(category_id):
 def index():
     """List all procurements - filtered by warehouse for warehouse staff"""
     status_filter = request.args.get('status', '')
+    search = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     query = Procurement.query
 
     # Filter by warehouse for warehouse staff
@@ -85,7 +88,32 @@ def index():
     if status_filter:
         query = query.filter_by(status=status_filter)
 
-    procurements = query.order_by(Procurement.created_at.desc()).all()
+    # Search by item name (join with procurement items)
+    if search:
+        from app.models.procurement import ProcurementItem
+        # Get procurement IDs that have items matching the search term
+        matching_procurement_ids = db.session.query(ProcurementItem.procurement_id).join(
+            Item, ProcurementItem.item_id == Item.id
+        ).filter(
+            Item.name.ilike(f'%{search}%')
+        ).distinct().all()
+
+        matching_ids = [pid[0] for pid in matching_procurement_ids]
+
+        if matching_ids:
+            query = query.filter(Procurement.id.in_(matching_ids))
+        else:
+            # No matches, return empty result
+            query = query.filter(Procurement.id == -1)
+
+    # Server-side pagination
+    pagination = query.order_by(Procurement.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    procurements = pagination.items
 
     # Get statistics - also filtered for warehouse staff
     if not current_user.is_admin():
@@ -113,6 +141,7 @@ def index():
 
     return render_template('procurement/index.html',
                          procurements=procurements,
+                         pagination=pagination,
                          stats={
                              'total': total_procurements,
                              'pending': pending_count,
@@ -120,7 +149,8 @@ def index():
                              'received': received_count,
                              'completed': completed_count
                          },
-                         current_filter=status_filter)
+                         current_filter=status_filter,
+                         search=search)
 
 
 @bp.route('/request', methods=['GET', 'POST'])

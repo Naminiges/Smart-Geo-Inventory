@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/pagination.html" import render_pagination %}
 
 {% block title %}Pengadaan - Smart Geo Inventory{% endblock %}
 {% block page_title %}Pengadaan Barang Baru{% endblock %}
@@ -94,30 +95,45 @@
 
 <!-- Filter Buttons -->
 <div class="bg-white rounded-xl shadow-md mb-6 p-4">
-  <div class="flex flex-wrap gap-2">
-    <a href="{{ url_for('procurement.index') }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if not status_filter %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+  <div class="flex flex-wrap gap-2 mb-3">
+    <a href="{{ url_for('procurement.index', search=search) }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if not status_filter %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
       <i class="fas fa-list mr-2"></i> Semua
     </a>
-    <a href="{{ url_for('procurement.index', status='pending') }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'pending' %}bg-amber-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+    <a href="{{ url_for('procurement.index', status='pending', search=search) }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'pending' %}bg-amber-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
       <i class="fas fa-clock mr-2"></i> Menunggu
     </a>
-    <a href="{{ url_for('procurement.index', status='approved') }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'approved' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+    <a href="{{ url_for('procurement.index', status='approved', search=search) }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'approved' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
       <i class="fas fa-check mr-2"></i> Disetujui
     </a>
-    <a href="{{ url_for('procurement.index', status='received') }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'received' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+    <a href="{{ url_for('procurement.index', status='received', search=search) }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'received' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
       <i class="fas fa-box mr-2"></i> Diterima
     </a>
-    <a href="{{ url_for('procurement.index', status='completed') }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'completed' %}bg-purple-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
+    <a href="{{ url_for('procurement.index', status='completed', search=search) }}" class="inline-flex items-center px-4 py-2 rounded-lg font-semibold text-sm transition-colors {% if status_filter == 'completed' %}bg-purple-600 text-white{% else %}bg-gray-100 text-gray-700 hover:bg-gray-200{% endif %}">
       <i class="fas fa-check-double mr-2"></i> Selesai
     </a>
   </div>
+
+  <!-- Search by Item Name -->
+  <form method="GET" class="flex gap-2">
+    <input type="text" name="search" class="flex-1 min-w-64 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Cari nama barang..."
+           value="{{ search }}">
+    <input type="hidden" name="status" value="{{ status_filter }}">
+    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-semibold">
+      <i class="fas fa-search mr-1"></i> Cari
+    </button>
+    {% if search %}
+    <a href="{{ url_for('procurement.index', status=status_filter) }}" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors font-semibold">
+      <i class="fas fa-times mr-1"></i> Reset
+    </a>
+    {% endif %}
+  </form>
 </div>
 
 <!-- Procurements Table -->
 <div class="bg-white rounded-xl shadow-md overflow-hidden">
   <div class="overflow-x-auto">
     {% if procurements and procurements|length > 0 %}
-    <table class="w-full paginated-table">
+    <table class="w-full">
       <thead class="bg-gray-50">
         <tr>
           <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Barang</th>
@@ -342,4 +358,8 @@ document.addEventListener('keydown', function(e) {
   }
 });
 </script>
+
+<!-- Pagination -->
+{% set query_params = {'status': status_filter, 'search': search} %}
+{{ render_pagination(pagination, 'procurement.index', query_params) }}
 {% endblock %}

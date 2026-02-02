@@ -15,6 +15,8 @@ bp = Blueprint('categories', __name__, url_prefix='/admin/categories')
 def index():
     """List all categories"""
     search = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
 
     query = Category.query
 
@@ -22,7 +24,14 @@ def index():
     if search:
         query = query.filter(Category.name.ilike(f'%{search}%'))
 
-    categories = query.order_by(Category.name).all()
+    # Server-side pagination
+    pagination = query.order_by(Category.name).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    categories = pagination.items
 
     # Get item count for each category
     category_item_counts = {}
@@ -32,7 +41,8 @@ def index():
     return render_template('admin/categories/index.html',
                          categories=categories,
                          category_item_counts=category_item_counts,
-                         search=search)
+                         search=search,
+                         pagination=pagination)
 
 
 @bp.route('/create', methods=['GET', 'POST'])

@@ -188,22 +188,40 @@ def unit_upload_return_proof(item_id):
 @role_required('warehouse_staff', 'admin')
 def warehouse_index():
     """List all asset loans for warehouse staff"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # 10 items per page
+
     # Filter by warehouse if warehouse staff
     if current_user.is_warehouse_staff():
-        loans = AssetLoan.query.filter_by(warehouse_id=get_user_warehouse_id(current_user)).order_by(AssetLoan.created_at.desc()).all()
+        query = AssetLoan.query.filter_by(warehouse_id=get_user_warehouse_id(current_user))
     else:  # admin
-        loans = AssetLoan.query.order_by(AssetLoan.created_at.desc()).all()
+        query = AssetLoan.query
 
-    # Get statistics
-    total_loans = len(loans)
-    pending_count = len([l for l in loans if l.status == 'pending'])
-    approved_count = len([l for l in loans if l.status == 'approved'])
-    shipped_count = len([l for l in loans if l.status == 'shipped'])
-    active_count = len([l for l in loans if l.status == 'active'])
-    returned_count = len([l for l in loans if l.status == 'returned'])
+    # Server-side pagination
+    pagination = query.order_by(AssetLoan.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    loans = pagination.items
+
+    # Get statistics (count all loans, not just current page)
+    if current_user.is_warehouse_staff():
+        total_query = AssetLoan.query.filter_by(warehouse_id=get_user_warehouse_id(current_user))
+    else:  # admin
+        total_query = AssetLoan.query
+
+    total_loans = total_query.count()
+    pending_count = total_query.filter_by(status='pending').count()
+    approved_count = total_query.filter_by(status='approved').count()
+    shipped_count = total_query.filter_by(status='shipped').count()
+    active_count = total_query.filter_by(status='active').count()
+    returned_count = total_query.filter_by(status='returned').count()
 
     return render_template('asset_loans/warehouse/index.html',
                          loans=loans,
+                         pagination=pagination,
                          stats={
                              'total': total_loans,
                              'pending': pending_count,

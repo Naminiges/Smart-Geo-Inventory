@@ -1,0 +1,72 @@
+{# Macro untuk pagination yang compact dengan format 1,2,3,...,last #}
+{% macro render_pagination(pagination_obj, endpoint, query_params={}) %}
+{% if pagination_obj.pages > 1 %}
+<nav class="mt-4 px-6 pb-6">
+  <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="text-sm text-gray-600">
+      Menampilkan {{ (pagination_obj.page - 1) * pagination_obj.per_page + 1 }}
+      - {{ [pagination_obj.page * pagination_obj.per_page, pagination_obj.total]|min }}
+      dari {{ pagination_obj.total }} data
+    </div>
+    <ul class="flex items-center gap-1">
+      {# Previous button #}
+      {% if pagination_obj.has_prev %}
+      <li>
+        <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+           href="{{ url_for(endpoint, page=pagination_obj.prev_num, **query_params) }}">
+          <i class="fas fa-chevron-left"></i>
+        </a>
+      </li>
+      {% else %}
+      <li>
+        <span class="px-3 py-2 border border-gray-300 rounded-lg text-gray-400 opacity-50 cursor-not-allowed">
+          <i class="fas fa-chevron-left"></i>
+        </span>
+      </li>
+      {% endif %}
+
+      {# Page numbers with ellipsis #}
+      {% set window = 2 %}
+      {% set pages = pagination_obj.iter_pages(left_edge=1, right_edge=1, left_current=window, right_current=window) %}
+
+      {% for page_num in pages %}
+        {% if page_num %}
+          {% if page_num == pagination_obj.page %}
+          <li>
+            <span class="px-3 py-2 bg-emerald-600 text-white rounded-lg font-medium">{{ page_num }}</span>
+          </li>
+          {% else %}
+          <li>
+            <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+               href="{{ url_for(endpoint, page=page_num, **query_params) }}">
+              {{ page_num }}
+            </a>
+          </li>
+          {% endif %}
+        {% else %}
+        <li>
+          <span class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700">...</span>
+        </li>
+        {% endif %}
+      {% endfor %}
+
+      {# Next button #}
+      {% if pagination_obj.has_next %}
+      <li>
+        <a class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+           href="{{ url_for(endpoint, page=pagination_obj.next_num, **query_params) }}">
+          <i class="fas fa-chevron-right"></i>
+        </a>
+      </li>
+      {% else %}
+      <li>
+        <span class="px-3 py-2 border border-gray-300 rounded-lg text-gray-400 opacity-50 cursor-not-allowed">
+          <i class="fas fa-chevron-right"></i>
+        </span>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+{% endif %}
+{% endmacro %}

@@ -22,6 +22,9 @@ def get_user_warehouse_id():
 @role_required('warehouse_staff', 'admin')
 def index():
     """List all return batches for warehouse staff"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # 10 items per page
+
     warehouse_id = get_user_warehouse_id()
 
     # Build query
@@ -31,10 +34,18 @@ def index():
     if warehouse_id:
         query = query.filter_by(warehouse_id=warehouse_id)
 
-    # Get all return batches ordered by creation date
-    return_batches = query.order_by(ReturnBatch.created_at.desc()).all()
+    # Server-side pagination
+    pagination = query.order_by(ReturnBatch.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
 
-    return render_template('returns/index.html', return_batches=return_batches)
+    return_batches = pagination.items
+
+    return render_template('returns/index.html',
+                          return_batches=return_batches,
+                          pagination=pagination)
 
 
 @bp.route('/create', methods=['GET', 'POST'])

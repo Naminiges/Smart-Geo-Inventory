@@ -20,7 +20,17 @@ def index():
     """List all units"""
     from app.models import VenueLoan
 
-    units = Unit.query.order_by(Unit.created_at.desc()).all()
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+
+    # Server-side pagination
+    pagination = Unit.query.order_by(Unit.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    units = pagination.items
 
     # Get statistics
     total_count = Unit.query.count()
@@ -39,7 +49,8 @@ def index():
                              'in_use': in_use_count,
                              'maintenance': maintenance_count
                          },
-                         pending_loans_count=pending_loans_count)
+                         pending_loans_count=pending_loans_count,
+                         pagination=pagination)
 
 
 @bp.route('/loans')

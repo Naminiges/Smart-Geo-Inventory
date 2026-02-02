@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/pagination.html" import render_pagination %}
 
 {% block title %}Retur Barang - Smart Geo Inventory{% endblock %}
 
@@ -60,7 +61,7 @@
 <!-- Return Batches Table -->
 <div class="bg-white rounded-xl shadow-md overflow-hidden">
     <div class="overflow-x-auto">
-        <table class="w-full paginated-table">
+        <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode</th>
@@ -136,5 +137,8 @@
         </a>
     </div>
     {% endif %}
+
+    <!-- Pagination -->
+    {{ render_pagination(pagination, 'returns.index', {}) }}
 </div>
 {% endblock %}

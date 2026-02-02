@@ -17,6 +17,8 @@ def index():
     search = request.args.get('search', '')
     role_filter = request.args.get('role', '')
     warehouse_filter = request.args.get('warehouse', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
 
     query = User.query
 
@@ -37,7 +39,14 @@ def index():
     if warehouse_filter:
         query = query.join(UserWarehouse).filter_by(warehouse_id=warehouse_filter)
 
-    users = query.order_by(User.created_at.desc()).all()
+    # Server-side pagination
+    pagination = query.order_by(User.created_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    users = pagination.items
     warehouses = Warehouse.query.all()
 
     # Get warehouse assignments for each user
@@ -57,7 +66,8 @@ def index():
                          user_units=user_units,
                          search=search,
                          role_filter=role_filter,
-                         warehouse_filter=warehouse_filter)
+                         warehouse_filter=warehouse_filter,
+                         pagination=pagination)
 
 
 @bp.route('/create', methods=['GET', 'POST'])

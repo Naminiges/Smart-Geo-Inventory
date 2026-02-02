@@ -50,6 +50,8 @@ def index():
     """List all items with category filter and search"""
     category_id = request.args.get('category_id', '', type=int)
     search = request.args.get('search', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10  # 10 items per page
 
     query = Item.query
 
@@ -64,10 +66,21 @@ def index():
             )
         )
 
-    items = query.all()
+    # Server-side pagination
+    pagination = query.paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    items = pagination.items
     categories = Category.query.all()
 
-    return render_template('items/index.html', items=items, categories=categories, current_filter=category_id)
+    return render_template('items/index.html',
+                          items=items,
+                          categories=categories,
+                          current_filter=category_id,
+                          pagination=pagination)
 
 
 @bp.route('/create', methods=['GET', 'POST'])
