@@ -11,9 +11,8 @@ class UserForm(FlaskForm):
     password = PasswordField('Password', validators=[Optional(), Length(min=6)])
     role = SelectField('Role', choices=[
         ('admin', 'Administrator'),
-        ('warehouse_staff', 'Warehouse Staff'),
-        ('field_staff', 'Field Staff'),
-        ('unit_staff', 'Unit Staff')
+        ('warehouse_staff', 'Storeman'),
+        ('unit_staff', 'Koordinator')
     ], validators=[DataRequired()])
 
 

@@ -232,7 +232,7 @@
                 <!-- New Item Name -->
                 <div class="mb-2">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Barang</label>
-                    <input type="text" class="new-item-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" placeholder="Contoh: Laptop Dell Latitude 5420">
+                    <input type="text" class="new-item-name w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" placeholder="Contoh: Laptop Dell Latitude 5420" data-auto-save="true">
                     <div class="item-name-warning mt-1 text-xs text-amber-600 hidden"></div>
                 </div>
 
@@ -259,7 +259,7 @@
                 <!-- New Item Unit -->
                 <div class="mb-0">
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Satuan Barang</label>
-                    <input type="text" class="new-item-unit w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" placeholder="Contoh: pcs, unit, buah">
+                    <input type="text" class="new-item-unit w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-sm" placeholder="Contoh: pcs, unit, buah" data-auto-save="true">
                 </div>
             </div>
         </div>
@@ -271,6 +271,39 @@
         </div>
     </div>
 </template>
+
+<!-- Restore Draft Modal -->
+<div id="restoreDraftModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4">
+        <div class="relative w-full max-w-md bg-white rounded-lg shadow-xl animate-fade-in">
+            <div class="p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-clock text-amber-600 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">Draft Ditemukan!</h3>
+                        <p class="text-sm text-gray-500">Data form tersimpan sebelumnya</p>
+                    </div>
+                </div>
+                <p class="text-gray-700 mb-4">Kami menemukan data form yang belum selesai. Apakah Anda ingin melanjutkan?</p>
+                <div class="bg-gray-50 rounded-lg p-3 mb-4">
+                    <div id="draftSummary" class="text-sm text-gray-600">
+                        <!-- Draft summary will be shown here -->
+                    </div>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="discardDraft()" class="flex-1 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium text-sm">
+                        <i class="fas fa-trash mr-2"></i>Buang Draft
+                    </button>
+                    <button onclick="restoreDraft()" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm">
+                        <i class="fas fa-check mr-2"></i>Lanjutkan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Confirmation Modal -->
 <div id="confirmModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-50 overflow-y-auto">
@@ -358,6 +391,253 @@
 </style>
 
 <script>
+// Auto-save and Restore functionality
+const DRAFT_KEY = 'procurement_draft';
+const DRAFT_TIMEOUT_KEY = 'procurement_draft_time';
+let hasChanges = false;
+let autoSaveTimer = null;
+
+// Save draft to localStorage
+function saveDraft() {
+    const form = document.getElementById('procurementForm');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const itemCards = itemsContainer.querySelectorAll('.item-card');
+
+    const itemsData = [];
+
+    itemCards.forEach(card => {
+        const itemSelect = card.querySelector('.item-select');
+        const itemSearch = card.querySelector('.item-search');
+        const itemQuantity = card.querySelector('.item-quantity');
+        const newItemName = card.querySelector('.new-item-name');
+        const newItemCategory = card.querySelector('.new-item-category');
+        const categorySearch = card.querySelector('.category-search');
+        const newItemUnit = card.querySelector('.new-item-unit');
+
+        const itemData = {
+            item_id: itemSelect.value,
+            item_search: itemSearch?.value || '',
+            quantity: itemQuantity?.value || '1'
+        };
+
+        if (itemSelect.value === '-1') {
+            itemData.new_item_name = newItemName?.value || '';
+            itemData.new_item_category_id = newItemCategory?.value || '';
+            itemData.category_search = categorySearch?.value || '';
+            itemData.new_item_unit = newItemUnit?.value || '';
+        }
+
+        itemsData.push(itemData);
+    });
+
+    const draftData = {
+        request_notes: form.querySelector('[name="request_notes"]')?.value || '',
+        warehouse_id: document.getElementById('warehouseSelect')?.value || '',
+        items: itemsData,
+        timestamp: Date.now()
+    };
+
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+    localStorage.setItem(DRAFT_TIMEOUT_KEY, Date.now().toString());
+    hasChanges = true;
+}
+
+// Restore draft from localStorage
+function restoreDraftFromStorage() {
+    const draftData = localStorage.getItem(DRAFT_KEY);
+    if (!draftData) return false;
+
+    const draft = JSON.parse(draftData);
+
+    // Check if draft is too old (24 hours)
+    const draftAge = Date.now() - draft.timestamp;
+    if (draftAge > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(DRAFT_TIMEOUT_KEY);
+        return false;
+    }
+
+    return draft;
+}
+
+// Load draft data into form
+function loadDraftData(draft, setupItemSearchFn, setupCategorySearchFn, setupItemNameCheckFn, checkDuplicateItemsFn, updateItemNumbersFn, scheduleAutoSaveFn) {
+    const form = document.getElementById('procurementForm');
+    const itemTemplate = document.getElementById('itemTemplate');
+    const itemsContainer = document.getElementById('itemsContainer');
+    let itemCount = 0;
+
+    // Restore notes
+    if (draft.request_notes) {
+        form.querySelector('[name="request_notes"]').value = draft.request_notes;
+    }
+
+    // Restore warehouse selection (for admin)
+    if (draft.warehouse_id && document.getElementById('warehouseSelect')) {
+        document.getElementById('warehouseSelect').value = draft.warehouse_id;
+    }
+
+    // Clear existing items
+    itemsContainer.innerHTML = '';
+
+    // Add saved items
+    draft.items.forEach(itemData => {
+        const template = itemTemplate.content.cloneNode(true);
+        const itemCard = template.querySelector('.item-card');
+
+        // Set unique index
+        itemCard.dataset.itemIndex = itemCount;
+        itemCard.querySelector('.item-number').textContent = itemCount + 1;
+
+        const itemSelect = itemCard.querySelector('.item-select');
+        const itemSearch = itemCard.querySelector('.item-search');
+        const itemQuantity = itemCard.querySelector('.item-quantity');
+        const newItemFields = itemCard.querySelector('.new-item-fields');
+        const removeBtn = itemCard.querySelector('.remove-item-btn');
+
+        // Set item values
+        itemSelect.value = itemData.item_id;
+        itemSearch.value = itemData.item_search || itemSelect.options[itemSelect.selectedIndex]?.text || '';
+        itemQuantity.value = itemData.quantity || '1';
+
+        // Show new item fields if needed
+        if (itemData.item_id === '-1') {
+            newItemFields.classList.remove('hidden');
+
+            const newItemName = itemCard.querySelector('.new-item-name');
+            const newItemCategory = itemCard.querySelector('.new-item-category');
+            const categorySearch = itemCard.querySelector('.category-search');
+            const newItemUnit = itemCard.querySelector('.new-item-unit');
+
+            newItemName.value = itemData.new_item_name || '';
+            newItemCategory.value = itemData.new_item_category_id || '';
+            categorySearch.value = itemData.category_search || '';
+            newItemUnit.value = itemData.new_item_unit || '';
+        }
+
+        // Setup event listeners
+        setupItemSearchFn(itemSearch, itemSelect, itemSearch.parentElement.querySelector('.item-search-results'), newItemFields);
+
+        // Add auto-save listeners
+        itemSearch.addEventListener('input', scheduleAutoSaveFn);
+
+        itemSelect.addEventListener('change', function() {
+            if (this.value === '-1') {
+                newItemFields.classList.remove('hidden');
+            } else {
+                newItemFields.classList.add('hidden');
+            }
+            checkDuplicateItemsFn();
+            scheduleAutoSaveFn();
+        });
+
+        const categorySearchEl = itemCard.querySelector('.category-search');
+        const categorySelect = itemCard.querySelector('.new-item-category');
+        const categorySearchResults = itemCard.querySelector('.category-search-results');
+        const categoryWarning = itemCard.querySelector('.category-warning');
+
+        if (categorySearchEl && categorySelect && categorySearchResults) {
+            setupCategorySearchFn(categorySearchEl, categorySelect, categorySearchResults, categoryWarning);
+        }
+
+        const newItemName = itemCard.querySelector('.new-item-name');
+        const itemNameWarning = itemCard.querySelector('.item-name-warning');
+
+        if (newItemName && itemNameWarning) {
+            setupItemNameCheckFn(newItemName, itemNameWarning, itemSelect);
+            // Add auto-save listener
+            newItemName.addEventListener('input', scheduleAutoSaveFn);
+        }
+
+        // Add auto-save to quantity field
+        if (itemQuantity) {
+            itemQuantity.addEventListener('input', scheduleAutoSaveFn);
+        }
+
+        // Add auto-save to new item unit field
+        const newItemUnit = itemCard.querySelector('.new-item-unit');
+        if (newItemUnit) {
+            newItemUnit.addEventListener('input', scheduleAutoSaveFn);
+        }
+
+        removeBtn.addEventListener('click', function() {
+            if (itemsContainer.children.length > 1) {
+                itemCard.remove();
+                updateItemNumbersFn();
+                scheduleAutoSaveFn();
+            } else {
+                alert('Minimal harus ada satu barang!');
+            }
+        });
+
+        itemsContainer.appendChild(itemCard);
+        itemCount++;
+    });
+
+    hasChanges = true;
+}
+
+// Schedule auto-save (debounced)
+function scheduleAutoSave() {
+    if (autoSaveTimer) {
+        clearTimeout(autoSaveTimer);
+    }
+    autoSaveTimer = setTimeout(saveDraft, 1000);
+}
+
+// Discard draft
+function discardDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_TIMEOUT_KEY);
+    document.getElementById('restoreDraftModal').classList.add('hidden');
+    hasChanges = false;
+}
+
+// Restore draft from modal (global, will be overridden inside DOMContentLoaded)
+window.restoreDraft = function() {
+    const draft = restoreDraftFromStorage();
+    if (draft && window._restoreDraftCallback) {
+        window._restoreDraftCallback(draft);
+    }
+    document.getElementById('restoreDraftModal').classList.add('hidden');
+}
+
+// Check for draft on page load and show modal
+function checkForDraft() {
+    const draftData = localStorage.getItem(DRAFT_KEY);
+    if (!draftData) return false;
+
+    const draft = JSON.parse(draftData);
+
+    // Check if draft is too old (24 hours)
+    const draftAge = Date.now() - draft.timestamp;
+    if (draftAge > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(DRAFT_TIMEOUT_KEY);
+        return false;
+    }
+
+    // Show draft summary in modal
+    const summaryDiv = document.getElementById('draftSummary');
+    const date = new Date(draft.timestamp);
+    summaryDiv.innerHTML = `
+        <div class="flex items-center justify-between">
+            <span><i class="fas fa-clock mr-2"></i>Disimpan: ${date.toLocaleString('id-ID')}</span>
+            <span class="font-semibold">${draft.items.length} barang</span>
+        </div>
+    `;
+
+    document.getElementById('restoreDraftModal').classList.remove('hidden');
+    return true;
+}
+
+// Clear draft after successful submission
+function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_TIMEOUT_KEY);
+    hasChanges = false;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('procurementForm');
     const itemsContainer = document.getElementById('itemsContainer');
@@ -365,11 +645,41 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemTemplate = document.getElementById('itemTemplate');
     let itemCount = 0;
 
-    // Add first item by default
-    addItem();
+    // Set up callback for restoring draft
+    window._restoreDraftCallback = function(draft) {
+        loadDraftData(draft, setupItemSearch, setupCategorySearch, setupItemNameCheck, checkDuplicateItems, updateItemNumbers, scheduleAutoSave);
+    };
+
+    // Check for existing draft first
+    const hasDraft = checkForDraft();
+
+    // Only add first item if no draft is being restored
+    if (!hasDraft) {
+        addItem();
+    }
 
     // Add item button click handler
     addItemBtn.addEventListener('click', addItem);
+
+    // Add auto-save listeners to form fields
+    const notesField = form.querySelector('[name="request_notes"]');
+    if (notesField) {
+        notesField.addEventListener('input', scheduleAutoSave);
+    }
+
+    const warehouseSelect = document.getElementById('warehouseSelect');
+    if (warehouseSelect) {
+        warehouseSelect.addEventListener('change', scheduleAutoSave);
+    }
+
+    // Warn before leaving page with unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = 'Anda memiliki perubahan yang belum disimpan. Data tersimpan sebagai draft dan bisa dilanjutkan nanti.';
+            return e.returnValue;
+        }
+    });
 
     function addItem() {
         const template = itemTemplate.content.cloneNode(true);
@@ -389,6 +699,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Setup search functionality for item selection
         setupItemSearch(itemSearch, itemSelect, itemSearchResults, newItemFields);
 
+        // Add auto-save listeners
+        itemSearch.addEventListener('input', scheduleAutoSave);
+
         // Show/hide new item fields
         itemSelect.addEventListener('change', function() {
             if (this.value === '-1') {
@@ -399,6 +712,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Check for duplicate items
             checkDuplicateItems();
+            scheduleAutoSave();
         });
 
         // Setup category search
@@ -417,6 +731,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (newItemName && itemNameWarning) {
             setupItemNameCheck(newItemName, itemNameWarning, itemSelect);
+            // Add auto-save listener
+            newItemName.addEventListener('input', scheduleAutoSave);
+        }
+
+        // Add auto-save to quantity field
+        const itemQuantity = itemCard.querySelector('.item-quantity');
+        if (itemQuantity) {
+            itemQuantity.addEventListener('input', scheduleAutoSave);
+        }
+
+        // Add auto-save to new item unit field
+        const newItemUnit = itemCard.querySelector('.new-item-unit');
+        if (newItemUnit) {
+            newItemUnit.addEventListener('input', scheduleAutoSave);
         }
 
         // Remove item button
@@ -424,6 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (itemsContainer.children.length > 1) {
                 itemCard.remove();
                 updateItemNumbers();
+                scheduleAutoSave();
             } else {
                 alert('Minimal harus ada satu barang!');
             }
@@ -591,6 +920,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 warningDiv.innerHTML = '';
                 searchInput.classList.remove('border-amber-400', 'bg-amber-50');
             }
+
+            // Trigger auto-save
+            scheduleAutoSave();
         });
 
         searchInput.addEventListener('keydown', function(e) {
@@ -675,6 +1007,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         // Trigger change event
                         selectElement.dispatchEvent(new Event('change'));
+
+                        // Trigger auto-save
+                        scheduleAutoSave();
                     });
                     listContainer.appendChild(div);
                 }
@@ -943,6 +1278,10 @@ function submitForm() {
         hiddenField.value = JSON.stringify(itemData);
         form.appendChild(hiddenField);
     }
+
+    // Clear draft after successful submission
+    clearDraft();
+    hasChanges = false;
 
     // Disable submit button to prevent double submission
     const submitBtn = document.querySelector('button[onclick="submitForm()"]');
