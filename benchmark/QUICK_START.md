@@ -9,8 +9,8 @@ sudo apt-get update && sudo apt-get install -y wrk
 # 2. Pindah ke directory benchmark
 cd benchmark
 
-# 3. Test koneksi
-curl http://172.30.95.249/home
+# 3. Test koneksi (HTTPS dengan self-signed certificate)
+curl -k https://172.30.95.249/home
 
 # 4. Jalankan quick test (1 menit)
 chmod +x *.sh
@@ -41,6 +41,9 @@ ls -lh results/
 ```bash
 # Ganti target ke apps (tanpa proxy)
 HOST=http://172.30.95.251:5000 ./scenarios.sh
+
+# Ganti target ke HTTPS (self-signed cert)
+HOST=https://172.30.95.249 CURL_OPTS="-k" ./scenarios.sh
 
 # Custom load
 THREADS=8 CONNECTIONS=200 DURATION=60s ./scenarios.sh

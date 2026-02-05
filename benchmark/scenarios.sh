@@ -8,9 +8,11 @@ set -e
 # Configuration
 WRK_BIN=${WRK_BIN:-wrk}
 # Akses melalui reverse proxy (rev-proxy: 172.30.95.249)
-HOST=${HOST:-http://172.30.95.249}
+HOST=${HOST:-https://172.30.95.249}
 # Alternatif: akses langsung ke apps (172.30.95.251:5000)
 # HOST=${HOST:-http://172.30.95.251:5000}
+# Options untuk curl (misal: -k untuk self-signed certificates)
+CURL_OPTS=${CURL_OPTS:--k}
 DURATION=${DURATION:-30s}
 THREADS=${THREADS:-4}
 CONNECTIONS=${CONNECTIONS:-100}
@@ -59,16 +61,102 @@ run_benchmark() {
     print_info "  Duration: $duration"
     echo ""
 
-    local cmd="$WRK_BIN -t$threads -c$connections -d$duration"
+    # Determine if using HTTPS
+    if [[ $HOST == https://* ]]; then
+        print_warning "HTTPS detected - using curl for basic benchmarking"
+        print_warning "For full benchmarking, use HTTP endpoint (direct to apps container)"
 
-    if [ -n "$body" ]; then
-        cmd="$cmd -s wrk.lua $HOST$path --path $path --method $method --body '$body'"
+        # Simple curl-based benchmark for HTTPS
+        {
+            echo "=== Benchmark: $name ==="
+            echo "Path: $path"
+            echo "Method: $method"
+            echo "Duration: $duration"
+            echo "Threads: $threads"
+            echo "Connections: $connections"
+            echo ""
+            echo "Test started at: $(date)"
+            echo ""
+
+            local end_time=$(($(date +%s) + $(echo $duration | sed 's/s//')))
+
+            local total_requests=0
+            local successful=0
+            local failed=0
+            declare -a response_times
+
+            while [ $(date +%s) -lt $end_time ]; do
+                for ((i=1; i<=connections; i++)); do
+                    local start_time=$(date +%s.%N)
+                    local response=$(curl -s -w "%{http_code}" -o /dev/null $CURL_OPTS "$HOST$path" 2>&1)
+                    local end_time_req=$(date +%s.%N)
+                    local elapsed=$(echo "$end_time_req - $start_time" | bc)
+
+                    total_requests=$((total_requests + 1))
+                    response_times+=("$elapsed")
+
+                    if [ "$response" = "200" ] || [ "$response" = "302" ]; then
+                        successful=$((successful + 1))
+                    else
+                        failed=$((failed + 1))
+                    fi
+                done
+            done
+
+            echo "Test completed at: $(date)"
+            echo ""
+            echo "=== Results ==="
+            echo "Total requests: $total_requests"
+            echo "Successful: $successful"
+            echo "Failed: $failed"
+            echo ""
+
+            # Calculate average response time
+            if [ ${#response_times[@]} -gt 0 ]; then
+                local sum=0
+                for time in "${response_times[@]}"; do
+                    sum=$(echo "$sum + $time" | bc -l)
+                done
+                local avg=$(echo "scale=3; $sum / ${#response_times[@]}" | bc -l)
+                echo "Average response time: ${avg}s"
+
+                # Find min and max
+                local min=${response_times[0]}
+                local max=${response_times[0]}
+                for time in "${response_times[@]}"; do
+                    if (( $(echo "$time < $min" | bc -l) )); then
+                        min=$time
+                    fi
+                    if (( $(echo "$time > $max" | bc -l) )); then
+                        max=$time
+                    fi
+                done
+                echo "Min response time: ${min}s"
+                echo "Max response time: ${max}s"
+            fi
+
+            echo ""
+            echo "Note: This is a basic curl-based benchmark for HTTPS endpoints."
+            echo "For production-grade benchmarking, consider:"
+            echo "  1. Using wrk with HTTP (direct to apps container at http://172.30.95.251:5000)"
+            echo "  2. Setting up stunnel to proxy HTTPS to HTTP for wrk"
+            echo "  3. Using alternative tools like hey (https://github.com/rakyll/hey)"
+            echo "     or vegeta (https://github.com/tsenart/vegeta)"
+        } | tee "$output_file"
+
     else
-        cmd="$cmd -s wrk.lua $HOST$path --path $path --method $method"
-    fi
+        # Use wrk for HTTP
+        local cmd="$WRK_BIN -t$threads -c$connections -d$duration"
 
-    # Run the benchmark
-    eval $cmd | tee "$output_file"
+        if [ -n "$body" ]; then
+            cmd="$cmd -s wrk.lua $HOST$path --path $path --method $method --body '$body'"
+        else
+            cmd="$cmd -s wrk.lua $HOST$path --path $path --method $method"
+        fi
+
+        # Run the benchmark
+        eval $cmd | tee "$output_file"
+    fi
 
     echo ""
     print_info "Results saved to: $output_file"
@@ -83,7 +171,7 @@ wait_for_service() {
     print_info "Waiting for service at $HOST to be ready..."
 
     while [ $attempt -le $max_attempts ]; do
-        if curl -s -f "$HOST/home" > /dev/null 2>&1 || curl -s -f "http://172.30.95.249/home" > /dev/null 2>&1; then
+        if curl -s -f $CURL_OPTS "$HOST/home" > /dev/null 2>&1; then
             print_info "Service is ready!"
             return 0
         fi
