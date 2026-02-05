@@ -99,7 +99,7 @@ def create():
                 user.set_password('123456')
 
             user.save()
-            flash(f'User {user.name} berhasil dibuat! Password default: 123456', 'success')
+            flash(f'User {user.name} berhasil dibuat!', 'success')
             return redirect(url_for('users.index'))
 
         except Exception as e:
