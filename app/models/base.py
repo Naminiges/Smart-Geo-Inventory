@@ -14,7 +14,10 @@ class BaseModel(db.Model):
     def save(self):
         """Save model to database"""
         try:
-            db.session.add(self)
+            # Only add if not already in session (for new records)
+            # This prevents SQLAlchemy from setting nullable fields to None on update
+            if self not in db.session:
+                db.session.add(self)
             db.session.commit()
             return True
         except Exception as e:

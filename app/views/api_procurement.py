@@ -112,16 +112,26 @@ def create_request():
                 'message': 'Either item_id or item_name must be provided'
             }), 400
 
-        # Create procurement request
+        # Create procurement request (DEPRECATED - using old single item format)
+        # This API endpoint is deprecated, should use the new multi-item format
+        from app.models.procurement import ProcurementItem
         procurement = Procurement(
-            item_id=item_id,
-            quantity=data['quantity'],
             request_notes=data['request_notes'],
             status='pending',
             requested_by=current_user.id,
             request_date=datetime.now()
         )
-        procurement.save()
+        db.session.add(procurement)
+        db.session.flush()  # Get the ID without committing
+
+        # Create procurement item
+        procurement_item = ProcurementItem(
+            procurement_id=procurement.id,
+            item_id=item_id,
+            quantity=data['quantity']
+        )
+        db.session.add(procurement_item)
+        db.session.commit()
 
         return jsonify({
             'success': True,

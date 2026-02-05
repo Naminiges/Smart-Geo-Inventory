@@ -5,29 +5,31 @@ from wtforms.validators import DataRequired, Length, Optional, NumberRange, Vali
 
 
 def validate_room_name_format(form, field):
-    """Validate that room_name only contains building code and room number without additional description"""
+    """Validate that room_name starts with the correct building code"""
+    from app.models import Building
+
     room_name = field.data.strip() if field.data else ""
 
-    # Check for '-' separator which indicates additional description
-    if ' - ' in room_name or '-' in room_name:
-        raise ValidationError('Format room_name tidak valid. Gunakan format: "GD.A 0201" tanpa deskripsi tambahan.')
+    if not room_name:
+        return
 
-    # Check if there are more than 2 parts (building code and room number only)
+    # Extract building code from room name (first part)
     parts = room_name.split()
-    if len(parts) > 2:
-        raise ValidationError('Format room_name tidak valid. Hanya gunakan kode gedung dan nomor ruangan (contoh: "GD.A 0201").')
+    if len(parts) < 2:
+        raise ValidationError('Format nama ruangan tidak valid. Gunakan kode gedung yang sesuai.')
 
-    # Validate format: should match pattern like "GD.A 0201" or "GD.B 0101"
-    # First part should be building code (GD.A, GD.B, etc.)
-    # Second part should be room number (digits)
-    if len(parts) == 2:
-        building_code, room_number = parts
-        # Check building code format (e.g., GD.A, GD.B)
-        if not re.match(r'^GD\.[A-Z]$', building_code):
-            raise ValidationError('Kode gedung harus dalam format GD.A, GD.B, GD.C, dst.')
-        # Check room number format (digits only)
-        if not re.match(r'^\d+$', room_number):
-            raise ValidationError('Nomor ruangan harus berupa angka saja.')
+    building_code = parts[0]
+
+    # Check building code format (e.g., GD.A, GD.B, GD.H)
+    if not re.match(r'^GD\.[A-Z]$', building_code):
+        raise ValidationError('Format nama ruangan tidak valid. Gunakan kode gedung yang sesuai.')
+
+    # Validate that the building code in room_name matches the selected building
+    building_id = form.building_id.data
+    if building_id:
+        building = Building.query.get(building_id)
+        if building and building.code != building_code:
+            raise ValidationError('Format nama ruangan tidak valid. Gunakan kode gedung yang sesuai.')
 
 
 def validate_floor_number(form, field):
