@@ -17,6 +17,11 @@ DURATION=${DURATION:-30s}
 THREADS=${THREADS:-4}
 CONNECTIONS=${CONNECTIONS:-100}
 RESULTS_DIR=${RESULTS_DIR:-./benchmark/results}
+COOKIE_FILE=${COOKIE_FILE:-./benchmark/.cookies.txt}
+
+# Login credentials (default admin user)
+LOGIN_EMAIL=${LOGIN_EMAIL:-admin@smartgeo.com}
+LOGIN_PASSWORD=${LOGIN_PASSWORD:-admin123}
 
 # Colors for output
 RED='\033[0;31m'
@@ -38,6 +43,44 @@ print_warning() {
 
 print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Function to login and save session
+login_and_save_session() {
+    print_info "Logging in to get session cookie..."
+
+    # Perform login
+    local login_response=$(curl -i -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
+        -H "Content-Type: application/x-www-form-urlencoded" \
+        -d "email=$LOGIN_EMAIL&password=$LOGIN_PASSWORD" \
+        "$HOST/auth/login" 2>&1)
+
+    # Check if login successful
+    if echo "$login_response" | grep -q "302\|Found\|Location"; then
+        print_info "✅ Login successful! Session saved to $COOKIE_FILE"
+
+        # Show cookie info
+        if [ -f "$COOKIE_FILE" ]; then
+            local session_count=$(grep -c "session" "$COOKIE_FILE" || echo "0")
+            print_info "Session cookies: $session_count"
+        fi
+        return 0
+    else
+        print_error "❌ Login failed!"
+        echo ""
+        echo "Login response:"
+        echo "$login_response" | head -20
+        echo ""
+        echo "Please check:"
+        echo "  1. Application is running at $HOST"
+        echo "  2. Login credentials are correct"
+        echo "  3. Admin user exists (run: python3 seed_admin_user.py)"
+        echo ""
+        echo "Current credentials:"
+        echo "  Email: $LOGIN_EMAIL"
+        echo "  Password: $LOGIN_PASSWORD"
+        return 1
+    fi
 }
 
 # Function to run benchmark
@@ -66,6 +109,17 @@ run_benchmark() {
         print_warning "HTTPS detected - using curl for basic benchmarking"
         print_warning "For full benchmarking, use HTTP endpoint (direct to apps container)"
 
+        # Check if cookie file exists for authenticated endpoints
+        local use_auth=false
+        if [[ $path == /api/* ]] || [[ $path == /dashboard* ]]; then
+            use_auth=true
+            if [ ! -f "$COOKIE_FILE" ]; then
+                print_error "Cookie file not found: $COOKIE_FILE"
+                print_error "Please login first (script should do this automatically)"
+                return 1
+            fi
+        fi
+
         # Simple curl-based benchmark for HTTPS
         {
             echo "=== Benchmark: $name ==="
@@ -74,6 +128,7 @@ run_benchmark() {
             echo "Duration: $duration"
             echo "Threads: $threads"
             echo "Connections: $connections"
+            echo "Authentication: $use_auth"
             echo ""
             echo "Test started at: $(date)"
             echo ""
@@ -84,12 +139,21 @@ run_benchmark() {
             local total_requests=0
             local successful=0
             local failed=0
+            local unauthorized=0
             declare -a response_times
 
             while [ $(date +%s) -lt $end_time ]; do
                 for ((i=1; i<=connections; i++)); do
                     local start_time=$(date +%s.%N 2>/dev/null || date +%s)
-                    local response=$(curl -s -w "%{http_code}" -o /dev/null $CURL_OPTS "$HOST$path" 2>&1)
+
+                    # Add cookie if authentication needed
+                    local curl_cmd="curl -s -w '%{http_code}' -o /dev/null $CURL_OPTS"
+                    if [ "$use_auth" = true ]; then
+                        curl_cmd="$curl_cmd -b $COOKIE_FILE"
+                    fi
+                    curl_cmd="$curl_cmd '$HOST$path'"
+
+                    local response=$(eval $curl_cmd 2>&1)
                     local end_time_req=$(date +%s.%N 2>/dev/null || date +%s)
                     local elapsed=$(awk "BEGIN {print $end_time_req - $start_time}")
 
@@ -98,6 +162,9 @@ run_benchmark() {
 
                     if [ "$response" = "200" ] || [ "$response" = "302" ]; then
                         successful=$((successful + 1))
+                    elif [ "$response" = "401" ] || [ "$response" = "403" ]; then
+                        unauthorized=$((unauthorized + 1))
+                        failed=$((failed + 1))
                     else
                         failed=$((failed + 1))
                     fi
@@ -110,6 +177,9 @@ run_benchmark() {
             echo "Total requests: $total_requests"
             echo "Successful: $successful"
             echo "Failed: $failed"
+            if [ $unauthorized -gt 0 ]; then
+                echo "Unauthorized (401/403): $unauthorized"
+            fi
             echo ""
 
             # Calculate average response time
@@ -200,6 +270,13 @@ main() {
     wait_for_service
     echo ""
 
+    # Login to get session cookie
+    if ! login_and_save_session; then
+        print_error "Failed to login. Exiting..."
+        exit 1
+    fi
+    echo ""
+
     # Scenario 1: Light load - Homepage
     print_info "=== Scenario 1: Light Load - Homepage ==="
     run_benchmark "01_homepage_light" "/home" "GET" "" "2" "10" "10s"
@@ -217,27 +294,32 @@ main() {
 
     # Scenario 4: API endpoints - Items list
     print_info "=== Scenario 4: API - Items List ==="
-    run_benchmark "04_api_items" "/api/items" "GET" "" "4" "50" "30s"
+    run_benchmark "04_api_items" "/api/items/" "GET" "" "4" "50" "30s"
     echo ""
 
-    # Scenario 5: API endpoints - Dashboard data
-    print_info "=== Scenario 5: API - Dashboard ==="
-    run_benchmark "05_api_dashboard" "/api/dashboard/data" "GET" "" "4" "50" "30s"
+    # Scenario 5: API endpoints - Dashboard stats
+    print_info "=== Scenario 5: API - Dashboard Stats ==="
+    run_benchmark "05_api_dashboard_stats" "/api/dashboard/stats" "GET" "" "4" "50" "30s"
     echo ""
 
-    # Scenario 6: API endpoints - Map data
-    print_info "=== Scenario 6: API - Map Data ==="
-    run_benchmark "06_api_map" "/api/map/markers" "GET" "" "4" "50" "30s"
+    # Scenario 6: API endpoints - Map warehouses
+    print_info "=== Scenario 6: API - Map Warehouses ==="
+    run_benchmark "06_api_map_warehouses" "/api/map/warehouses" "GET" "" "4" "50" "30s"
     echo ""
 
-    # Scenario 7: Stress test - Sustained load
-    print_info "=== Scenario 7: Stress Test - Sustained Load ==="
-    run_benchmark "07_stress_sustained" "/home" "GET" "" "12" "500" "120s"
+    # Scenario 7: API endpoints - Dashboard main page
+    print_info "=== Scenario 7: Dashboard Page ==="
+    run_benchmark "07_dashboard_page" "/dashboard/" "GET" "" "4" "50" "30s"
     echo ""
 
-    # Scenario 8: Spike test - Sudden load
-    print_info "=== Scenario 8: Spike Test - Sudden Load ==="
-    run_benchmark "08_spike_test" "/home" "GET" "" "16" "1000" "30s"
+    # Scenario 8: Stress test - Sustained load
+    print_info "=== Scenario 8: Stress Test - Sustained Load ==="
+    run_benchmark "08_stress_sustained" "/home" "GET" "" "12" "500" "120s"
+    echo ""
+
+    # Scenario 9: Spike test - Sudden load
+    print_info "=== Scenario 9: Spike Test - Sudden Load ==="
+    run_benchmark "09_spike_test" "/home" "GET" "" "16" "1000" "30s"
     echo ""
 
     print_info "=== All benchmarks completed! ==="

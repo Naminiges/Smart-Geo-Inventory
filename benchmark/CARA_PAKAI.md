@@ -38,7 +38,18 @@ sudo cp wrk /usr/local/bin/
 cd /path/to/Smart-Geo-Inventory/benchmark
 ```
 
-### 3. Test Connection ke Aplikasi
+### 3. Pastikan Admin User Ada
+
+```bash
+# Jalankan script untuk membuat admin user
+python3 seed_admin_user.py
+
+# Default credentials:
+# Email: admin@smartgeo.com
+# Password: admin123
+```
+
+### 4. Test Connection ke Aplikasi
 
 ```bash
 # Test koneksi ke rev-proxy (default)
@@ -50,7 +61,7 @@ curl http://172.30.95.251:5000/home
 
 Jika berhasil, akan muncul HTML dari halaman home.
 
-### 4. Jalankan Benchmark
+### 5. Jalankan Benchmark
 
 #### Opsi A: Quick Test (Cepat - 1 menit)
 
@@ -78,17 +89,40 @@ Hasil disimpan di: `results/` dengan nama file timestamped
 ## SCENARIO YANG DIUJI
 
 1. **Light Load** - Homepage (2 threads, 10 connections, 10s)
+   - **Public endpoint** - Tidak perlu login
 2. **Medium Load** - Homepage (4 threads, 50 connections, 30s)
+   - **Public endpoint** - Tidak perlu login
 3. **Heavy Load** - Homepage (8 threads, 200 connections, 60s)
-4. **API - Items List** (4 threads, 50 connections, 30s)
-5. **API - Dashboard** (4 threads, 50 connections, 30s)
-6. **API - Map Data** (4 threads, 50 connections, 30s)
-7. **Stress Test** - Sustained load (12 threads, 500 connections, 120s)
-8. **Spike Test** - Sudden load (16 threads, 1000 connections, 30s)
+   - **Public endpoint** - Tidak perlu login
+4. **API - Items List** `/api/items/` (4 threads, 50 connections, 30s)
+   - **Authenticated** - Script akan login otomatis
+5. **API - Dashboard Stats** `/api/dashboard/stats` (4 threads, 50 connections, 30s)
+   - **Authenticated** - Script akan login otomatis
+6. **API - Map Warehouses** `/api/map/warehouses` (4 threads, 50 connections, 30s)
+   - **Authenticated** - Script akan login otomatis
+7. **Dashboard Page** `/dashboard/` (4 threads, 50 connections, 30s)
+   - **Authenticated** - Script akan login otomatis
+8. **Stress Test** - Sustained load (12 threads, 500 connections, 120s)
+   - **Public endpoint** - Homepage tanpa login
+9. **Spike Test** - Sudden load (16 threads, 1000 connections, 30s)
+   - **Public endpoint** - Homepage tanpa login
+
+**Catatan:** Script akan otomatis login menggunakan kredensial admin sebelum menjalankan benchmark untuk endpoint yang memerlukan authentication.
 
 ---
 
 ## KONFIGURASI OPSIONAL
+
+### Menggunakan Login Credentials Berbeda
+
+Default menggunakan admin user (`admin@smartgeo.com` / `admin123`).
+
+Untuk menggunakan user lain:
+
+```bash
+# Custom email dan password
+LOGIN_EMAIL=user@example.com LOGIN_PASSWORD=custompass ./scenarios.sh
+```
 
 ### Mengganti Target Host
 
@@ -240,6 +274,40 @@ netstat -tlnp | grep 5000
 THREADS=2 CONNECTIONS=50 ./scenarios.sh
 ```
 
+### Error: Login Failed
+
+**Solusi**:
+```bash
+# Pastikan admin user sudah dibuat
+python3 seed_admin_user.py
+
+# Cek apakah login page accessible
+curl -k https://172.30.95.249/auth/login
+
+# Coba login manual
+curl -i -s -k -X POST \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "email=admin@smartgeo.com&password=admin123" \
+  https://172.30.95.249/auth/login
+```
+
+### Error: Unauthorized (401/403) pada API Endpoints
+
+**Kemungkinan penyebab**:
+1. Session cookie expired
+2. Login gagal
+3. User tidak memiliki akses ke endpoint tersebut
+
+**Solusi**:
+```bash
+# Hapus cookie file dan jalankan ulang
+rm -f .cookies.txt
+./scenarios.sh
+
+# Atau gunakan custom credentials
+LOGIN_EMAIL=admin@smartgeo.com LOGIN_PASSWORD=admin123 ./scenarios.sh
+```
+
 ---
 
 ## TIPS & BEST PRACTICES
@@ -262,13 +330,16 @@ THREADS=2 CONNECTIONS=50 ./scenarios.sh
 ✅ 2. Install wrk (jika belum)
    sudo apt-get install -y wrk
 
-✅ 3. Pindah directory
+✅ 3. Buat admin user (jika belum)
+   python3 seed_admin_user.py
+
+✅ 4. Pindah directory
    cd benchmark
 
-✅ 4. Test connection
-   curl http://172.30.95.249/home
+✅ 5. Test connection
+   curl -k https://172.30.95.249/home
 
-✅ 5. Jalankan benchmark
+✅ 6. Jalankan benchmark
    chmod +x *.sh
    ./run_benchmark.sh          # Quick test
    # atau
