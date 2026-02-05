@@ -414,6 +414,16 @@ class Procurement(BaseModel):
         return self.requester
 
     @property
+    def received_by_user(self):
+        """Get the user who received the goods"""
+        return self.receiver
+
+    @property
+    def completed_by_user(self):
+        """Get the user who completed the procurement"""
+        return self.completer
+
+    @property
     def total_quantity(self):
         """Get total quantity of all items in this procurement"""
         return sum(item.quantity for item in self.items) if self.items else 0

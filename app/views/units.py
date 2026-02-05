@@ -176,7 +176,7 @@ def create():
             unit = Unit(
                 name=form.name.data,
                 address=form.address.data,
-                status=form.status.data
+                status='available'
             )
 
             # Set coordinates if provided
@@ -312,7 +312,6 @@ def edit(id):
             # Update unit
             unit.name = form.name.data
             unit.address = form.address.data
-            unit.status = form.status.data
 
             # Update coordinates if provided
             if form.latitude.data and form.longitude.data:

@@ -240,6 +240,115 @@
         addItemRow();
     });
 
+    function setupItemSearch(searchInput, selectElement, resultsDiv) {
+        let selectedIndex = -1;
+        const listContainer = resultsDiv.querySelector('.item-list-container');
+
+        searchInput.addEventListener('focus', function() {
+            // Show all items when focused
+            showAllOptions();
+            resultsDiv.classList.remove('hidden');
+        });
+
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            filterOptions(searchTerm);
+            selectedIndex = -1;
+            resultsDiv.classList.remove('hidden');
+        });
+
+        searchInput.addEventListener('keydown', function(e) {
+            const options = resultsDiv.querySelectorAll('.search-option');
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, options.length - 1);
+                updateSelectedOption(options);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                updateSelectedOption(options);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0 && selectedIndex < options.length) {
+                    options[selectedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                this.value = '';
+                resultsDiv.classList.add('hidden');
+            }
+        });
+
+        searchInput.addEventListener('blur', function() {
+            // Hide the list after delay to allow click events
+            setTimeout(() => {
+                resultsDiv.classList.add('hidden');
+            }, 200);
+        });
+
+        function filterOptions(searchTerm) {
+            const options = selectElement.querySelectorAll('option');
+            listContainer.innerHTML = '';
+
+            let hasResults = false;
+
+            options.forEach(option => {
+                if (option.value === '') return; // Skip default option
+
+                const searchText = option.getAttribute('data-search-text')?.toLowerCase() || option.textContent.toLowerCase();
+
+                if (searchText.includes(searchTerm)) {
+                    hasResults = true;
+                    const div = document.createElement('div');
+                    div.className = 'search-option px-3 py-1.5 cursor-pointer hover:bg-blue-50 transition-colors text-sm';
+                    div.textContent = option.textContent;
+                    div.dataset.value = option.value;
+                    div.addEventListener('click', function() {
+                        selectElement.value = this.dataset.value;
+                        searchInput.value = option.textContent;
+
+                        // Trigger change event
+                        selectElement.dispatchEvent(new Event('change'));
+                    });
+                    listContainer.appendChild(div);
+                }
+            });
+
+            // Show no results message if no matches found
+            if (!hasResults && searchTerm !== '') {
+                const noResultsDiv = document.createElement('div');
+                noResultsDiv.className = 'search-option px-3 py-1.5 text-gray-500 text-sm italic cursor-default';
+                noResultsDiv.textContent = `Tidak ditemukan: "${searchInput.value}"`;
+                listContainer.insertBefore(noResultsDiv, listContainer.firstChild);
+            }
+
+            // Dynamic height: if items > 6, set max height with scroll, otherwise fit content
+            const itemCount = listContainer.children.length;
+            if (itemCount > 6) {
+                resultsDiv.style.height = '160px';
+                resultsDiv.style.overflowY = 'auto';
+            } else {
+                resultsDiv.style.height = 'auto';
+                resultsDiv.style.overflowY = 'visible';
+            }
+        }
+
+        function showAllOptions() {
+            filterOptions('');
+        }
+
+        function updateSelectedOption(options) {
+            options.forEach((opt, index) => {
+                if (index === selectedIndex) {
+                    opt.classList.add('bg-blue-100');
+                    opt.scrollIntoView({ block: 'nearest' });
+                } else {
+                    opt.classList.remove('bg-blue-100');
+                }
+            });
+        }
+    }
+
     function addItemRow() {
         itemCounter++;
         const containerId = `item-${itemCounter}`;
@@ -253,15 +362,23 @@
                 </button>
             </div>
 
-            <!-- Item Selection -->
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Barang</label>
-                <select required name="item_select_${itemCounter}" class="item-select w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+            <!-- Item Selection with Search -->
+            <div class="mb-3" style="position: relative; z-index: 10;">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Barang</label>
+                <input type="text" class="item-search w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" placeholder="Cari barang..." autocomplete="off">
+                <select name="item_select_${itemCounter}" class="item-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm hidden" style="min-height: 42px;" tabindex="-1" required>
                     <option value="">Pilih Barang</option>
                     {% for item in items %}
-                    <option value="{{ item.id }}">{{ item.name }} ({{ item.category.name if item.category else '-' }})</option>
+                    <option value="{{ item.id }}" data-search-text="{{ item.item_code }} {{ item.name }}">{{ item.item_code }} - {{ item.name }} ({{ item.category.name if item.category else '-' }})</option>
                     {% endfor %}
                 </select>
+
+                <!-- Scrollable Item List Card -->
+                <div class="item-search-results bg-white border border-gray-300 rounded-lg mt-1 shadow-lg hidden">
+                    <div class="item-list-container p-1">
+                        <!-- Items will be populated here -->
+                    </div>
+                </div>
             </div>
 
             <!-- Location Detail Selection -->
@@ -282,6 +399,9 @@
                 <div class="serial-selection hidden">
                     <div class="flex items-center justify-between mb-3">
                         <h5 class="font-medium text-gray-700">Tersedia: <span class="available-count">-</span> unit</h5>
+                        <span class="text-xs text-gray-500">
+                            <span class="selected-count">0</span> dipilih
+                        </span>
                     </div>
 
                     <div class="stock-warning hidden mb-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
@@ -289,8 +409,16 @@
                         <span class="text-amber-800">Stok tidak tersedia</span>
                     </div>
 
-                    <div class="serial-list border border-gray-200 rounded-lg p-2" style="max-height: 200px; overflow-y: auto;">
-                        <!-- Serial numbers will be loaded here -->
+                    <!-- Serial Search Bar -->
+                    <div class="mb-2">
+                        <input type="text" class="serial-search w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm" placeholder="Cari serial number..." autocomplete="off">
+                    </div>
+
+                    <!-- Serial List Container -->
+                    <div class="serial-list-container border border-gray-200 rounded-lg bg-white" style="max-height: 250px; overflow-y: auto;">
+                        <div class="serial-list p-2">
+                            <!-- Serial numbers will be loaded here -->
+                        </div>
                     </div>
 
                     <input type="hidden" name="selected_serials_${itemCounter}" id="selected_serials_${itemCounter}" value="">
@@ -304,11 +432,20 @@
 
         const container = document.getElementById(containerId);
 
+        // Setup search functionality for item selection
+        const itemSelect = container.querySelector('.item-select');
+        const itemSearch = container.querySelector('.item-search');
+        const itemSearchResults = container.querySelector('.item-search-results');
+
+        setupItemSearch(itemSearch, itemSelect, itemSearchResults);
+
+        // Setup serial search functionality
+        const serialSearch = container.querySelector('.serial-search');
+
         // Load unit details for this item
         loadUnitDetails(container);
 
         // Add event listener for item selection
-        const itemSelect = container.querySelector('.item-select');
         itemSelect.addEventListener('change', function () {
             const itemId = this.value;
 
@@ -327,6 +464,7 @@
             if (duplicateFound) {
                 alert(`Barang "${duplicateName}" sudah dipilih!\n\nSilakan pilih barang yang lain atau hapus salah satu dari daftar.`);
                 itemSelect.value = '';
+                itemSearch.value = '';
                 return;
             }
 
@@ -403,6 +541,8 @@
         const serialSelection = container.querySelector('.serial-selection');
         const serialList = container.querySelector('.serial-list');
         const availableCountSpan = container.querySelector('.available-count');
+        const selectedCountSpan = container.querySelector('.selected-count');
+        const serialSearch = container.querySelector('.serial-search');
         const stockWarning = container.querySelector('.stock-warning');
 
         loadingState.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memuat serial numbers...';
@@ -429,27 +569,14 @@
 
                 stockWarning.classList.add('hidden');
 
-                serialList.innerHTML = data.items.map(item => `
-                <label class="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
-                    <input type="checkbox"
-                           class="serial-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                           data-container-id="${containerId}"
-                           data-item-detail-id="${item.id}"
-                           data-serial-number="${item.serial_number}">
-                    <div class="ml-3 flex-1">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">${item.serial_number}</span>
-                            <span class="text-sm text-gray-500">${item.serial_unit || '-'}</span>
-                        </div>
-                    </div>
-                </label>
-            `).join('');
+                // Store serial data for search functionality
+                container.serialData = data.items;
 
-                // Add event listeners to checkboxes
-                const checkboxes = serialList.querySelectorAll('.serial-checkbox');
-                checkboxes.forEach(checkbox => {
-                    checkbox.addEventListener('change', handleSerialSelection);
-                });
+                // Setup serial search functionality
+                setupSerialSearch(serialSearch, serialList, container);
+
+                // Render all serials initially
+                renderSerialList(data.items, serialList, containerId);
 
                 validateDistributionForm();
             })
@@ -459,11 +586,70 @@
             });
     }
 
+    function renderSerialList(items, serialList, containerId) {
+        serialList.innerHTML = items.map(item => `
+        <label class="serial-item flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer" data-search-text="${item.serial_number.toLowerCase()} ${item.serial_unit ? item.serial_unit.toLowerCase() : ''}">
+            <input type="checkbox"
+                   class="serial-checkbox w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                   data-container-id="${containerId}"
+                   data-item-detail-id="${item.id}"
+                   data-serial-number="${item.serial_number}">
+            <div class="ml-3 flex-1">
+                <div class="flex items-center justify-between">
+                    <span class="font-medium text-gray-800">${item.serial_number}</span>
+                    <span class="text-sm text-gray-500">${item.serial_unit || '-'}</span>
+                </div>
+            </div>
+        </label>
+    `).join('');
+
+        // Re-attach event listeners to checkboxes
+        const checkboxes = serialList.querySelectorAll('.serial-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', handleSerialSelection);
+        });
+    }
+
+    function setupSerialSearch(searchInput, serialList, container) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase().trim();
+            const allSerialItems = serialList.querySelectorAll('.serial-item');
+            let visibleCount = 0;
+
+            allSerialItems.forEach(item => {
+                const searchText = item.dataset.searchText || '';
+                if (searchText.includes(searchTerm)) {
+                    item.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Show "no results" message if no matches
+            let noResultsMsg = serialList.querySelector('.no-serial-results');
+            if (visibleCount === 0 && searchTerm !== '') {
+                if (!noResultsMsg) {
+                    noResultsMsg = document.createElement('div');
+                    noResultsMsg.className = 'no-serial-results text-center py-4 text-gray-500 text-sm';
+                    serialList.appendChild(noResultsMsg);
+                }
+                noResultsMsg.textContent = `Tidak ditemukan: "${searchTerm}"`;
+                noResultsMsg.classList.remove('hidden');
+            } else {
+                if (noResultsMsg) {
+                    noResultsMsg.classList.add('hidden');
+                }
+            }
+        });
+    }
+
     function handleSerialSelection(e) {
         const checkbox = e.target;
         const containerId = checkbox.dataset.containerId;
         const container = document.getElementById(containerId);
         const hiddenInput = container.querySelector('[id^="selected_serials_"]');
+        const selectedCountSpan = container.querySelector('.selected-count');
 
         // Get all selected serials for this container
         const allCheckboxes = container.querySelectorAll('.serial-checkbox:checked');
@@ -471,6 +657,9 @@
 
         // Update hidden input
         hiddenInput.value = selectedIds.join(',');
+
+        // Update selected count
+        selectedCountSpan.textContent = selectedIds.length;
 
         validateDistributionForm();
     }
@@ -493,6 +682,7 @@
         } else {
             itemCards.forEach(card => {
                 const itemSelect = card.querySelector('.item-select');
+                const itemSearch = card.querySelector('.item-search');
                 const hiddenInput = card.querySelector('[id^="selected_serials_"]');
 
                 if (!itemSelect.value) {

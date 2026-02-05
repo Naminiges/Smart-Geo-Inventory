@@ -7,10 +7,5 @@ class UnitForm(FlaskForm):
     """Form for creating/editing units"""
     name = StringField('Nama Unit', validators=[DataRequired(), Length(min=2, max=200)])
     address = TextAreaField('Alamat', validators=[Optional(), Length(max=500)])
-    status = SelectField('Status', choices=[
-        ('available', 'Available'),
-        ('in_use', 'In Use'),
-        ('maintenance', 'Maintenance')
-    ], validators=[DataRequired()])
     latitude = FloatField('Latitude', validators=[Optional(), NumberRange(min=-90, max=90)])
     longitude = FloatField('Longitude', validators=[Optional(), NumberRange(min=-180, max=180)])
