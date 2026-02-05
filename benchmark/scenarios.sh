@@ -78,7 +78,8 @@ run_benchmark() {
             echo "Test started at: $(date)"
             echo ""
 
-            local end_time=$(($(date +%s) + $(echo $duration | sed 's/s//')))
+            local duration_sec=$(echo $duration | sed 's/s//')
+            local end_time=$(($(date +%s) + duration_sec))
 
             local total_requests=0
             local successful=0
@@ -87,10 +88,10 @@ run_benchmark() {
 
             while [ $(date +%s) -lt $end_time ]; do
                 for ((i=1; i<=connections; i++)); do
-                    local start_time=$(date +%s.%N)
+                    local start_time=$(date +%s.%N 2>/dev/null || date +%s)
                     local response=$(curl -s -w "%{http_code}" -o /dev/null $CURL_OPTS "$HOST$path" 2>&1)
-                    local end_time_req=$(date +%s.%N)
-                    local elapsed=$(echo "$end_time_req - $start_time" | bc)
+                    local end_time_req=$(date +%s.%N 2>/dev/null || date +%s)
+                    local elapsed=$(awk "BEGIN {print $end_time_req - $start_time}")
 
                     total_requests=$((total_requests + 1))
                     response_times+=("$elapsed")
@@ -113,24 +114,27 @@ run_benchmark() {
 
             # Calculate average response time
             if [ ${#response_times[@]} -gt 0 ]; then
-                local sum=0
-                for time in "${response_times[@]}"; do
-                    sum=$(echo "$sum + $time" | bc -l)
-                done
-                local avg=$(echo "scale=3; $sum / ${#response_times[@]}" | bc -l)
-                echo "Average response time: ${avg}s"
+                # Use awk for all calculations
+                local stats=$(printf "%s\n" "${response_times[@]}" | awk '
+                {
+                    sum += $1
+                    if (NR == 1) {
+                        min = max = $1
+                    } else {
+                        if ($1 < min) min = $1
+                        if ($1 > max) max = $1
+                    }
+                }
+                END {
+                    avg = sum / NR
+                    printf "%.3f %.3f %.3f", avg, min, max
+                }')
 
-                # Find min and max
-                local min=${response_times[0]}
-                local max=${response_times[0]}
-                for time in "${response_times[@]}"; do
-                    if (( $(echo "$time < $min" | bc -l) )); then
-                        min=$time
-                    fi
-                    if (( $(echo "$time > $max" | bc -l) )); then
-                        max=$time
-                    fi
-                done
+                local avg=$(echo $stats | awk '{print $1}')
+                local min=$(echo $stats | awk '{print $2}')
+                local max=$(echo $stats | awk '{print $3}')
+
+                echo "Average response time: ${avg}s"
                 echo "Min response time: ${min}s"
                 echo "Max response time: ${max}s"
             fi
