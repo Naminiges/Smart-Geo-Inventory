@@ -1,4 +1,3 @@
-import re
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, FloatField, SelectField, SubmitField
 from wtforms.validators import DataRequired, Length, Optional, NumberRange, ValidationError
@@ -19,10 +18,6 @@ def validate_room_name_format(form, field):
         raise ValidationError('Format nama ruangan tidak valid. Gunakan kode gedung yang sesuai.')
 
     building_code = parts[0]
-
-    # Check building code format (e.g., GD.A, GD.B, GD.H)
-    if not re.match(r'^GD\.[A-Z]$', building_code):
-        raise ValidationError('Format nama ruangan tidak valid. Gunakan kode gedung yang sesuai.')
 
     # Validate that the building code in room_name matches the selected building
     building_id = form.building_id.data
