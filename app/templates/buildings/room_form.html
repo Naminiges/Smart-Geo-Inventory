@@ -47,8 +47,8 @@
                 <label class="block text-sm font-medium text-gray-700 mb-2">Nama Ruangan <span class="text-red-500">*</span></label>
                 <input type="text" name="room_name" value="{{ form.room_name.data or '' }}"
                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                       placeholder="Contoh: GD.A 0201" required>
-                <p class="mt-1 text-sm text-gray-500">Format: Kode Gedung + Nomor Ruangan (contoh: GD.A 0201)</p>
+                       placeholder="Contoh: GD.GF 0101" required>
+                <p class="mt-1 text-sm text-gray-500">Format: Kode Gedung (sesuai gedung yang dipilih) + nomor ruangan (contoh: GD.GF 0101)</p>
                 {% if form.room_name.errors %}
                 <p class="mt-1 text-sm text-red-600">{{ form.room_name.errors[0] }}</p>
                 {% endif %}
