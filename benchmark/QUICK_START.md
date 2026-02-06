@@ -33,7 +33,10 @@ ls -lh results/
 ## Test Rate Limiting (1-2 menit)
 
 ```bash
-# Simple version - TANPA login (Recommended!)
+# Fallback version - Auto-detect (BEST!)
+./test_rate_limit_fallback.sh
+
+# Atau simple version - TANPA login
 ./test_rate_limit_simple.sh
 
 # Atau comprehensive version
@@ -41,6 +44,12 @@ ls -lh results/
 
 # Atau Python version (lebih detail, perlu login)
 python3 test_rate_limit.py
+```
+
+**Note:** Jika login gagal (404), restart aplikasi terlebih dahulu:
+```bash
+docker restart <container_name>
+# ATAU gunakan test_rate_limit_fallback.sh (auto-detect)
 ```
 
 Lihat `README_RATE_LIMIT_TEST.md` untuk detail tentang rate limiting test.

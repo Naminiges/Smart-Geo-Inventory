@@ -4,15 +4,29 @@
 
 Test script ini digunakan untuk memverifikasi konfigurasi rate limiting pada Smart Geo Inventory application.
 
-**3 Versi Tersedia:**
+**4 Versi Tersedia:**
 
 | Script | Login Required | Dependencies | Best For |
 |--------|---------------|--------------|----------|
 | `test_rate_limit_simple.sh` | ❌ NO | None (only curl) | **Quick test** (Recommended!) |
+| `test_rate_limit_fallback.sh` | ⚠️ Auto-detect | None (only curl) | **Best choice** - tries all methods |
 | `test_rate_limit.sh` | ❌ NO | None | Comprehensive test |
 | `test_rate_limit.py` | ✅ YES | Python + requests | Advanced statistics |
 
-## Cara Menggunakan (Rekomendasi: Simple Version!)
+## Cara Menggunakan
+
+### ⭐ Opsi 0: Fallback Version (BEST - Auto-detect)
+
+```bash
+# Jalankan test yang mencoba semua method
+./test_rate_limit_fallback.sh
+```
+
+**Keuntungan:**
+- ✅ **Auto-detect** - coba semua login method
+- ✅ **Graceful fallback** - lanjut tanpa auth jika login gagal
+- ✅ **Universal** - jalan di semua situasi
+- ✅ **Informative** - kasih tahu apa yang terjadi
 
 ### ✅ Opsi 1: Simple Version (TANPA Login - Recommended)
 
@@ -220,6 +234,59 @@ SUMMARY
 
 ## Files
 
-- `test_rate_limit.sh` - Bash version (simple, no dependencies)
+- `test_rate_limit_simple.sh` - Simple version (no login, no dependencies)
+- `test_rate_limit_fallback.sh` - Fallback version (auto-detect login)
+- `test_rate_limit.sh` - Comprehensive version (detailed statistics)
 - `test_rate_limit.py` - Python version (advanced, with statistics)
 - `README_RATE_LIMIT_TEST.md` - Documentation ini
+
+## ⚠️ PENTING: Jika Login Gagal
+
+### Gejala:
+- Script return 404 saat login
+- Error "Benchmark API endpoint tidak tersedia"
+- Python script error saat mencoba login
+
+### Solusi: **RESTART APLIKASI**
+
+Setelah menambahkan endpoint `/api/benchmark/login`, aplikasi **HARUS di-restart**:
+
+```bash
+# Cek apakah endpoint tersedia
+curl -k https://172.30.95.249/api/benchmark/login
+
+# Jika return 404, restart aplikasi:
+docker restart <container_name>
+# ATAU
+systemctl restart smart-geo-inventory
+
+# Setelah restart, test lagi
+curl -k https://172.30.95.249/api/benchmark/login
+# Harus return: Method Not Allowed (bukan 404)
+```
+
+### Verification:
+
+```bash
+# Test endpoint manual
+curl -k https://172.30.95.249/api/benchmark/login
+
+# Response yang diharapkan:
+# {"message":"The method is not allowed..."}  ← Endpoint ada tapi method salah (NORMAL!)
+#
+# BUKAN:
+# {"error":"Not Found"}  ← Endpoint tidak ada (perlu restart!)
+```
+
+### Alternative: Gunakan Script Fallback
+
+Jika tidak mau restart, gunakan `test_rate_limit_fallback.sh`:
+
+```bash
+./test_rate_limit_fallback.sh
+```
+
+Script ini akan:
+1. Coba login dulu
+2. Jika gagal, lanjut test public endpoints saja
+3. Tetap bisa test rate limiting dengan baik
