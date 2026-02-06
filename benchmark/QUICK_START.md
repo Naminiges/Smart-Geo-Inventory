@@ -30,12 +30,19 @@ cat results/quick_run.txt
 ls -lh results/
 ```
 
-## Test Rate Limiting (2 menit)
+## Test Rate Limiting (2-3 menit)
 
 ```bash
-# Test rate limiting (TIDAK perlu login)
+# Simple version - 1000 requests, TANPA login (Recommended!)
+./test_rate_limit_simple.sh
+
+# Atau comprehensive version - dengan login attempt
 ./test_rate_limit.sh
 ```
+
+**Note:**
+- `test_rate_limit_simple.sh` - 1000 requests ke /home, tanpa login (recommended)
+- `test_rate_limit.sh` - Coba login dulu, test lebih banyak endpoint
 
 Lihat `README_RATE_LIMIT.md` untuk detail.
 
