@@ -49,27 +49,47 @@ print_error() {
 login_and_save_session() {
     print_info "Logging in to get session cookie..."
 
-    # Perform login
-    local login_response=$(curl -i -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
+    # Step 1: Get login page and CSRF token
+    print_info "Fetching CSRF token from login page..."
+    local login_page=$(curl -s $CURL_OPTS -c "$COOKIE_FILE" "$HOST/auth/login" 2>&1)
+
+    # Extract CSRF token from HTML
+    local csrf_token=$(echo "$login_page" | grep -o 'name="csrf_token".*value="[^"]*"' | sed 's/.*value="\([^"]*\)".*/\1/')
+
+    if [ -z "$csrf_token" ]; then
+        print_warning "Could not extract CSRF token from login page"
+        print_warning "Trying login without CSRF token..."
+    else
+        print_info "✅ CSRF token extracted: ${csrf_token:0:20}..."
+    fi
+
+    # Step 2: Perform login with CSRF token
+    print_info "Attempting login..."
+    local login_data="email=$LOGIN_EMAIL&password=$LOGIN_PASSWORD"
+    if [ -n "$csrf_token" ]; then
+        login_data="$login_data&csrf_token=$csrf_token"
+    fi
+
+    local login_response=$(curl -i -s $CURL_OPTS -b "$COOKIE_FILE" -c "$COOKIE_FILE" -X POST \
         -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "email=$LOGIN_EMAIL&password=$LOGIN_PASSWORD" \
+        -d "$login_data" \
         "$HOST/auth/login" 2>&1)
 
-    # Check if login successful
-    if echo "$login_response" | grep -q "302\|Found\|Location"; then
+    # Check if login successful (302 redirect or Location header)
+    if echo "$login_response" | grep -q "302\|Found\|Location:"; then
         print_info "✅ Login successful! Session saved to $COOKIE_FILE"
 
         # Show cookie info
         if [ -f "$COOKIE_FILE" ]; then
-            local session_count=$(grep -c "session" "$COOKIE_FILE" || echo "0")
-            print_info "Session cookies: $session_count"
+            print_info "Cookie file created:"
+            cat "$COOKIE_FILE" | head -5
         fi
         return 0
     else
         print_error "❌ Login failed!"
         echo ""
         echo "Login response:"
-        echo "$login_response" | head -20
+        echo "$login_response" | head -30
         echo ""
         echo "Please check:"
         echo "  1. Application is running at $HOST"
@@ -79,6 +99,9 @@ login_and_save_session() {
         echo "Current credentials:"
         echo "  Email: $LOGIN_EMAIL"
         echo "  Password: $LOGIN_PASSWORD"
+        echo ""
+        echo "Debug info:"
+        echo "  CSRF token: ${csrf_token:-none}"
         return 1
     fi
 }
