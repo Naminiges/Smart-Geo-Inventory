@@ -58,21 +58,46 @@ echo ""
 print_header "LOGIN PHASE"
 
 print_info "Mencoba login untuk test authenticated endpoints..."
+print_info "Email: $LOGIN_EMAIL"
+print_info "Password: $LOGIN_PASSWORD"
 
-# Try benchmark API
+# Method 1: Try benchmark API (new endpoint, CSRF-exempt)
+print_info "Method 1: Benchmark API endpoint..."
 json_payload="{\"email\":\"$LOGIN_EMAIL\",\"password\":\"$LOGIN_PASSWORD\"}"
-login_response=$(curl -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
+login_response=$(curl -i -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
     -H "Content-Type: application/json" \
     -d "$json_payload" \
     "$HOST/api/benchmark/login" 2>&1)
 
-HAS_AUTH=0
 if echo "$login_response" | grep -q "success.*true"; then
-    print_success "Login berhasil!"
+    print_success "Login berhasil via Benchmark API!"
     HAS_AUTH=1
+    echo ""
+    # Show user info
+    user_name=$(echo "$login_response" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
+    print_info "Logged in as: $user_name"
 else
-    print_warning "Login gagal, hanya test public endpoints"
-    HAS_AUTH=0
+    print_warning "Benchmark API tidak tersedia (mungkin perlu restart aplikasi)"
+
+    # Method 2: Try regular API auth (might have CSRF issue, but try anyway)
+    print_info "Method 2: Regular API Auth endpoint..."
+    login_response2=$(curl -i -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
+        -H "Content-Type: application/json" \
+        -d "$json_payload" \
+        "$HOST/api/auth/login" 2>&1)
+
+    if echo "$login_response2" | grep -q "success.*true"; then
+        print_success "Login berhasil via Regular API!"
+        HAS_AUTH=1
+        echo ""
+        user_name=$(echo "$login_response2" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
+        print_info "Logged in as: $user_name"
+    else
+        print_error "Login gagal via semua method"
+        echo ""
+        print_info "Melanjutkan TANPA authentication (public endpoints only)"
+        HAS_AUTH=0
+    fi
 fi
 
 echo ""
