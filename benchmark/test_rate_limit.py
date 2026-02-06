@@ -6,9 +6,8 @@ Tests rate limiting configuration with detailed statistics
 
 import requests
 import time
-import json
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Configuration
 HOST = "https://172.30.95.249"
@@ -272,7 +271,7 @@ def main():
     print("  • API Auth: 10 per minute, 20 per hour")
     print()
 
-    print_info "Hasil Test:"
+    print_info("Hasil Test:")
     print(f"  1. Burst Test (100 req): {burst_results.get(429, 0)} rate limited")
     print(f"  2. Sustained Load (60 req): {sustained_results.get(429, 0)} rate limited")
     print(f"  3. Public Endpoint (50 req): {public_results.get(429, 0)} rate limited")
@@ -295,7 +294,7 @@ def main():
         print_success(f"Rate limiting bekerja dengan baik ({total_429} requests ditolak dari 230 total)")
 
     print()
-    print_info "Rekomendasi:"
+    print_info("Rekomendasi:")
     print("  ✅ Untuk benchmarking: 10000/day, 1000/hour (sudah dikonfigurasi)")
     print("  ✅ Untuk production: 1000/day, 100/hour (lebih ketat)")
     print("  ✅ Login endpoint: 10/minute, 20/hour (sudah sesuai)")
