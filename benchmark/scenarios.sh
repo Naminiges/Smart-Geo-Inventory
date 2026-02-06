@@ -49,17 +49,18 @@ print_error() {
 login_and_save_session() {
     print_info "Logging in to get session cookie..."
 
-    # Use API endpoint for login (no CSRF token required!)
-    print_info "Using API endpoint for login (POST /api/auth/login)..."
+    # Use benchmark-specific API endpoint (CSRF-exempt)
+    print_info "Using benchmark API endpoint (POST /api/benchmark/login)..."
+    print_info "This endpoint is CSRF-exempt for load testing purposes."
 
     # Prepare JSON payload
     local json_payload="{\"email\":\"$LOGIN_EMAIL\",\"password\":\"$LOGIN_PASSWORD\"}"
 
-    # Perform login via API
+    # Perform login via benchmark API
     local login_response=$(curl -i -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
         -H "Content-Type: application/json" \
         -d "$json_payload" \
-        "$HOST/api/auth/login" 2>&1)
+        "$HOST/api/benchmark/login" 2>&1)
 
     # Check if login successful (200 OK with success:true)
     if echo "$login_response" | grep -q "HTTP.*200\|success.*true"; then
@@ -76,6 +77,9 @@ login_and_save_session() {
         local verify_response=$(curl -s $CURL_OPTS -b "$COOKIE_FILE" "$HOST/api/auth/me")
         if echo "$verify_response" | grep -q "success.*true"; then
             print_info "✅ Authentication verified!"
+            # Show user info
+            local user_name=$(echo "$verify_response" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
+            print_info "Logged in as: $user_name"
         else
             print_warning "⚠️  Authentication verification failed, but continuing..."
         fi
@@ -91,6 +95,7 @@ login_and_save_session() {
         echo "  1. Application is running at $HOST"
         echo "  2. Login credentials are correct"
         echo "  3. Admin user exists (run: python3 seed_admin_user.py)"
+        echo "  4. Application has been restarted to load new endpoint"
         echo ""
         echo "Current credentials:"
         echo "  Email: $LOGIN_EMAIL"

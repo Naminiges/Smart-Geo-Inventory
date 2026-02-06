@@ -109,7 +109,8 @@ Hasil disimpan di: `results/` dengan nama file timestamped
 
 **Catatan:**
 - Script akan otomatis login menggunakan kredensial admin sebelum menjalankan benchmark untuk endpoint yang memerlukan authentication.
-- Login menggunakan API endpoint `/api/auth/login` (JSON, tanpa CSRF token).
+- Login menggunakan API endpoint khusus benchmark `/api/benchmark/login` (JSON, **CSRF-exempt** untuk load testing).
+- Endpoint ini aman karena hanya dapat diakses dari internal network dan memiliki rate limiting.
 - Session cookie disimpan untuk digunakan pada authenticated requests.
 
 ---
@@ -283,29 +284,38 @@ THREADS=2 CONNECTIONS=50 ./scenarios.sh
 1. Admin user belum dibuat
 2. Salah password/email
 3. Application tidak running
-4. API endpoint tidak accessible
+4. API endpoint belum ter-load (perlu restart aplikasi)
+5. Benchmark API endpoint tidak registered
 
 **Solusi**:
 ```bash
 # 1. Pastikan admin user sudah dibuat
 python3 seed_admin_user.py
 
-# 2. Cek apakah API login accessible
-curl -k https://172.30.95.249/api/auth/login
+# 2. Pastikan aplikasi sudah di-restart untuk load endpoint baru
+# Restart container atau reload aplikasi
 
-# 3. Test manual login via API (JSON, no CSRF needed!)
+# 3. Cek apakah benchmark API login accessible
+curl -k https://172.30.95.249/api/benchmark/login
+
+# 4. Test manual login via Benchmark API (CSRF-exempt!)
 curl -i -s -k -X POST \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@smartgeo.com","password":"admin123"}' \
   -c cookies.txt \
-  https://172.30.95.249/api/auth/login
+  https://172.30.95.249/api/benchmark/login
 
-# 4. Cek cookie
+# 5. Cek cookie
 cat cookies.txt
 
-# 5. Verify authentication
+# 6. Verify authentication
 curl -s -k -b cookies.txt https://172.30.95.249/api/auth/me
 ```
+
+**PENTING:** Jika endpoint `/api/benchmark/login` tidak ditemukan (404):
+- Restart aplikasi/container untuk load blueprint baru
+- Pastikan file `app/views/api_benchmark.py` ada
+- Cek logs untuk error saat import blueprint
 
 ### Error: Unauthorized (401/403) pada API Endpoints
 
