@@ -30,6 +30,18 @@ cat results/quick_run.txt
 ls -lh results/
 ```
 
+## Test Rate Limiting (2 menit)
+
+```bash
+# Cek apakah rate limiting bekerja dengan benar
+./test_rate_limit.sh
+
+# Atau gunakan Python version (lebih detail)
+python3 test_rate_limit.py
+```
+
+Lihat `README_RATE_LIMIT_TEST.md` untuk detail tentang rate limiting test.
+
 ## IP Address Reference
 
 - **rev-proxy**: 172.30.95.249 (default target)
