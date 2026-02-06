@@ -5,51 +5,83 @@
 ```bash
 cd /app/Smart-Geo-Inventory/benchmark
 
-# Jalankan test (TIDAK perlu login!)
+# Jalankan test (Otomatis coba login)
 ./test_rate_limit.sh
 ```
 
-## Test yang Dilakukan
+## Test yang Dilakukan (Total: 1000-1800 requests)
 
-| Test | Requests | Description |
-|------|----------|-------------|
-| 1. Burst | 100 sekaligus | Test burst load ke `/home` |
-| 2. Sustained | 60 (1 req/detik) | Test sustained load selama 60 detik |
-| 3. Login Protection | 20 | Test rate limiting pada login endpoint |
-| 4. Multiple Endpoints | 50 random | Test ke berbagai endpoints |
+| # | Test | Requests | Endpoint | Auth Required |
+|---|------|----------|----------|---------------|
+| 1 | Homepage Benchmark | **1000** | `/home` | ❌ No |
+| 2 | Dashboard | 200 | `/dashboard/` | ✅ Yes |
+| 3 | API Dashboard Stats | 300 | `/api/dashboard/stats` | ✅ Yes |
+| 4 | API Items | 200 | `/api/items/` | ✅ Yes |
+| 5 | Login Protection | 100 | `/api/benchmark/login` | ❌ No |
 
 ## Hasil yang Diharapkan
 
-Dengan konfigurasi saat ini (`10000/day, 1000/hour`):
+### Dengan Konfigurasi Saat Ini:
+- **Default**: 10000 per day, **1000 per hour** ⚠️
+- **API Auth**: 10 per minute, 20 per hour
 
-- ✅ **Homepage Burst**: 0/100 rate limited (public endpoint)
-- ✅ **Sustained Load**: 0/60 rate limited (1 req/sec < 1000/hour)
-- ⚠️ **Login Endpoint**: ±5-10/20 rate limited (protection aktif)
+### Expected Results:
 
-## Interpretasi
+| Test | Expected 429 | Description |
+|------|--------------|-------------|
+| Homepage (1000) | **0-50** | Mungkin kena rate limit jika mendekati 1000/hour |
+| Dashboard (200) | 0 | Seharusnya tidak kena (amount kecil) |
+| API Stats (300) | 0 | Seharusnya tidak kena |
+| API Items (200) | 0 | Seharusnya tidak kena |
+| Login (100) | **10-50+** | **Harus kena rate limit** (protection aktif) |
 
-**Tidak ada rate limiting pada public endpoints?** ✅ **NORMAL!**
-- Rate limit sudah dinaikkan untuk benchmarking
-- Public endpoints memang seharusnya tidak dibatasi
+## Interpretasi Hasil
 
-**Rate limiting aktif pada login endpoint?** ✅ **BAGUS!**
-- Login endpoint memiliki rate limit yang lebih ketat
-- Melindungi dari brute force attacks
+### Scenario 1: Homepage 0/1000 Limited
+✅ **IDEAL** - Rate limit bekerja, belum kena batas 1000/hour
+
+### Scenario 2: Homepage 100-500/1000 Limited
+⚠️ **NORMAL** - Rate limit aktif, mendekati batas 1000/hour
+
+### Scenario 3: Homepage >500/1000 Limited
+❌ **TERLALU KETAT** - Perlu naikkan limit untuk benchmarking
+
+### Scenario 4: Login 0/100 Limited
+⚠️ **KURANG KETAT** - Login protection kurang aktif
+
+### Scenario 5: Login 10-50/100 Limited
+✅ **BAGUS** - Rate limiting bekerja pada login endpoint
+
+## Catatan Penting
+
+### Jika Login Gagal:
+Script akan otomatis lanjut test public endpoints saja:
+- ✅ Homepage 1000 requests
+- ✅ Login protection test
+- ❌ Tidak test authenticated endpoints
+
+### Untuk Test Lengkap:
+1. Pastikan aplikasi sudah di-restart
+2. Pastikan admin user ada: `python3 seed_admin_user.py`
+3. Script akan auto-login jika endpoint tersedia
 
 ## Troubleshooting
 
-### Error: Connection refused
-```bash
-# Cek koneksi
-curl -k https://172.30.95.249/home
-```
-
-### Rate limiting terlalu ketat (banyak 429)
+### Homepage banyak kena rate limit?
 ```bash
 # Cek konfigurasi di app/__init__.py
 # Pastikan: default_limits=["10000 per day", "1000 per hour"]
 ```
 
-## Files
+### Login gagal (404)?
+```bash
+# Restart aplikasi untuk load endpoint baru
+docker restart <container>
+# ATAU
+systemctl restart smart-geo-inventory
+```
 
-- `test_rate_limit.sh` - Test script (langsung jalan, no dependencies)
+## Duration
+
+- **Tanpa login**: ~2-3 menit (1100 requests)
+- **Dengan login**: ~5-7 menit (1800 requests)
