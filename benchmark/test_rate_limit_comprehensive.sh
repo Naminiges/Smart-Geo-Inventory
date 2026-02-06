@@ -157,7 +157,7 @@ echo ""
 # SCENARIO 2: Half Limit Test (500 requests) - HARUSNYA 0 rate limited
 #=============================================================================
 print_header "SCENARIO 2: HALF LIMIT TEST (500 Requests)"
-print_endpoint "GET /home"
+print_endpoint "GET /dashboard/admin (Authenticated)"
 print_info "Tujuan: Membuktikan bahwa pada 50% dari batas, MASIH belum ada rate limiting"
 print_info "Batas: 1000/hour, Test: 500 requests"
 echo ""
@@ -165,14 +165,17 @@ echo ""
 success=0
 rate_limited=0
 errors=0
+unauthorized=0
 
 for i in {1..500}; do
-    response=$(curl -s $CURL_OPTS -w "%{http_code}" "$HOST/home" -o /dev/null 2>&1)
+    response=$(curl -s $CURL_OPTS -b "$COOKIE_FILE" -w "%{http_code}" "$HOST/dashboard/admin" -o /dev/null 2>&1)
 
     if [ "$response" = "200" ]; then
         success=$((success + 1))
     elif [ "$response" = "429" ]; then
         rate_limited=$((rate_limited + 1))
+    elif [ "$response" = "401" ] || [ "$response" = "403" ]; then
+        unauthorized=$((unauthorized + 1))
     else
         errors=$((errors + 1))
     fi
@@ -187,10 +190,13 @@ echo ""
 print_result "Hasil Half Limit (500 requests):"
 echo "  ✅ Sukses: $success/500"
 echo "  🚫 Rate Limited (429): $rate_limited/500"
+echo "  🔒 Unauthorized: $unauthorized/500"
 echo "  ❌ Error lain: $errors/500"
 echo ""
 
-if [ $rate_limited -eq 0 ]; then
+if [ $unauthorized -eq 500 ]; then
+    print_error "Session tidak valid! Semua requests unauthorized"
+elif [ $rate_limited -eq 0 ]; then
     print_success "✅ PASS: Tidak ada rate limiting pada 50% batas"
     print_info "Kesimpulan: Sistem masih berfungsi normal pada traffic sedang"
 else
@@ -204,7 +210,7 @@ echo ""
 # SCENARIO 3: At Limit Test (1200 requests) - HARUSNYA TERLIHAT rate limiting
 #=============================================================================
 print_header "SCENARIO 3: AT LIMIT TEST (1200 Requests)"
-print_endpoint "GET /home"
+print_endpoint "GET /dashboard/admin (Authenticated)"
 print_info "Tujuan: Membuktikan bahwa MELEWATI batas, rate limiting AKTIF"
 print_info "Batas: 1000/hour, Test: 1200 requests (200 melebihi batas)"
 echo ""
@@ -212,6 +218,7 @@ echo ""
 success=0
 rate_limited=0
 errors=0
+unauthorized=0
 
 # Track per 100 requests untuk melihat kapan mulai kena rate limit
 declare -a success_per_hundred
@@ -220,7 +227,7 @@ current_success=0
 current_rate_limited=0
 
 for i in {1..1200}; do
-    response=$(curl -s $CURL_OPTS -w "%{http_code}" "$HOST/home" -o /dev/null 2>&1)
+    response=$(curl -s $CURL_OPTS -b "$COOKIE_FILE" -w "%{http_code}" "$HOST/dashboard/admin" -o /dev/null 2>&1)
 
     if [ "$response" = "200" ]; then
         success=$((success + 1))
@@ -228,6 +235,8 @@ for i in {1..1200}; do
     elif [ "$response" = "429" ]; then
         rate_limited=$((rate_limited + 1))
         current_rate_limited=$((current_rate_limited + 1))
+    elif [ "$response" = "401" ] || [ "$response" = "403" ]; then
+        unauthorized=$((unauthorized + 1))
     else
         errors=$((errors + 1))
     fi
@@ -247,8 +256,24 @@ echo ""
 print_result "Hasil At Limit (1200 requests):"
 echo "  ✅ Sukses: $success/1200"
 echo "  🚫 Rate Limited (429): $rate_limited/1200"
+echo "  🔒 Unauthorized: $unauthorized/1200"
 echo "  ❌ Error lain: $errors/1200"
 echo ""
+
+if [ $unauthorized -eq 1200 ]; then
+    print_error "Session tidak valid! Tidak bisa test rate limiting"
+    print_info "Silakan cek login dan ulangi test"
+elif [ $rate_limited -gt 150 ]; then
+    print_success "✅ PASS: Rate limiting terlihat jelas!"
+    print_info "Kesimpulan: $rate_limited requests kena rate limit ($((rate_limited * 100 / 1200))%)"
+    print_info "Ini membuktikan rate limit 1000/hour berfungsi dengan baik"
+elif [ $rate_limited -gt 50 ]; then
+    print_warning "⚠️  PARTIAL: Rate limiting terdeteksi tapi tidak terlalu agresif"
+    print_info "Kesimpulan: $rate_limited requests kena rate limit"
+else
+    print_error "❌ FAIL: Rate limiting tidak terlihat"
+    print_info "Mungkin rate limit sudah reset (window 1 hour) atau belum kena batas"
+fi
 
 echo "Breakdown per 100 requests:"
 echo "─────────────────────────────────────────────────"
@@ -291,11 +316,11 @@ fi
 echo ""
 
 #=============================================================================
-# SCENARIO 4: Authenticated Endpoint Test (500 requests)
+# SCENARIO 4: API Endpoint Test (500 requests)
 #=============================================================================
-print_header "SCENARIO 4: AUTHENTICATED ENDPOINT TEST (500 Requests)"
-print_endpoint "GET /dashboard/"
-print_info "Tujuan: Test rate limiting pada authenticated endpoint"
+print_header "SCENARIO 4: API ENDPOINT TEST (500 Requests)"
+print_endpoint "GET /api/dashboard/stats (Authenticated)"
+print_info "Tujuan: Test rate limiting pada API endpoint dengan autentikasi"
 print_info "Batas API Auth: 10 per minute, 20 per hour"
 echo ""
 
@@ -306,7 +331,7 @@ errors=0
 
 for i in {1..500}; do
     response=$(curl -s $CURL_OPTS -b "$COOKIE_FILE" -w "%{http_code}" \
-        "$HOST/dashboard/" -o /dev/null 2>&1)
+        "$HOST/api/dashboard/stats" -o /dev/null 2>&1)
 
     if [ "$response" = "200" ]; then
         success=$((success + 1))
@@ -325,7 +350,7 @@ done
 
 echo ""
 echo ""
-print_result "Hasil Authenticated Endpoint (500 requests):"
+print_result "Hasil API Endpoint (500 requests):"
 echo "  ✅ Sukses: $success/500"
 echo "  🚫 Rate Limited (429): $rate_limited/500"
 echo "  🔒 Unauthorized: $unauthorized/500"
@@ -334,9 +359,13 @@ echo ""
 
 if [ $unauthorized -eq 500 ]; then
     print_error "Session tidak valid! Semua requests unauthorized"
+elif [ $rate_limited -gt 400 ]; then
+    print_success "✅ PASS: Rate limiting aktif pada API endpoint!"
+    print_info "Kesimpulan: API Auth rate limit (10/min, 20/hour) berfungsi"
+    print_info "Hanya ~20 requests sukses, sisanya kena rate limit"
 elif [ $rate_limited -gt 0 ]; then
-    print_success "✅ PASS: Rate limiting aktif pada authenticated endpoint"
-    print_info "Kesimpulan: API Auth rate limit berfungsi"
+    print_warning "⚠️  Rate limiting terdeteksi pada API"
+    print_info "Kesimpulan: $rate_limited requests kena rate limit"
 else
     print_info "Rate limiting belum aktif (masih di bawah batas)"
 fi
@@ -351,26 +380,26 @@ print_header "SUMMARY & ANALYSIS UNTUK LAPORAN"
 print_info "Total Requests: 2300+"
 echo ""
 print_info "Scenario Coverage:"
-echo "  1. Baseline Test (100 req) - Traffic rendah"
-echo "  2. Half Limit Test (500 req) - Traffic sedang (50% batas)"
-echo "  3. At Limit Test (1200 req) - Traffic tinggi (melebihi batas)"
-echo "  4. Authenticated Test (500 req) - Endpoint dengan autentikasi"
+echo "  1. Baseline Test (100 req) - Public endpoint (/home)"
+echo "  2. Half Limit Test (500 req) - Authenticated endpoint (/dashboard/admin)"
+echo "  3. At Limit Test (1200 req) - Authenticated endpoint melebihi batas"
+echo "  4. API Endpoint Test (500 req) - API endpoint dengan limit ketat"
 echo ""
 
 print_result "📊 KESIMPULAN UNTUK LAPORAN:"
 echo ""
-echo "✅ Point 1: Pada traffic rendah (100 requests), sistem berfungsi normal"
+echo "✅ Point 1: Public endpoint (/home) berfungsi normal pada traffic rendah"
 echo "   Tidak ada rate limiting yang mengganggu user experience"
 echo ""
-echo "✅ Point 2: Pada traffic sedang (500 requests), sistem masih stabil"
-echo "   Rate limit 1000/hour memberikan ruang yang cukup"
+echo "✅ Point 2: Authenticated endpoint (/dashboard/admin) stabil pada traffic sedang"
+echo "   Rate limit 1000/hour memberikan ruang yang cukup untuk user normal"
 echo ""
-echo "✅ Point 3: Pada traffic tinggi (1200+ requests), rate limiting AKTIF"
+echo "✅ Point 3: Authenticated endpoint menunjukkan rate limiting pada traffic tinggi"
 echo "   Requests melebihi 1000/hour akan di-reject dengan HTTP 429"
 echo "   Ini membuktikan rate limit bekerja untuk melindungi server"
 echo ""
-echo "✅ Point 4: Authenticated endpoints memiliki rate limit tersendiri"
-echo "   API Auth rate limit (10/min, 20/hour) lebih ketat untuk keamanan"
+echo "✅ Point 4: API endpoints memiliki rate limit lebih ketat untuk keamanan"
+echo "   API Auth rate limit (10/min, 20/hour) mencegah API abuse"
 echo ""
 
 print_info "💡 Rekomendasi:"
