@@ -276,19 +276,36 @@ THREADS=2 CONNECTIONS=50 ./scenarios.sh
 
 ### Error: Login Failed
 
+**Kemungkinan penyebab**:
+1. Admin user belum dibuat
+2. Salah password/email
+3. CSRF token error
+4. Application tidak running
+
 **Solusi**:
 ```bash
-# Pastikan admin user sudah dibuat
+# 1. Pastikan admin user sudah dibuat
 python3 seed_admin_user.py
 
-# Cek apakah login page accessible
+# 2. Cek apakah login page accessible
 curl -k https://172.30.95.249/auth/login
 
-# Coba login manual
+# 3. Cek CSRF token di login page
+curl -k https://172.30.95.249/auth/login | grep csrf_token
+
+# 4. Test manual login (dengan CSRF)
+# Get CSRF token dulu
+CSRF_TOKEN=$(curl -k https://172.30.95.249/auth/login | grep -o 'name="csrf_token".*value="[^"]*"' | sed 's/.*value="\([^"]*\)".*/\1/')
+
+# Then login
 curl -i -s -k -X POST \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "email=admin@smartgeo.com&password=admin123" \
+  -d "email=admin@smartgeo.com&password=admin123&csrf_token=$CSRF_TOKEN" \
+  -c cookies.txt \
   https://172.30.95.249/auth/login
+
+# 5. Cek cookie
+cat cookies.txt
 ```
 
 ### Error: Unauthorized (401/403) pada API Endpoints
