@@ -49,41 +49,37 @@ print_error() {
 login_and_save_session() {
     print_info "Logging in to get session cookie..."
 
-    # Step 1: Get login page and CSRF token
-    print_info "Fetching CSRF token from login page..."
-    local login_page=$(curl -s $CURL_OPTS -c "$COOKIE_FILE" "$HOST/auth/login" 2>&1)
+    # Use API endpoint for login (no CSRF token required!)
+    print_info "Using API endpoint for login (POST /api/auth/login)..."
 
-    # Extract CSRF token from HTML
-    local csrf_token=$(echo "$login_page" | grep -o 'name="csrf_token".*value="[^"]*"' | sed 's/.*value="\([^"]*\)".*/\1/')
+    # Prepare JSON payload
+    local json_payload="{\"email\":\"$LOGIN_EMAIL\",\"password\":\"$LOGIN_PASSWORD\"}"
 
-    if [ -z "$csrf_token" ]; then
-        print_warning "Could not extract CSRF token from login page"
-        print_warning "Trying login without CSRF token..."
-    else
-        print_info "✅ CSRF token extracted: ${csrf_token:0:20}..."
-    fi
+    # Perform login via API
+    local login_response=$(curl -i -s $CURL_OPTS -c "$COOKIE_FILE" -X POST \
+        -H "Content-Type: application/json" \
+        -d "$json_payload" \
+        "$HOST/api/auth/login" 2>&1)
 
-    # Step 2: Perform login with CSRF token
-    print_info "Attempting login..."
-    local login_data="email=$LOGIN_EMAIL&password=$LOGIN_PASSWORD"
-    if [ -n "$csrf_token" ]; then
-        login_data="$login_data&csrf_token=$csrf_token"
-    fi
-
-    local login_response=$(curl -i -s $CURL_OPTS -b "$COOKIE_FILE" -c "$COOKIE_FILE" -X POST \
-        -H "Content-Type: application/x-www-form-urlencoded" \
-        -d "$login_data" \
-        "$HOST/auth/login" 2>&1)
-
-    # Check if login successful (302 redirect or Location header)
-    if echo "$login_response" | grep -q "302\|Found\|Location:"; then
+    # Check if login successful (200 OK with success:true)
+    if echo "$login_response" | grep -q "HTTP.*200\|success.*true"; then
         print_info "✅ Login successful! Session saved to $COOKIE_FILE"
 
         # Show cookie info
         if [ -f "$COOKIE_FILE" ]; then
-            print_info "Cookie file created:"
-            cat "$COOKIE_FILE" | head -5
+            print_info "Cookie file contents:"
+            cat "$COOKIE_FILE"
         fi
+
+        # Verify login by checking /api/auth/me
+        print_info "Verifying authentication..."
+        local verify_response=$(curl -s $CURL_OPTS -b "$COOKIE_FILE" "$HOST/api/auth/me")
+        if echo "$verify_response" | grep -q "success.*true"; then
+            print_info "✅ Authentication verified!"
+        else
+            print_warning "⚠️  Authentication verification failed, but continuing..."
+        fi
+
         return 0
     else
         print_error "❌ Login failed!"
@@ -100,8 +96,6 @@ login_and_save_session() {
         echo "  Email: $LOGIN_EMAIL"
         echo "  Password: $LOGIN_PASSWORD"
         echo ""
-        echo "Debug info:"
-        echo "  CSRF token: ${csrf_token:-none}"
         return 1
     fi
 }

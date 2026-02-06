@@ -107,7 +107,10 @@ Hasil disimpan di: `results/` dengan nama file timestamped
 9. **Spike Test** - Sudden load (16 threads, 1000 connections, 30s)
    - **Public endpoint** - Homepage tanpa login
 
-**Catatan:** Script akan otomatis login menggunakan kredensial admin sebelum menjalankan benchmark untuk endpoint yang memerlukan authentication.
+**Catatan:**
+- Script akan otomatis login menggunakan kredensial admin sebelum menjalankan benchmark untuk endpoint yang memerlukan authentication.
+- Login menggunakan API endpoint `/api/auth/login` (JSON, tanpa CSRF token).
+- Session cookie disimpan untuk digunakan pada authenticated requests.
 
 ---
 
@@ -279,33 +282,29 @@ THREADS=2 CONNECTIONS=50 ./scenarios.sh
 **Kemungkinan penyebab**:
 1. Admin user belum dibuat
 2. Salah password/email
-3. CSRF token error
-4. Application tidak running
+3. Application tidak running
+4. API endpoint tidak accessible
 
 **Solusi**:
 ```bash
 # 1. Pastikan admin user sudah dibuat
 python3 seed_admin_user.py
 
-# 2. Cek apakah login page accessible
-curl -k https://172.30.95.249/auth/login
+# 2. Cek apakah API login accessible
+curl -k https://172.30.95.249/api/auth/login
 
-# 3. Cek CSRF token di login page
-curl -k https://172.30.95.249/auth/login | grep csrf_token
-
-# 4. Test manual login (dengan CSRF)
-# Get CSRF token dulu
-CSRF_TOKEN=$(curl -k https://172.30.95.249/auth/login | grep -o 'name="csrf_token".*value="[^"]*"' | sed 's/.*value="\([^"]*\)".*/\1/')
-
-# Then login
+# 3. Test manual login via API (JSON, no CSRF needed!)
 curl -i -s -k -X POST \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "email=admin@smartgeo.com&password=admin123&csrf_token=$CSRF_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@smartgeo.com","password":"admin123"}' \
   -c cookies.txt \
-  https://172.30.95.249/auth/login
+  https://172.30.95.249/api/auth/login
 
-# 5. Cek cookie
+# 4. Cek cookie
 cat cookies.txt
+
+# 5. Verify authentication
+curl -s -k -b cookies.txt https://172.30.95.249/api/auth/me
 ```
 
 ### Error: Unauthorized (401/403) pada API Endpoints
