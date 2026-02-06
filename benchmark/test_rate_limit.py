@@ -15,6 +15,10 @@ LOGIN_EMAIL = "admin@smartgeo.com"
 LOGIN_PASSWORD = "admin123"
 VERIFY_SSL = False  # Set to False for self-signed certs
 
+# Disable SSL warnings
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 # Colors for terminal output
 class Colors:
     GREEN = '\033[0;32m'
@@ -53,14 +57,32 @@ def login():
     try:
         response = requests.post(url, json=payload, verify=VERIFY_SSL)
 
-        if response.status_code == 200 and response.json().get('success'):
-            print_success("Login berhasil")
-            print_info(f"User: {response.json().get('user', {}).get('name', 'Unknown')}")
-            return response.cookies
+        print_info(f"Status Code: {response.status_code}")
+        print_info(f"Response Length: {len(response.text)} bytes")
+
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if data.get('success'):
+                    print_success("Login berhasil")
+                    print_info(f"User: {data.get('user', {}).get('name', 'Unknown')}")
+                    return response.cookies
+                else:
+                    print_error(f"Login failed: {data.get('message', 'Unknown error')}")
+                    return None
+            except Exception as json_error:
+                print_error(f"Failed to parse JSON response: {json_error}")
+                print_error(f"Response text: {response.text[:200]}")
+                return None
         else:
-            print_error(f"Login gagal: {response.status_code}")
-            print_error(f"Response: {response.text}")
+            print_error(f"Login gagal dengan status code: {response.status_code}")
+            print_error(f"Response: {response.text[:200]}")
             return None
+
+    except requests.exceptions.ConnectionError as e:
+        print_error(f"Connection error: {str(e)}")
+        print_info(f"Pastikan {HOST} dapat diakses")
+        return None
     except Exception as e:
         print_error(f"Exception during login: {str(e)}")
         return None

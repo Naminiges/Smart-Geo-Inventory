@@ -30,13 +30,16 @@ cat results/quick_run.txt
 ls -lh results/
 ```
 
-## Test Rate Limiting (2 menit)
+## Test Rate Limiting (1-2 menit)
 
 ```bash
-# Cek apakah rate limiting bekerja dengan benar
+# Simple version - TANPA login (Recommended!)
+./test_rate_limit_simple.sh
+
+# Atau comprehensive version
 ./test_rate_limit.sh
 
-# Atau gunakan Python version (lebih detail)
+# Atau Python version (lebih detail, perlu login)
 python3 test_rate_limit.py
 ```
 

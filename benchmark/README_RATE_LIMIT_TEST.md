@@ -2,67 +2,76 @@
 
 ## Overview
 
-Test script ini digunakan untuk memverifikasi konfigurasi rate limiting pada Smart Geo Inventory application. Ada dua versi:
-- **Bash version**: `test_rate_limit.sh` (lebih simple, tidak perlu dependencies)
-- **Python version**: `test_rate_limit.py` (lebih detail dengan statistik)
+Test script ini digunakan untuk memverifikasi konfigurasi rate limiting pada Smart Geo Inventory application.
 
-## Cara Menggunakan
+**3 Versi Tersedia:**
 
-### Opsi 1: Menggunakan Bash Script (Recommended)
+| Script | Login Required | Dependencies | Best For |
+|--------|---------------|--------------|----------|
+| `test_rate_limit_simple.sh` | ❌ NO | None (only curl) | **Quick test** (Recommended!) |
+| `test_rate_limit.sh` | ❌ NO | None | Comprehensive test |
+| `test_rate_limit.py` | ✅ YES | Python + requests | Advanced statistics |
+
+## Cara Menggunakan (Rekomendasi: Simple Version!)
+
+### ✅ Opsi 1: Simple Version (TANPA Login - Recommended)
 
 ```bash
 # Masuk ke directory benchmark
 cd /app/Smart-Geo-Inventory/benchmark
 
-# Jalankan test
+# Jalankan test (TIDAK perlu login!)
+./test_rate_limit_simple.sh
+```
+
+**Keuntungan:**
+- ✅ **Tidak perlu login** - langsung jalan
+- ✅ **Tidak perlu dependencies** - hanya butuh curl
+- ✅ **Cepat** - selesai dalam ~1 menit
+- ✅ **Simple** - mudah dimengerti
+
+### Opsi 2: Comprehensive Bash Version
+
+```bash
+# Jalankan test lengkap
 ./test_rate_limit.sh
 ```
 
-### Opsi 2: Menggunakan Python Script
+### Opsi 3: Python Version (Perlu Login)
 
 ```bash
-# Install requirements (jika belum)
+# Install requirements
 pip3 install requests
 
 # Jalankan test
-cd /app/Smart-Geo-Inventory/benchmark
 python3 test_rate_limit.py
 ```
 
-### Opsi 3: Custom Configuration
+### Opsi 4: Custom Configuration
 
 ```bash
 # Custom host
-HOST=http://172.30.95.251:5000 ./test_rate_limit.sh
-
-# Custom credentials
-LOGIN_EMAIL=admin@smartgeo.com LOGIN_PASSWORD=admin123 ./test_rate_limit.sh
+HOST=http://172.30.95.251:5000 ./test_rate_limit_simple.sh
 ```
 
 ## Test yang Dilakukan
 
-### Test 1: Login
-- Mencoba login ke aplikasi
-- Mendapatkan session cookie untuk test berikutnya
+### Simple Version (`test_rate_limit_simple.sh`):
 
-### Test 2: Burst Requests (100 requests)
-- Mengirim 100 requests sekaligus tanpa delay
-- Menguji apakah burst requests memicu rate limiting
-- **Expected**: Seharusnya **TIDAK** kena rate limit (karena limit sudah dinaikkan)
+| Test | Requests | Endpoint | Purpose | Expected 429 |
+|------|----------|----------|---------|--------------|
+| 1. Homepage Burst | 100 sekaligus | `/home` | Public endpoint burst | 0 |
+| 2. Homepage Sustained | 60 selama 60s | `/home` | 1 req/sec load | 0 |
+| 3. Login Rate Limit | 20 | `/api/benchmark/login` | Login protection | ±5-10 |
+| 4. Concurrent | 50 | Multiple endpoints | Concurrent load | 0-5 |
 
-### Test 3: Sustained Load (60 requests selama 60 detik)
-- Mengirim 60 requests dengan interval 1 detik
-- Menguji sustained load selama 1 menit
-- **Expected**: Seharusnya **TIDAK** kena rate limit (1 req/sec = 60 req/minit, di bawah 1000/hour)
+### Comprehensive Version (`test_rate_limit.sh`):
 
-### Test 4: Public Endpoint (50 requests)
-- Menguji endpoint publik (`/home`) tanpa authentication
-- **Expected**: Tidak ada rate limiting (public endpoint)
+Test yang sama tapi dengan statistik lebih detail.
 
-### Test 5: Login Endpoint Rate Limit (20 requests)
-- Menguji rate limiting pada login endpoint
-- Mengirim 20 login attempts dengan password salah
-- **Expected**: Seharusnya kena rate limit setelah beberapa attempts
+### Python Version (`test_rate_limit.py`):
+
+Test yang sama **TAPI memerlukan login** untuk test authenticated endpoints.
 
 ## Hasil yang Diharapkan
 
