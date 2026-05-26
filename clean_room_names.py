@@ -3,7 +3,7 @@ Script untuk membersihkan data room_name di tabel unit_details
 Menghapus bagian deskripsi tambahan, sehingga hanya menyimpan kode ruangan
 
 Contoh:
-- "GD.A 0201 - Ruang Kepala PSI" -> "GD.A 0201"
+- "GD.A 0201 - Ruang Direktur Ditsintek" -> "GD.A 0201"
 - "GD.B 0101 - Lab Komputer" -> "GD.B 0101"
 
 Run: python clean_room_names.py
