@@ -1,5 +1,5 @@
 /**
- * SAPA PSI Landing Page JavaScript
+ * SAPA Ditsintek Landing Page JavaScript
  * Smart Geo Inventory System
  */
 

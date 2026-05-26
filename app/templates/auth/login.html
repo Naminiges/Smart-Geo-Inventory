@@ -1,28 +1,32 @@
 <!DOCTYPE html>
 <html lang="id" class="overflow-x-hidden">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Login - SAPA PSI</title>
+    <title>Login - SAPA Ditsintek</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}"/>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"/>
-    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/output.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}" />
+    <link rel="icon" href="{{ url_for('static', filename='img/logo.png') }}" type="image/png" />
 </head>
+
 <body class="bg-gradient-to-br from-white via-emerald-50 to-white overflow-x-hidden min-h-screen">
 
     <div class="main-container flex w-full overflow-y-auto overflow-x-hidden relative z-10">
         <!-- Login Section -->
-        <div class="sidebar flex-1 relative flex flex-col justify-center items-center p-6 md:p-8 lg:p-12 bg-gradient-to-br from-white via-emerald-50 to-white backdrop-blur-xl min-h-full">
+        <div
+            class="sidebar flex-1 relative flex flex-col justify-center items-center p-6 md:p-8 lg:p-12 bg-gradient-to-br from-white via-emerald-50 to-white backdrop-blur-xl min-h-full">
             <div class="sidebar-content relative z-10 w-full max-w-md py-4">
                 <!-- Logo Section -->
                 <div class="logo-section flex items-center justify-center gap-3 mb-6">
-                    <div class="flex items-center justify-center w-32 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg flex-shrink-0 px-2">
-                        <img src="{{ url_for('static', filename='img/logo-panjang.png') }}" alt="Logo" class="w-full h-full object-contain">
+                    <div class="flex items-center justify-center w-32 h-12 rounded-xl flex-shrink-0 px-2">
+                        <img src="{{ url_for('static', filename='img/logo-panjang.png') }}" alt="Logo"
+                            class="w-full h-full object-contain">
                     </div>
                     <div class="text-left">
                         <h2 class="text-xl font-bold text-gray-800 leading-tight">
-                            SAPA PSI
+                            SAPA Ditsintek
                         </h2>
                         <p class="text-emerald-600 text-xs leading-tight font-medium">Smart Geo Inventory System</p>
                     </div>
@@ -39,24 +43,27 @@
 
                     <!-- Flash Messages -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert {{ 'bg-emerald-50 border-emerald-400 text-emerald-700' if category == 'success' else 'bg-red-50 border-red-400 text-red-700' if category == 'danger' else 'bg-amber-50 border-amber-400 text-amber-700' if category == 'warning' else 'bg-blue-50 border-blue-400 text-blue-700' }} border-l-4 rounded-xl p-4 mb-6 flex items-center justify-between shadow-lg" role="alert">
-                                    <div class="flex items-center gap-3">
-                                        <i class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-triangle' if category == 'danger' else 'fa-exclamation-circle' if category == 'warning' else 'fa-info-circle' }} text-lg"></i>
-                                        <span class="text-sm font-medium">{{ message }}</span>
-                                    </div>
-                                    <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" onclick="this.parentElement.remove()">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            {% endfor %}
-                        {% endif %}
+                    {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert {{ 'bg-emerald-50 border-emerald-400 text-emerald-700' if category == 'success' else 'bg-red-50 border-red-400 text-red-700' if category == 'danger' else 'bg-amber-50 border-amber-400 text-amber-700' if category == 'warning' else 'bg-blue-50 border-blue-400 text-blue-700' }} border-l-4 rounded-xl p-4 mb-6 flex items-center justify-between shadow-lg"
+                        role="alert">
+                        <div class="flex items-center gap-3">
+                            <i
+                                class="fas {{ 'fa-check-circle' if category == 'success' else 'fa-exclamation-triangle' if category == 'danger' else 'fa-exclamation-circle' if category == 'warning' else 'fa-info-circle' }} text-lg"></i>
+                            <span class="text-sm font-medium">{{ message }}</span>
+                        </div>
+                        <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors"
+                            onclick="this.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
                     {% endwith %}
 
                     <!-- Login Form -->
                     <form method="POST" action="{{ url_for('auth.login') }}" class="space-y-4">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         {{ form.hidden_tag() }}
 
                         <!-- Email Field -->
@@ -67,18 +74,14 @@
                             </label>
                             <input
                                 class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 text-gray-800 placeholder-gray-400"
-                                id="email"
-                                type="email"
-                                name="email"
-                                placeholder="Masukkan email"
-                                required>
+                                id="email" type="email" name="email" placeholder="Masukkan email" required>
                             {% if form.email.errors %}
-                                <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                    {% for error in form.email.errors %}
-                                        <span>{{ error }}</span>
-                                    {% endfor %}
-                                </div>
+                            <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
+                                <i class="fas fa-exclamation-circle"></i>
+                                {% for error in form.email.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
                             {% endif %}
                         </div>
 
@@ -91,31 +94,26 @@
                             <div class="relative">
                                 <input
                                     class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all bg-gray-50 text-gray-800 placeholder-gray-400"
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    placeholder="Masukkan password"
+                                    id="password" type="password" name="password" placeholder="Masukkan password"
                                     required>
-                                <button
-                                    type="button"
+                                <button type="button"
                                     class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                     onclick="togglePassword()">
                                     <i class="fas fa-eye" id="toggleIcon"></i>
                                 </button>
                             </div>
                             {% if form.password.errors %}
-                                <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                    {% for error in form.password.errors %}
-                                        <span>{{ error }}</span>
-                                    {% endfor %}
-                                </div>
+                            <div class="mt-1.5 text-red-500 text-xs flex items-center gap-1">
+                                <i class="fas fa-exclamation-circle"></i>
+                                {% for error in form.password.errors %}
+                                <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
                             {% endif %}
                         </div>
 
                         <!-- Submit Button -->
-                        <button
-                            type="submit"
+                        <button type="submit"
                             class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-semibold py-3 px-6 rounded-xl flex items-center justify-center gap-2 mt-6 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/30">
                             <i class="fas fa-sign-in-alt"></i>
                             Masuk
@@ -131,7 +129,8 @@
 
                     <!-- Back to Home -->
                     <div class="text-center">
-                        <a href="{{ url_for('main.landing') }}" class="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium text-sm transition-colors">
+                        <a href="{{ url_for('main.landing') }}"
+                            class="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium text-sm transition-colors">
                             <i class="fas fa-arrow-left"></i>
                             Kembali ke Beranda
                         </a>
@@ -140,7 +139,8 @@
                     <!-- Help Text -->
                     <div class="mt-4 pt-4 border-t border-gray-200">
                         <div class="flex items-start gap-3 p-3 bg-emerald-50 rounded-xl">
-                            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                            <div
+                                class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
                                 <i class="fas fa-info-circle text-emerald-600 text-sm"></i>
                             </div>
                             <div>
@@ -153,7 +153,8 @@
 
                 <!-- Copyright -->
                 <p class="text-center text-gray-500 text-xs mt-6">
-                    &copy; 2026 SAPA PSI - Pusat Sistem Informasi Universitas Sumatera Utara
+                    &copy; 2026 SAPA Ditsintek - Direktorat Sistem Informasi dan Pengembangan Teknologi Universitas
+                    Sumatera Utara
                 </p>
             </div>
         </div>
@@ -180,12 +181,13 @@
         }
 
         // Auto-dismiss alerts
-        setTimeout(function() {
+        setTimeout(function () {
             const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(function(alert) {
+            alerts.forEach(function (alert) {
                 alert.remove();
             });
         }, 5000);
     </script>
 </body>
+
 </html>

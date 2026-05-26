@@ -134,7 +134,7 @@ def notify_procurement_created(procurement):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Pengadaan Baru Diajukan - {procurement.procurement_code}',
+        subject=f'[SAPA Ditsintek] Pengadaan Baru Diajukan - {procurement.procurement_code}',
         template='procurement_created',
         procurement=procurement
     )
@@ -149,7 +149,7 @@ def notify_procurement_approved(procurement):
 
     return send_email(
         to=creator.email,
-        subject=f'[SAPA PSI] Pengadaan Disetujui - {procurement.procurement_code}',
+        subject=f'[SAPA Ditsintek] Pengadaan Disetujui - {procurement.procurement_code}',
         template='procurement_approved',
         procurement=procurement
     )
@@ -164,7 +164,7 @@ def notify_procurement_rejected(procurement, rejection_reason=None):
 
     return send_email(
         to=creator.email,
-        subject=f'[SAPA PSI] Pengadaan Ditolak - {procurement.procurement_code}',
+        subject=f'[SAPA Ditsintek] Pengadaan Ditolak - {procurement.procurement_code}',
         template='procurement_rejected',
         procurement=procurement,
         rejection_reason=rejection_reason
@@ -187,7 +187,7 @@ def notify_procurement_goods_received(procurement):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Barang Diterima - {procurement.procurement_code}',
+        subject=f'[SAPA Ditsintek] Barang Diterima - {procurement.procurement_code}',
         template='procurement_goods_received',
         procurement=procurement
     )
@@ -216,7 +216,7 @@ def notify_procurement_completed(procurement):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Pengadaan Selesai - {procurement.procurement_code}',
+        subject=f'[SAPA Ditsintek] Pengadaan Selesai - {procurement.procurement_code}',
         template='procurement_completed',
         procurement=procurement
     )
@@ -246,7 +246,7 @@ def notify_distribution_created(distribution):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Distribusi Baru Diajukan - {distribution_code}',
+        subject=f'[SAPA Ditsintek] Distribusi Baru Diajukan - {distribution_code}',
         template='distribution_created',
         distribution=distribution,
         distribution_code=distribution_code
@@ -279,7 +279,7 @@ def notify_distribution_sent(distribution):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Barang Ditujukan Ke Unit Anda - {distribution_code}',
+        subject=f'[SAPA Ditsintek] Barang Ditujukan Ke Unit Anda - {distribution_code}',
         template='distribution_sent',
         distribution=distribution,
         distribution_code=distribution_code
@@ -305,7 +305,7 @@ def notify_distribution_received(distribution):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Barang Diterima Unit - {distribution_code}',
+        subject=f'[SAPA Ditsintek] Barang Diterima Unit - {distribution_code}',
         template='distribution_received',
         distribution=distribution,
         distribution_code=distribution_code
@@ -325,7 +325,7 @@ def notify_distribution_rejected(distribution, rejection_reason=None):
 
     return send_email(
         to=creator.email,
-        subject=f'[SAPA PSI] Distribusi Ditolak - {distribution_code}',
+        subject=f'[SAPA Ditsintek] Distribusi Ditolak - {distribution_code}',
         template='distribution_rejected',
         distribution=distribution,
         distribution_code=distribution_code,
@@ -351,7 +351,7 @@ def notify_asset_request_created(asset_request):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Permohonan Aset Baru - #{asset_request.id}',
+        subject=f'[SAPA Ditsintek] Permohonan Aset Baru - #{asset_request.id}',
         template='asset_request_created',
         asset_request=asset_request
     )
@@ -366,7 +366,7 @@ def notify_asset_request_verified(asset_request):
 
     return send_email(
         to=requester.email,
-        subject=f'[SAPA PSI] Permohonan Aset Terverifikasi - #{asset_request.id}',
+        subject=f'[SAPA Ditsintek] Permohonan Aset Terverifikasi - #{asset_request.id}',
         template='asset_request_verified',
         asset_request=asset_request
     )
@@ -381,7 +381,7 @@ def notify_asset_request_rejected(asset_request):
 
     return send_email(
         to=requester.email,
-        subject=f'[SAPA PSI] Permohonan Aset Ditolak - #{asset_request.id}',
+        subject=f'[SAPA Ditsintek] Permohonan Aset Ditolak - #{asset_request.id}',
         template='asset_request_rejected',
         asset_request=asset_request
     )
@@ -396,7 +396,7 @@ def notify_asset_request_distributing(asset_request):
 
     return send_email(
         to=requester.email,
-        subject=f'[SAPA PSI] Permohonan Aset Sedang Didistribusikan - #{asset_request.id}',
+        subject=f'[SAPA Ditsintek] Permohonan Aset Sedang Didistribusikan - #{asset_request.id}',
         template='asset_request_distributing',
         asset_request=asset_request
     )
@@ -418,7 +418,7 @@ def notify_asset_request_verified_to_warehouse(asset_request):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Permohonan Aset Terverifikasi - Silakan Distribusikan - #{asset_request.id}',
+        subject=f'[SAPA Ditsintek] Permohonan Aset Terverifikasi - Silakan Distribusikan - #{asset_request.id}',
         template='asset_request_verified_warehouse',
         asset_request=asset_request
     )
@@ -448,7 +448,7 @@ def notify_asset_request_completed(asset_request, warehouse_staff_id=None):
 
     return send_email_to_multiple(
         recipients=recipients,
-        subject=f'[SAPA PSI] Permohonan Aset Selesai - #{asset_request.id}',
+        subject=f'[SAPA Ditsintek] Permohonan Aset Selesai - #{asset_request.id}',
         template='asset_request_completed',
         asset_request=asset_request
     )
