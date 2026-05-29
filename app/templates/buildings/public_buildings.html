@@ -38,15 +38,20 @@
     <!-- Header -->
     <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg">
         <div class="container mx-auto px-4 py-6">
-            <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                    <i class="fas fa-building text-3xl"></i>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                        <i class="fas fa-building text-3xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h1 class="text-2xl md:text-3xl font-bold">Daftar Gedung dan Ruangan</h1>
+                        <p class="text-emerald-100 mt-1">
+                            <i class="fas fa-map-marker-alt mr-2"></i>Informasi gedung dan ruangan yang tersedia
+                        </p>
+                    </div>
                 </div>
-                <div class="flex-1">
-                    <h1 class="text-2xl md:text-3xl font-bold">Daftar Gedung dan Ruangan</h1>
-                    <p class="text-emerald-100 mt-1">
-                        <i class="fas fa-map-marker-alt mr-2"></i>Informasi gedung dan ruangan yang tersedia
-                    </p>
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-white">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-8 h-8">
                 </div>
             </div>
         </div>
@@ -54,6 +59,13 @@
 
     <!-- Content -->
     <div class="container mx-auto px-4 py-6">
+
+        <!-- Back Button -->
+        <div class="mb-4">
+            <a href="{{ url_for('main.landing') }}" class="inline-flex items-center border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg transition-colors bg-white shadow-sm">
+                <i class="fas fa-arrow-left mr-2"></i> Kembali ke Beranda
+            </a>
+        </div>
 
         <!-- Info Summary Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
