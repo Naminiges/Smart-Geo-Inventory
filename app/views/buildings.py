@@ -327,14 +327,45 @@ def room_items(room_id):
     })
 
 
+@bp.route('/public/')
+def public_buildings_view():
+    """Public view of all buildings and their rooms - accessible without login"""
+    from app.models.facilities import UnitDetail
+
+    # Ambil semua gedung, urutkan berdasarkan kode
+    buildings = Building.query.order_by(Building.code).all()
+
+    # Ambil daftar ruangan per gedung
+    building_rooms = {}
+    for building in buildings:
+        rooms = UnitDetail.query.filter_by(building_id=building.id).order_by(UnitDetail.room_name).all()
+        building_rooms[building.id] = rooms
+
+    return render_template(
+        'buildings/public_buildings.html',
+        buildings=buildings,
+        building_rooms=building_rooms
+    )
+
+
 @bp.route('/rooms/<int:room_id>/view')
 def public_room_view(room_id):
     """Public view of items in a room - accessible via QR Code without login"""
     from app.models.facilities import UnitDetail
-    from app.models import Distribution
+    from app.models import Distribution, VenueLoan
+    from app.utils.datetime_helper import get_wib_now
 
     room = UnitDetail.query.get_or_404(room_id)
     building = room.building
+
+    # Cek apakah ada peminjaman aktif di ruangan ini
+    now = get_wib_now()
+    active_loan = VenueLoan.query.filter(
+        VenueLoan.unit_detail_id == room_id,
+        VenueLoan.status.in_(['active', 'approved']),
+        VenueLoan.start_datetime <= now,
+        VenueLoan.end_datetime >= now
+    ).first()
 
     # Get all distributions in this room with status 'installed'
     distributions = Distribution.query.filter_by(
@@ -367,5 +398,12 @@ def public_room_view(room_id):
         'buildings/public_room_items.html',
         room=room,
         building=building,
-        items=items
+        items=items,
+        active_loan=active_loan
     )
+
+
+@bp.route('/public/rooms/<string:building_name>/<int:room_id>/view')
+def public_room_view_with_building(building_name, room_id):
+    """Public view with building name in URL - redirects to main public_room_view"""
+    return redirect(url_for('buildings.public_room_view', room_id=room_id))
