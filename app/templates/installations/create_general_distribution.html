@@ -517,7 +517,14 @@
                     data.details.forEach(detail => {
                         const option = document.createElement('option');
                         option.value = detail.id;
-                        option.textContent = `${detail.room_name} (${detail.floor})`;
+                        
+                        // Format: kode gedung - nama ruangan - deskripsi
+                        let optionText = `${detail.room_name}`;
+                        if (detail.description) {
+                            optionText += ` - ${detail.description}`;
+                        }
+                        
+                        option.textContent = optionText;
                         unitDetailSelect.appendChild(option);
                     });
                 }

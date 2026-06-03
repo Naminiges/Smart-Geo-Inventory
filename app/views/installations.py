@@ -920,8 +920,14 @@ def create_general_distribution():
     # Get all rooms from all buildings for unit_detail dropdown
     all_rooms = UnitDetail.query.join(Building).order_by(Building.code, UnitDetail.room_name).all()
 
-    # Format: "GD.A - GD.A 0201"
-    unit_details_choices = [(room.id, f"{room.building.code} - {room.room_name}") for room in all_rooms]
+    # Format: "GD.A - GD.A 0201 - Deskripsi"
+    unit_details_choices = []
+    for room in all_rooms:
+        label = f"{room.building.code} - {room.room_name}"
+        if room.description:
+            label += f" - {room.description}"
+        unit_details_choices.append((room.id, label))
+
 
     # Get warehouse_id for current user
     user_warehouse_id = get_user_warehouse_id(current_user)
@@ -1114,7 +1120,8 @@ def api_unit_details(unit_id):
             'id': ud.id,
             'room_name': f"{ud.building.code} - {ud.room_name}",  # Format: GD.A - GD.A 0201
             'floor': ud.floor,
-            'building_code': ud.building.code
+            'building_code': ud.building.code,
+            'description': ud.description or ''
         } for ud in unit_details]
 
         return jsonify({
