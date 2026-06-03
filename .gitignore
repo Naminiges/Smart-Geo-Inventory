@@ -1,15 +1,14 @@
+.gitignore
 venv/
 __pycache__/
 *.pyc
 .DS_Store
 .env
-
-node_modules/
-
-package-lock.json
-
 .claude/
+node_modules/
+package-lock.json
 
 # Session files
 config/sessions/
 flask_session/
+PRD.md

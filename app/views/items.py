@@ -265,6 +265,34 @@ def barcode(serial_number):
     return generate_barcode(serial_number)
 
 
+@bp.route('/detail/<int:detail_id>/label')
+@login_required
+@role_required('admin', 'warehouse_staff')
+def print_label(detail_id):
+    """Render print label page for a specific item detail"""
+    detail = ItemDetail.query.get_or_404(detail_id)
+
+    # Indonesian months mapping
+    months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ]
+
+    month_received = '-'
+    year_received = '-'
+    if detail.created_at:
+        month_received = months[detail.created_at.month - 1]
+        year_received = str(detail.created_at.year)
+
+    return render_template(
+        'items/item_label.html',
+        detail=detail,
+        month_received=month_received,
+        year_received=year_received
+    )
+
+
+
 @bp.route('/search')
 @login_required
 @role_required('admin', 'warehouse_staff')
