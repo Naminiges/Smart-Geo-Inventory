@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cetak Label - {{ detail.serial_number }}</title>
     <!-- Google Fonts for premium typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         :root {
             --bg-color: #0f172a;
@@ -95,7 +98,8 @@
             padding: 15px;
             border: 3px solid #000000;
             border-radius: 8px;
-            width: 380px; /* Tag/Sticker size */
+            width: 380px;
+            /* Tag/Sticker size */
             box-sizing: border-box;
         }
 
@@ -143,13 +147,27 @@
 
         /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes scaleIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         /* Print Styling */
@@ -187,6 +205,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <!-- Toolbar for browser preview -->
@@ -221,7 +240,7 @@
                 <tr>
                     <td class="meta-cell" style="width: 40%;">
                         <span class="label-title">Kode Barang</span>
-                        <div>{{ detail.item.item_code }}</div>
+                        <div>{{ detail.serial_unit }}</div>
                     </td>
                     <td class="meta-cell" style="width: 30%;">
                         <span class="label-title">Tahun</span>
@@ -238,11 +257,12 @@
 
     <script>
         // Otomatis memicu print dialog setelah halaman termuat
-        window.onload = function() {
-            setTimeout(function() {
+        window.onload = function () {
+            setTimeout(function () {
                 window.print();
             }, 600);
         };
     </script>
 </body>
+
 </html>
