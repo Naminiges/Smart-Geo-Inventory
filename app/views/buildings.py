@@ -367,6 +367,13 @@ def public_room_view(room_id):
         VenueLoan.end_datetime >= now
     ).first()
 
+    # Cek peminjaman berikutnya yang akan datang
+    next_loan = VenueLoan.query.filter(
+        VenueLoan.unit_detail_id == room_id,
+        VenueLoan.status.in_(['active', 'approved']),
+        VenueLoan.start_datetime > now
+    ).order_by(VenueLoan.start_datetime.asc()).first()
+
     # Get all distributions in this room with status 'installed'
     distributions = Distribution.query.filter_by(
         unit_detail_id=room_id,
@@ -399,7 +406,9 @@ def public_room_view(room_id):
         room=room,
         building=building,
         items=items,
-        active_loan=active_loan
+        active_loan=active_loan,
+        next_loan=next_loan,
+        now=now
     )
 
 
@@ -407,3 +416,48 @@ def public_room_view(room_id):
 def public_room_view_with_building(building_name, room_id):
     """Public view with building name in URL - redirects to main public_room_view"""
     return redirect(url_for('buildings.public_room_view', room_id=room_id))
+
+
+@bp.route('/rooms/<int:room_id>/items/public')
+def public_room_items_list(room_id):
+    """Public view of items in a room (list view) - accessible without login"""
+    from app.models.facilities import UnitDetail
+    from app.models import Distribution
+
+    room = UnitDetail.query.get_or_404(room_id)
+    building = room.building
+
+    # Get all distributions in this room with status 'installed'
+    distributions = Distribution.query.filter_by(
+        unit_detail_id=room_id,
+        status='installed'
+    ).all()
+
+    items = []
+    for dist in distributions:
+        if dist.item_detail and dist.item_detail.item:
+            # Use installed_at or created_at as distribution date
+            dist_date = None
+            if dist.installed_at:
+                dist_date = dist.installed_at.strftime('%d/%m/%Y')
+            elif dist.created_at:
+                dist_date = dist.created_at.strftime('%d/%m/%Y')
+            else:
+                dist_date = '-'
+
+            items.append({
+                'serial_number': dist.item_detail.serial_number,
+                'item_name': dist.item_detail.item.name,
+                'item_code': dist.item_detail.item.item_code,
+                'category': dist.item_detail.item.category.name if dist.item_detail.item.category else '-',
+                'unit_name': dist.unit.name if dist.unit else '-',
+                'distributed_date': dist_date
+            })
+
+    return render_template(
+        'buildings/public_room_items_list.html',
+        room=room,
+        building=building,
+        items=items
+    )
+
