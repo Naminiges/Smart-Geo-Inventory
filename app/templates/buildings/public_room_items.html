@@ -198,6 +198,52 @@
 
         updateWIBClock();
         setInterval(updateWIBClock, 1000);
+
+        // --- Fitur Auto-Refresh Cerdas Terjadwal ---
+        // Mendapatkan data waktu dari server untuk sinkronisasi
+        const serverNow = "{{ now.isoformat() }}";
+        const activeLoanEnd = {% if active_loan %}"{{ active_loan.end_datetime.isoformat() }}"{% else %}null{% endif %};
+        const nextLoanStart = {% if next_loan %}"{{ next_loan.start_datetime.isoformat() }}"{% else %}null{% endif %};
+
+        function scheduleReloads() {
+            const serverDate = new Date(serverNow);
+            const clientDate = new Date();
+            // Selisih waktu antara server dengan waktu lokal client (dalam milidetik)
+            const timeDiff = serverDate.getTime() - clientDate.getTime();
+
+            const schedule = (targetIsoStr, label) => {
+                if (!targetIsoStr) return;
+
+                const targetTime = new Date(targetIsoStr).getTime();
+                // Menyesuaikan waktu target dari server ke waktu lokal client
+                const localTargetTime = targetTime - timeDiff;
+                const delay = localTargetTime - Date.now();
+
+                // Jika waktu target masih di masa depan, jadwalkan reload
+                if (delay > 0) {
+                    console.log(`[Auto-Refresh] Menjadwalkan refresh untuk ${label} dalam ${Math.round(delay / 1000)} detik.`);
+                    setTimeout(() => {
+                        console.log(`[Auto-Refresh] Memulai refresh otomatis untuk ${label}...`);
+                        window.location.reload();
+                    }, delay + 2000); // ditambah toleransi 2 detik agar status di server sudah pasti berganti
+                }
+            };
+
+            // Jadwalkan reload saat peminjaman aktif selesai
+            schedule(activeLoanEnd, "akhir peminjaman aktif");
+            // Jadwalkan reload saat peminjaman berikutnya dimulai
+            schedule(nextLoanStart, "mulai peminjaman baru");
+        }
+
+        scheduleReloads();
+
+        // Backup reload setiap 15 menit sebagai antisipasi jika ada peminjaman baru dadakan 
+        // yang diinput dari perangkat lain setelah halaman ini dimuat.
+        // Interval 15 menit sangat hemat bandwidth dan tidak membebani server/rate limiter.
+        setTimeout(() => {
+            console.log("[Auto-Refresh] Melakukan backup reload berkala...");
+            window.location.reload();
+        }, 15 * 60 * 1000);
     </script>
 
 </body>

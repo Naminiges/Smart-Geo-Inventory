@@ -367,6 +367,13 @@ def public_room_view(room_id):
         VenueLoan.end_datetime >= now
     ).first()
 
+    # Cek peminjaman berikutnya yang akan datang
+    next_loan = VenueLoan.query.filter(
+        VenueLoan.unit_detail_id == room_id,
+        VenueLoan.status.in_(['active', 'approved']),
+        VenueLoan.start_datetime > now
+    ).order_by(VenueLoan.start_datetime.asc()).first()
+
     # Get all distributions in this room with status 'installed'
     distributions = Distribution.query.filter_by(
         unit_detail_id=room_id,
@@ -399,7 +406,9 @@ def public_room_view(room_id):
         room=room,
         building=building,
         items=items,
-        active_loan=active_loan
+        active_loan=active_loan,
+        next_loan=next_loan,
+        now=now
     )
 
 
