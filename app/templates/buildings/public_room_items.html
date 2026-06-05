@@ -4,37 +4,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barang di {{ room.room_name }} - {{ building.name }}</title>
+    <title>{{ room.room_name }} - {{ building.name }}</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
+
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- QR Code Library (sudah dipakai di detail.html) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
     <style>
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
+
+        /* Animasi pulse halus untuk status badge */
+        @keyframes soft-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .animate-soft-pulse {
+            animation: soft-pulse 2.5s ease-in-out infinite;
+        }
+
+        /* QR code container styling */
+        #qrcode-container img {
+            margin: 0 auto;
+            border-radius: 0.5rem;
+        }
+
+        #qrcode-container canvas {
+            margin: 0 auto;
+            border-radius: 0.5rem;
+        }
     </style>
 </head>
 
+<!-- Body: Layout digital signage fullscreen untuk monitor di depan ruangan -->
+
 <body class="bg-slate-50 min-h-screen flex flex-col justify-between">
 
-    <!-- Header -->
+    <!-- ============================================================= -->
+    <!-- HEADER: Logo kiri (icon + nama ruangan) & Logo panjang kanan   -->
+    <!-- ============================================================= -->
     <div class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg">
-        <div class="container mx-auto px-6 py-6">
+        <div class="container mx-auto px-6 py-5">
             <div class="flex items-center justify-between">
+                <!-- Kiri: Icon + Nama Ruangan + Info Gedung -->
                 <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                        <i class="fas fa-door-open text-3xl"></i>
+                    <div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center backdrop-blur-sm">
+                        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-9 h-9">
                     </div>
                     <div class="flex-1">
-                        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">{{ room.room_name }}</h1>
-                        <p class="text-emerald-100 mt-1.5 text-base md:text-lg flex items-center gap-3">
+                        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">{{ room.room_name }}</h1>
+                        <p class="text-emerald-100 mt-1 text-sm md:text-base flex items-center gap-3">
                             <span><i class="fas fa-building mr-1.5"></i>{{ building.name }}</span>
                             {% if room.floor %}
                             <span class="w-1.5 h-1.5 bg-emerald-300 rounded-full"></span>
@@ -43,133 +80,179 @@
                         </p>
                     </div>
                 </div>
-                <div class="w-14 h-14 rounded-2xl flex items-center justify-center transition-all bg-white shadow-md">
-                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="w-9 h-9">
+                <!-- Kanan: Logo Panjang Institusi -->
+                <div class="hidden sm:flex items-center bg-white rounded-xl py-1 px-2">
+                    <img src="{{ url_for('static', filename='img/logo-panjang.png') }}" alt="Logo Institusi"
+                        class="h-12 md:h-14 object-contain">
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Content (Optimized for Monitor Showcase - 2 Column Layout) -->
+    <!-- ============================================================= -->
+    <!-- CONTENT: Card utama 2 kolom (Jam+QR | Deskripsi+Status)        -->
+    <!-- ============================================================= -->
     <div class="container mx-auto px-6 py-8 flex-1 flex flex-col justify-center">
-        
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
-            
-            <!-- Left Side: Time, Date & Room Details (2 Columns on LG) -->
-            <div class="lg:col-span-2 flex flex-col gap-6">
-                <!-- Realtime WIB Clock & Date Card -->
-                <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-8 flex flex-col justify-center items-center text-center h-full min-h-[220px] transition-all hover:shadow-lg">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-clock text-emerald-600 text-xl"></i>
+
+        <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-0">
+
+                <!-- ============================== -->
+                <!-- KOLOM KIRI: Jam WIB + QR Code  -->
+                <!-- ============================== -->
+                <div class="lg:col-span-2 p-8 lg:p-10 flex flex-col gap-6 lg:border-r border-slate-100">
+
+                    <!-- Jam WIB Realtime (dipertahankan seperti semula) -->
+                    <div class="flex flex-col justify-center items-center text-center flex-1">
+                        <div class="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center mb-3">
+                            <i class="fas fa-clock text-emerald-600 text-xl"></i>
+                        </div>
+                        <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Waktu Indonesia
+                            Barat (WIB)</p>
+                        <p id="wib-clock"
+                            class="text-5xl md:text-6xl font-black text-slate-800 tracking-tight font-mono">--:--:--</p>
+                        <p id="wib-date" class="text-lg font-medium text-slate-500 mt-3">-</p>
                     </div>
-                    <p class="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-1">Waktu Indonesia Barat (WIB)</p>
-                    <p id="wib-clock" class="text-5xl md:text-6xl font-black text-slate-800 tracking-tight font-mono">--:--:--</p>
-                    <p id="wib-date" class="text-lg font-medium text-slate-500 mt-3">-</p>
+
+                    <!-- QR Code: Link ke halaman daftar barang -->
+                    <div class="flex flex-col items-center text-center pt-4 border-t border-slate-100">
+                        <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">
+                            <i class="fas fa-qrcode mr-1.5"></i>QR Code
+                        </p>
+                        <!-- Container QR Code (di-generate oleh JavaScript) -->
+                        <div id="qrcode-container"
+                            class="bg-white p-3 rounded-xl border-2 border-slate-200 shadow-sm inline-block"></div>
+                    </div>
                 </div>
 
-                <!-- Room Description Card -->
-                <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-8 flex flex-col justify-center h-full transition-all hover:shadow-lg">
-                    <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        <i class="fas fa-info-circle text-emerald-600"></i>
-                        <span>Deskripsi Ruangan</span>
-                    </h3>
-                    <p class="text-slate-600 text-lg leading-relaxed">
-                        {% if room.description %}
+                <!-- ============================================= -->
+                <!-- KOLOM KANAN: Deskripsi Ruangan + Status       -->
+                <!-- ============================================= -->
+                <div class="lg:col-span-3 p-8 lg:p-10 flex flex-col gap-6">
+
+                    <!-- Deskripsi Ruangan (font besar sesuai permintaan) -->
+                    <div class="flex-shrink-0">
+                        <p class="text-2xl md:text-3xl lg:text-4xl font-bold text-slate-800 leading-snug">
+                            {% if room.description %}
                             {{ room.description }}
-                        {% else %}
-                            Tidak ada deskripsi tambahan untuk ruangan ini.
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+                            {% else %}
+                            {{ room.room_name }}
+                            {% endif %}
+                        </p>
+                    </div>
 
-            <!-- Right Side: Booking Status & Information (3 Columns on LG) -->
-            <div class="lg:col-span-3 flex flex-col">
-                <div class="bg-white rounded-2xl shadow-md border border-slate-100 p-8 flex flex-col justify-between h-full transition-all hover:shadow-lg">
-                    
-                    <div>
-                        <h3 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                            <i class="fas fa-calendar-check text-emerald-600"></i>
-                            <span>Status Peminjaman Ruangan</span>
-                        </h3>
+                    <!-- Divider -->
+                    <div class="border-t border-slate-100"></div>
 
+                    <!-- Status Peminjaman Ruangan -->
+                    <div class="flex-1 flex flex-col justify-center">
                         {% if active_loan %}
-                        <!-- Ruangan sedang dipinjam -->
+                        <!-- ====================================== -->
+                        <!-- STATUS: Ruangan sedang dipinjam        -->
+                        <!-- Tampil nama acara + waktu mulai-selesai -->
+                        <!-- ====================================== -->
                         <div class="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-6 md:p-8">
-                            <div class="flex items-start gap-4">
-                                <div class="w-14 h-14 bg-indigo-100 rounded-2xl flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-handshake text-indigo-600 text-2xl"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-indigo-100 text-indigo-800 mb-3 animate-pulse">
-                                        <i class="fas fa-circle text-[8px] mr-2"></i>Sedang Dipinjam
-                                    </span>
-                                    
-                                    <h4 class="text-2xl font-extrabold text-slate-800 tracking-tight leading-snug mb-4">
-                                        {{ active_loan.event_name }}
-                                    </h4>
+                            <!-- Badge status -->
+                            <span
+                                class="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-indigo-100 text-indigo-800 mb-5 animate-soft-pulse">
+                                <i class="fas fa-circle text-[8px] mr-2"></i>Sedang Dipinjam
+                            </span>
 
-                                    <div class="space-y-3 border-t border-indigo-100/50 pt-4">
-                                        <div class="flex items-center text-slate-600 text-base md:text-lg">
-                                            <span class="w-32 font-medium flex items-center gap-2">
-                                                <i class="fas fa-play-circle text-indigo-500"></i>Mulai:
-                                            </span>
-                                            <span class="font-bold text-slate-800">{{ active_loan.start_datetime.strftime('%d/%m/%Y %H:%M') }} WIB</span>
-                                        </div>
-                                        <div class="flex items-center text-slate-600 text-base md:text-lg">
-                                            <span class="w-32 font-medium flex items-center gap-2">
-                                                <i class="fas fa-stop-circle text-indigo-500"></i>Selesai:
-                                            </span>
-                                            <span class="font-bold text-slate-800">{{ active_loan.end_datetime.strftime('%d/%m/%Y %H:%M') }} WIB</span>
-                                        </div>
-                                    </div>
+                            <!-- Nama acara (font besar) -->
+                            <h4
+                                class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight leading-tight mb-6">
+                                {{ active_loan.event_name }}
+                            </h4>
+
+                            <!-- Waktu mulai dan selesai (font besar) -->
+                            <div class="space-y-3">
+                                <div class="flex items-center text-lg md:text-xl">
+                                    <span class="w-28 font-semibold text-indigo-600 flex items-center gap-2">
+                                        <i class="fas fa-play-circle"></i>Mulai
+                                    </span>
+                                    <span class="font-bold text-slate-800 text-xl md:text-2xl">{{
+                                        active_loan.start_datetime.strftime('%d/%m/%Y %H:%M') }} WIB</span>
+                                </div>
+                                <div class="flex items-center text-lg md:text-xl">
+                                    <span class="w-28 font-semibold text-indigo-600 flex items-center gap-2">
+                                        <i class="fas fa-stop-circle"></i>Selesai
+                                    </span>
+                                    <span class="font-bold text-slate-800 text-xl md:text-2xl">{{
+                                        active_loan.end_datetime.strftime('%d/%m/%Y %H:%M') }} WIB</span>
                                 </div>
                             </div>
                         </div>
+
                         {% else %}
-                        <!-- Tidak ada yang meminjam (Tersedia) -->
-                        <div class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-8 md:p-12 flex flex-col items-center text-center justify-center my-auto">
-                            <div class="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
-                                <i class="fas fa-check-circle text-emerald-600 text-4xl"></i>
+                        <!-- ====================================== -->
+                        <!-- STATUS: Tidak ada peminjaman (Tersedia) -->
+                        <!-- Tampil nama pemilik ruangan             -->
+                        <!-- ====================================== -->
+                        <div
+                            class="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-6 md:p-8 flex flex-col items-center text-center justify-center">
+                            <div
+                                class="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                                <i class="fas fa-check-circle text-emerald-600 text-3xl"></i>
                             </div>
-                            <span class="inline-flex items-center px-4 py-1.5 rounded-full text-base font-extrabold bg-emerald-100 text-emerald-800 mb-2">
-                                Tersedia / Kosong
+                            <span
+                                class="inline-flex items-center px-4 py-1.5 rounded-full text-base font-extrabold bg-emerald-100 text-emerald-800 mb-3">
+                                Tersedia
                             </span>
-                            <p class="text-slate-600 text-lg md:text-xl font-medium mt-2 max-w-md">
-                                Saat ini tidak ada peminjaman aktif. Ruangan siap digunakan.
+                            <!-- Nama pemilik ruangan (dari config/room_owners.json) -->
+                            <p
+                                class="text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight mt-2">
+                                {{ room_owner }}
                             </p>
                         </div>
                         {% endif %}
                     </div>
 
                 </div>
-            </div>
 
+            </div>
         </div>
 
-        <!-- Action Buttons Grid (Bottom Controls) -->
+        <!-- ============================================================= -->
+        <!-- FOOTER ACTIONS: Tombol Kembali + Social Media Links            -->
+        <!-- ============================================================= -->
         <div class="mt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- Tombol Kembali (kiri) -->
             <a href="{{ url_for('buildings.public_buildings_view') }}"
                 class="w-full sm:w-auto inline-flex items-center justify-center border border-slate-300 text-slate-700 hover:bg-slate-100 px-6 py-3.5 rounded-xl transition-all bg-white shadow-sm font-semibold hover:shadow">
-                <i class="fas fa-arrow-left mr-2"></i> Kembali ke Daftar Gedung
+                <i class="fas fa-arrow-left"></i>
             </a>
-            
-            <a href="{{ url_for('buildings.public_room_items_list', room_id=room.id) }}"
-                class="w-full sm:w-auto inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3.5 rounded-xl font-bold shadow-md hover:shadow-lg transition-all transform hover:-translate-y-0.5 active:translate-y-0">
-                <i class="fas fa-box-open mr-2"></i> Lihat Daftar Barang
-            </a>
+
+            <!-- Social Media Links (kanan) -->
+            <div
+                class="flex items-center gap-6 text-slate-700 text-sm font-medium bg-white p-2 rounded-xl backdrop-blur-sm shadow-lg">
+                <!-- Instagram -->
+                <a href="https://instagram.com/ditsintek.usu" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center gap-2 hover:text-pink-600 transition-colors">
+                    <i class="fab fa-instagram text-lg"></i>
+                    <span class="hidden sm:inline">ditsintek.usu</span>
+                </a>
+                <!-- Website -->
+                <a href="https://ditsintek.usu.ac.id" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center gap-2 hover:text-emerald-600 transition-colors">
+                    <i class="fas fa-globe text-lg"></i>
+                    <span class="hidden sm:inline">ditsintek.usu.ac.id</span>
+                </a>
+                <!-- YouTube -->
+                <a href="https://youtube.com/@DITSINTEKUSU" target="_blank" rel="noopener noreferrer"
+                    class="flex items-center gap-2 hover:text-red-600 transition-colors">
+                    <i class="fab fa-youtube text-lg"></i>
+                    <span class="hidden sm:inline">DITSINTEK USU</span>
+                </a>
+            </div>
+            <div></div>
         </div>
     </div>
 
-    <!-- Footer -->
-    <div class="py-6 text-center text-sm text-slate-500 border-t border-slate-200/60 bg-white">
-        <p>
-            Copyright &copy;2026 SAPA Ditsintek
-        </p>
-    </div>
-
-    <!-- JavaScript: Jam WIB Realtime -->
+    <!-- ============================================================= -->
+    <!-- JavaScript: Jam WIB Realtime (dipertahankan seperti semula)     -->
+    <!-- ============================================================= -->
     <script>
+        // --- Jam WIB Realtime ---
         function updateWIBClock() {
             const now = new Date();
 
@@ -199,11 +282,26 @@
         updateWIBClock();
         setInterval(updateWIBClock, 1000);
 
-        // --- Fitur Auto-Refresh Cerdas Terjadwal ---
+        // --- Generate QR Code untuk link ke halaman daftar barang ---
+        // URL menuju halaman public_room_items_list
+        const qrUrl = "{{ url_for('buildings.public_room_items_list', room_id=room.id, _external=True) }}";
+        const qrcodeContainer = document.getElementById('qrcode-container');
+
+        // Generate QR code menggunakan qrcodejs library
+        new QRCode(qrcodeContainer, {
+            text: qrUrl,
+            width: 180,
+            height: 180,
+            colorDark: "#1e293b",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+
+        // --- Fitur Auto-Refresh Cerdas Terjadwal (dipertahankan) ---
         // Mendapatkan data waktu dari server untuk sinkronisasi
         const serverNow = "{{ now.isoformat() }}";
-        const activeLoanEnd = {% if active_loan %}"{{ active_loan.end_datetime.isoformat() }}"{% else %}null{% endif %};
-        const nextLoanStart = {% if next_loan %}"{{ next_loan.start_datetime.isoformat() }}"{% else %}null{% endif %};
+        const activeLoanEnd = {% if active_loan %}"{{ active_loan.end_datetime.isoformat() }}"{% else %} null{% endif %};
+        const nextLoanStart = {% if next_loan %}"{{ next_loan.start_datetime.isoformat() }}"{% else %} null{% endif %};
 
         function scheduleReloads() {
             const serverDate = new Date(serverNow);

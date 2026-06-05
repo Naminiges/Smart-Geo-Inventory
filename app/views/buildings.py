@@ -354,6 +354,8 @@ def public_room_view(room_id):
     from app.models.facilities import UnitDetail
     from app.models import Distribution, VenueLoan
     from app.utils.datetime_helper import get_wib_now
+    import json
+    import os
 
     room = UnitDetail.query.get_or_404(room_id)
     building = room.building
@@ -373,6 +375,17 @@ def public_room_view(room_id):
         VenueLoan.status.in_(['active', 'approved']),
         VenueLoan.start_datetime > now
     ).order_by(VenueLoan.start_datetime.asc()).first()
+
+    # Baca nama pemilik ruangan dari file konfigurasi JSON
+    # File: config/room_owners.json — edit file ini untuk mengubah nama pemilik
+    room_owner = 'DITSINTEK USU'  # Default jika tidak ditemukan
+    try:
+        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'config', 'room_owners.json')
+        with open(config_path, 'r', encoding='utf-8') as f:
+            owners_data = json.load(f)
+        room_owner = owners_data.get(str(room_id), room_owner)
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass  # Gunakan default jika file tidak ditemukan atau format salah
 
     # Get all distributions in this room with status 'installed'
     distributions = Distribution.query.filter_by(
@@ -408,8 +421,10 @@ def public_room_view(room_id):
         items=items,
         active_loan=active_loan,
         next_loan=next_loan,
-        now=now
+        now=now,
+        room_owner=room_owner
     )
+
 
 
 @bp.route('/public/rooms/<string:building_name>/<int:room_id>/view')
