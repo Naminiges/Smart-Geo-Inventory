@@ -146,7 +146,11 @@ document.addEventListener('DOMContentLoaded', function() {
             data.forEach(unitDetail => {
                 const option = document.createElement('option');
                 option.value = unitDetail.id;
-                option.textContent = `${unitDetail.building_code} - ${unitDetail.room_name} (Lantai ${unitDetail.floor || 'N/A'}) - ${unitDetail.items_count} barang`;
+                let optionText = `${unitDetail.building_code} - ${unitDetail.room_name} (Lantai ${unitDetail.floor || 'N/A'}) `;
+                if (unitDetail.description) {
+                    optionText += ` - ${unitDetail.description}`;
+                }
+                option.textContent = optionText;
                 unitDetailSelect.appendChild(option);
             });
         })
