@@ -1,0 +1,7 @@
+{
+    "_comment": "Mapping room_id ke nama pemilik ruangan. Edit file ini untuk mengubah nama pemilik tanpa ubah database.",
+    "_contoh": "Tambahkan entry baru dengan format: \"room_id\": \"Nama Pemilik\"",
+    "_default": "Jika room_id tidak ditemukan, akan menampilkan 'Pengelola Ruangan'",
+    "1": "DITSINTEK USU",
+    "2": "DITSINTEK USU"
+}
