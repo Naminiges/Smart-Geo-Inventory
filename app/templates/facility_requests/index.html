@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Formulir Fasilitas{% endblock %}
+{% block page_title %}Formulir Fasilitas{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h2 class="text-xl font-bold text-gray-900">Daftar Formulir</h2>
+            <p class="text-sm text-gray-500">Alur Unit → Administrasi → Pimpinan</p>
+        </div>
+        {% if current_user.is_unit_staff() %}
+        <a href="{{ url_for('facility_requests.create') }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-semibold">
+            <i class="fas fa-plus mr-2"></i>Buat Formulir
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="GET" class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row gap-3">
+        <select name="status" class="px-3 py-2 border border-gray-300 rounded-lg flex-1">
+            <option value="">Semua status</option>
+            {% for value, label in [
+                ('unit_signed', 'Menunggu Administrasi'),
+                ('administratively_approved', 'Menunggu Pimpinan'),
+                ('in_fulfillment', 'Dalam Pemenuhan'),
+                ('warehouse_fulfillment', 'Menunggu Penyerahan Administrasi'),
+                ('service_intake_pending', 'Menunggu Penerimaan Servis'),
+                ('service_in_progress', 'Dalam Proses Servis'),
+                ('return_pending', 'Menunggu Penerimaan Pengembalian'),
+                ('replacement_pending', 'Menunggu Penggantian Manual'),
+                ('replacement_in_fulfillment', 'Penggantian dalam Pemenuhan'),
+                ('replacement_old_received', 'Aset Lama Diterima'),
+                ('receipt_pending', 'Menunggu Penerimaan'),
+                ('completed', 'Selesai'),
+                ('revision_requested', 'Perlu Revisi'),
+                ('rejected', 'Ditolak')
+            ] %}
+            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900">Filter</button>
+    </form>
+
+    <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {% if requests %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase">Nomor</th>
+                        <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase">Unit</th>
+                        <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase">Jenis</th>
+                        <th class="px-5 py-3 text-left text-xs font-bold text-gray-500 uppercase">Status</th>
+                        <th class="px-5 py-3 text-right text-xs font-bold text-gray-500 uppercase">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for row in requests %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-5 py-4 font-mono text-sm font-semibold text-gray-900">{{ row.form_number }}</td>
+                        <td class="px-5 py-4 text-sm text-gray-700">{{ row.unit_name_snapshot }}</td>
+                        <td class="px-5 py-4 text-sm text-gray-700">{{ row.request_type_display }}</td>
+                        <td class="px-5 py-4">
+                            <span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold {% if row.status == 'completed' %}bg-green-100 text-green-800{% elif row.status in ['rejected', 'revision_requested'] %}bg-red-100 text-red-800{% elif row.status == 'administratively_approved' %}bg-purple-100 text-purple-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                {{ row.status_display }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4 text-right">
+                            <a href="{{ url_for('facility_requests.detail', id=row.id) }}" class="text-emerald-700 hover:text-emerald-900 font-semibold text-sm">Detail</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="p-12 text-center text-gray-500">
+            <i class="fas fa-file-circle-xmark text-4xl text-gray-300 mb-3"></i>
+            <p>Belum ada formulir fasilitas.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="flex justify-center gap-2">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('facility_requests.index', page=pagination.prev_num, status=status_filter) }}" class="px-3 py-2 border rounded-lg">Sebelumnya</a>
+        {% endif %}
+        <span class="px-3 py-2 text-sm text-gray-600">Halaman {{ pagination.page }} dari {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('facility_requests.index', page=pagination.next_num, status=status_filter) }}" class="px-3 py-2 border rounded-lg">Berikutnya</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

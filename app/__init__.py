@@ -84,7 +84,7 @@ def create_app(config_name='default'):
         return e
 
     # Register blueprints
-    from app.views import main, auth, dashboard, installations, stock, items, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans, warehouses, buildings, asset_transfer
+    from app.views import main, auth, dashboard, installations, stock, items, map, procurement, users, categories, asset_requests, units, field_tasks, unit_procurement, asset_loans, distributions, returns, venue_loans, warehouses, buildings, asset_transfer, facility_requests
     from app.views.admin import buildings as admin_buildings
     from app.views import api_auth, api_dashboard, api_installations, api_stock, api_items, api_map, api_procurement, api_units, api_unit_procurement, api_benchmark
 
@@ -110,6 +110,7 @@ def create_app(config_name='default'):
     app.register_blueprint(buildings.bp)
     app.register_blueprint(admin_buildings.bp)
     app.register_blueprint(asset_transfer.bp)
+    app.register_blueprint(facility_requests.bp)
 
     # Register API blueprints
     app.register_blueprint(api_auth.bp, url_prefix='/api/auth')

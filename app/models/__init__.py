@@ -13,6 +13,14 @@ from app.models.asset_loan import AssetLoan, AssetLoanItem
 from app.models.return_batch import ReturnBatch, ReturnItem
 from app.models.venue_loan import VenueLoan
 from app.models.asset_transfer import AssetTransfer
+from app.models.facility_request import (
+    FacilityRequest,
+    FacilityRequestItem,
+    FacilityVerification,
+    FacilityApproval,
+    FacilityDocument,
+    FacilityRequestEvent,
+)
 
 __all__ = [
     'BaseModel',
@@ -27,5 +35,7 @@ __all__ = [
     'AssetLoan', 'AssetLoanItem',
     'ReturnBatch', 'ReturnItem',
     'VenueLoan',
-    'AssetTransfer'
+    'AssetTransfer',
+    'FacilityRequest', 'FacilityRequestItem', 'FacilityVerification',
+    'FacilityApproval', 'FacilityDocument', 'FacilityRequestEvent'
 ]

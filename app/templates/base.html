@@ -68,6 +68,16 @@
           </a>
           {% endif %}
 
+          {% if current_user.is_unit_staff() or current_user.is_warehouse_staff() or current_user.is_admin() %}
+          <a
+            class="flex items-center px-3 py-2.5 rounded-lg {{ 'bg-emerald-50 text-emerald-700' if request.endpoint and 'facility_requests' in request.endpoint else 'text-gray-700 hover:bg-gray-50' }} transition-all duration-200 mb-1"
+            href="{{ url_for('facility_requests.index') }}"
+          >
+            <i class="fas fa-file-signature w-5 h-5 mr-3 text-center {{ 'text-emerald-600' if request.endpoint and 'facility_requests' in request.endpoint else 'text-gray-400' }}"></i>
+            <span class="font-medium">Formulir Fasilitas</span>
+          </a>
+          {% endif %}
+
 
           {% if current_user.is_field_staff() %}
           <!-- Field Staff Only Menu -->
