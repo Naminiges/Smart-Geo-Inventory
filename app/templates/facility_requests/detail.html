@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ facility_request.form_number }}{% endblock %}
+{% block page_title %}{{ facility_request.form_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .signature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid #d1d5db; border-radius: .9rem; overflow: hidden; }
+    .signature-cell { min-width: 0; padding: 1rem; border-right: 1px solid #d1d5db; background: white; }
+    .signature-cell:last-child { border-right: 0; }
+    .signature-canvas { width: 100%; height: 170px; display: block; touch-action: none; background: #fff; border: 1px dashed #94a3b8; border-radius: .75rem; }
+    @media (max-width: 767px) {
+        .signature-grid { grid-template-columns: 1fr; border: 0; gap: 1rem; overflow: visible; }
+        .signature-cell { border: 1px solid #d1d5db !important; border-radius: .9rem; width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% set unit_approval = facility_request.approval_for('unit_supervisor') %}
+{% set administration_approval = facility_request.approval_for('administration') %}
+{% set leadership_approval = facility_request.approval_for('leadership') %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white border border-gray-200 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+                <span class="font-mono text-lg font-bold text-gray-900">{{ facility_request.form_number }}</span>
+                <span class="px-2.5 py-1 rounded-full text-xs font-semibold {% if facility_request.status == 'completed' %}bg-green-100 text-green-800{% elif facility_request.status in ['rejected', 'revision_requested'] %}bg-red-100 text-red-800{% elif facility_request.status == 'administratively_approved' %}bg-purple-100 text-purple-800{% else %}bg-amber-100 text-amber-800{% endif %}">{{ facility_request.status_display }}</span>
+            </div>
+            <p class="text-sm text-gray-600">{{ facility_request.unit_name_snapshot }} · {{ facility_request.submitter_name_snapshot }}</p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ url_for('facility_requests.preview_pdf', id=facility_request.id) }}" target="_blank" class="inline-flex items-center px-3 py-2 rounded-lg bg-gray-100 text-gray-800 hover:bg-gray-200 text-sm font-semibold">
+                <i class="fas fa-eye mr-2"></i>Preview PDF Tahap Ini
+            </a>
+            {% for document in facility_request.documents %}
+            <a href="{{ url_for('facility_requests.download_document', id=facility_request.id, document_id=document.id) }}" class="inline-flex items-center px-3 py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-sm font-semibold">
+                <i class="fas fa-file-pdf mr-2"></i>{{ 'PDF Selesai' if document.document_type == 'completed_form' else 'PDF Persetujuan' }}
+            </a>
+            {% endfor %}
+            <a href="{{ url_for('facility_requests.index') }}" class="inline-flex items-center px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm">Kembali</a>
+        </div>
+    </div>
+
+    {% if facility_request.linked_asset_request %}
+    <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <p class="font-semibold text-blue-900">Terhubung ke Permohonan Aset #{{ facility_request.linked_asset_request.id }}</p>
+            <p class="text-sm text-blue-700">Status fulfillment: {{ facility_request.linked_asset_request.status|translate_status }}</p>
+        </div>
+        <a href="{{ url_for('asset_requests.detail', id=facility_request.linked_asset_request.id) }}" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold text-center">Buka Permohonan Aset</a>
+    </div>
+    {% endif %}
+
+    <section class="bg-white border border-gray-200 rounded-xl p-5 md:p-6">
+        <h2 class="font-bold text-lg text-gray-900 mb-4">Informasi Formulir</h2>
+        <dl class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div><dt class="text-gray-500">Unit</dt><dd class="font-semibold text-gray-900 mt-1">{{ facility_request.unit_name_snapshot }}</dd></div>
+            <div><dt class="text-gray-500">Jenis</dt><dd class="font-semibold text-gray-900 mt-1">{{ facility_request.request_type_display }}</dd></div>
+            <div><dt class="text-gray-500">Prioritas</dt><dd class="font-semibold text-gray-900 mt-1">{{ {'normal':'Normal','important':'Penting','urgent':'Mendesak'}.get(facility_request.priority, facility_request.priority) }}</dd></div>
+            <div><dt class="text-gray-500">Tanggal</dt><dd class="font-semibold text-gray-900 mt-1">{{ facility_request.submitted_at.strftime('%d/%m/%Y %H:%M') }}</dd></div>
+        </dl>
+    </section>
+
+    <section class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200"><h2 class="font-bold text-lg text-gray-900">Daftar Fasilitas</h2></div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50"><tr>
+                    <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">No</th>
+                    <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Fasilitas</th>
+                    <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Spesifikasi</th>
+                    <th class="px-4 py-3 text-center text-xs uppercase text-gray-500">Jumlah</th>
+                    <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Status</th>
+                    <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Keperluan</th>
+                    <th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Aset/Serial Eksisting</th>
+                    {% if facility_request.status == 'completed' %}<th class="px-4 py-3 text-left text-xs uppercase text-gray-500">Hasil Serah Terima</th>{% endif %}
+                </tr></thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for item in facility_request.items %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm">{{ loop.index }}</td>
+                        <td class="px-4 py-3 text-sm font-semibold">{{ item.facility_name }}</td>
+                        <td class="px-4 py-3 text-sm">{{ item.specification or '-' }}</td>
+                        <td class="px-4 py-3 text-sm text-center">{{ item.quantity }}</td>
+                        <td class="px-4 py-3 text-sm">{{ 'Baru' if item.need_status == 'new' else 'Eksisting' }}</td>
+                        <td class="px-4 py-3 text-sm">{{ item.purpose or '-' }}</td>
+                        <td class="px-4 py-3 text-sm">{{ item.item_detail.serial_number if item.item_detail else item.serial_number or '-' }}</td>
+                        {% if facility_request.status == 'completed' %}
+                        <td class="px-4 py-3 text-xs text-gray-700 whitespace-nowrap">
+                            <div><span class="text-gray-500">Merek/Tipe:</span> {{ item.brand_type or '-' }}</div>
+                            <div><span class="text-gray-500">No. inventaris:</span> {{ item.inventory_number or '-' }}</div>
+                            <div><span class="text-gray-500">Serial:</span> {{ item.serial_number or '-' }}</div>
+                            <div><span class="text-gray-500">Kondisi:</span> {{ 'Baik' if item.handover_condition == 'good' else 'Rusak' if item.handover_condition == 'damaged' else '-' }}</div>
+                            <div><span class="text-gray-500">Catatan:</span> {{ item.handover_notes or '-' }}</div>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white border border-gray-200 rounded-xl p-5"><h3 class="font-bold text-gray-900 mb-2">Alasan/Justifikasi</h3><p class="text-sm text-gray-700 whitespace-pre-line">{{ facility_request.justification }}</p></div>
+        <div class="bg-white border border-gray-200 rounded-xl p-5"><h3 class="font-bold text-gray-900 mb-2">Dampak Jika Tidak Tersedia</h3><p class="text-sm text-gray-700 whitespace-pre-line">{{ facility_request.impact_if_unavailable }}</p></div>
+    </section>
+
+    {% if facility_request.verification %}
+    <section class="bg-white border border-gray-200 rounded-xl p-5 md:p-6">
+        <h2 class="font-bold text-lg text-gray-900 mb-4">Verifikasi Administrasi</h2>
+        <dl class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+            <div><dt class="text-gray-500">Warehouse</dt><dd class="font-semibold mt-1">{{ facility_request.verification.warehouse.name }}</dd></div>
+            <div><dt class="text-gray-500">Ketersediaan</dt><dd class="font-semibold mt-1">{{ facility_request.verification.availability.replace('_', ' ')|title }}</dd></div>
+            <div><dt class="text-gray-500">Kondisi</dt><dd class="font-semibold mt-1">{{ facility_request.verification.device_condition.replace('_', ' ')|title }}</dd></div>
+            <div><dt class="text-gray-500">Sumber</dt><dd class="font-semibold mt-1">{{ facility_request.verification.facility_source|title }}</dd></div>
+            <div><dt class="text-gray-500">Rekomendasi</dt><dd class="font-semibold mt-1">{{ facility_request.verification.recommendation.replace('_', ' ')|title }}</dd></div>
+            <div><dt class="text-gray-500">Prioritas realisasi</dt><dd class="font-semibold mt-1">{{ facility_request.verification.realization_priority|title }}</dd></div>
+            <div><dt class="text-gray-500">Estimasi</dt><dd class="font-semibold mt-1">{{ facility_request.verification.estimated_completion.strftime('%d/%m/%Y') if facility_request.verification.estimated_completion else '-' }}</dd></div>
+            <div><dt class="text-gray-500">Petugas</dt><dd class="font-semibold mt-1">{{ facility_request.verification.verifier.name }}</dd></div>
+        </dl>
+        {% if facility_request.verification.notes %}<div class="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700 whitespace-pre-line">{{ facility_request.verification.notes }}</div>{% endif %}
+    </section>
+    {% endif %}
+
+    <section>
+        <h2 class="font-bold text-lg text-gray-900 mb-3">Tanda Tangan Elektronik</h2>
+        <div class="signature-grid">
+            <article class="signature-cell">
+                <h3 class="text-center font-bold text-gray-900 mb-3">Pemohon/Atasan Langsung</h3>
+                {% if unit_approval %}
+                <img src="{{ url_for('facility_requests.signature_image', id=facility_request.id, approval_id=unit_approval.id) }}" alt="Tanda tangan Pemohon/Atasan" class="h-36 w-full object-contain mb-2">
+                <p class="text-center font-semibold text-sm">{{ unit_approval.signer_name_snapshot }}</p>
+                <p class="text-center text-xs text-gray-500">{{ unit_approval.signed_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p class="text-center text-xs font-mono text-gray-400 mt-1" title="{{ unit_approval.document_hash }}">{{ unit_approval.document_hash[:16] }}…</p>
+                {% else %}<p class="text-center text-sm text-gray-400 py-16">Belum ditandatangani</p>{% endif %}
+            </article>
+
+            <article class="signature-cell">
+                <h3 class="text-center font-bold text-gray-900 mb-3">Administrasi</h3>
+                {% if administration_approval %}
+                <img src="{{ url_for('facility_requests.signature_image', id=facility_request.id, approval_id=administration_approval.id) }}" alt="Tanda tangan Administrasi" class="h-36 w-full object-contain mb-2">
+                <p class="text-center font-semibold text-sm">{{ administration_approval.signer_name_snapshot }}</p>
+                <p class="text-center text-xs text-gray-500">{{ administration_approval.signed_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p class="text-center text-xs font-mono text-gray-400 mt-1">{{ administration_approval.document_hash[:16] }}…</p>
+                {% elif current_user.is_warehouse_staff() and facility_request.status == 'unit_signed' %}
+                <form method="POST" action="{{ url_for('facility_requests.administration_sign', id=facility_request.id) }}" class="space-y-3">
+                    {{ administration_form.hidden_tag() }}
+                    <div class="grid grid-cols-1 gap-2">
+                        {{ administration_form.warehouse_id(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.availability(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.device_condition(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.facility_source(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.recommendation(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.realization_priority(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.estimated_completion(class='w-full px-3 py-2 border rounded-lg text-sm') }}
+                        {{ administration_form.notes(class='w-full px-3 py-2 border rounded-lg text-sm', rows='2', placeholder='Catatan verifikasi') }}
+                    </div>
+                    <div data-signature-pad data-target="administration-signature_data"><canvas class="signature-canvas"></canvas><button type="button" data-clear-signature class="text-xs text-red-600 mt-1">Hapus tanda tangan</button></div>
+                    {{ administration_form.password(class='w-full px-3 py-2 border rounded-lg text-sm', placeholder='Konfirmasi password', autocomplete='current-password') }}
+                    <label class="flex gap-2 text-xs text-gray-700">{{ administration_form.consent(class='mt-0.5') }}<span>Saya telah memverifikasi formulir ini sebagai Administrasi.</span></label>
+                    {{ administration_form.submit(class='w-full px-3 py-2.5 bg-emerald-600 text-white rounded-lg font-semibold cursor-pointer') }}
+                </form>
+                {% else %}<p class="text-center text-sm text-gray-400 py-16">Menunggu tahap Administrasi</p>{% endif %}
+            </article>
+
+            <article class="signature-cell">
+                <h3 class="text-center font-bold text-gray-900 mb-3">Pimpinan</h3>
+                {% if leadership_approval %}
+                <img src="{{ url_for('facility_requests.signature_image', id=facility_request.id, approval_id=leadership_approval.id) }}" alt="Tanda tangan Pimpinan" class="h-36 w-full object-contain mb-2">
+                <p class="text-center font-semibold text-sm">{{ leadership_approval.signer_name_snapshot }}</p>
+                <p class="text-center text-xs text-gray-500">{{ leadership_approval.signed_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                <p class="text-center text-xs font-mono text-gray-400 mt-1">{{ leadership_approval.document_hash[:16] }}…</p>
+                {% elif current_user.is_admin() and facility_request.status == 'administratively_approved' %}
+                <form method="POST" action="{{ url_for('facility_requests.leadership_sign', id=facility_request.id) }}" class="space-y-3">
+                    {{ leadership_form.hidden_tag() }}
+                    {{ leadership_form.notes(class='w-full px-3 py-2 border rounded-lg text-sm', rows='3', placeholder='Catatan pimpinan (opsional)') }}
+                    <div data-signature-pad data-target="leadership-signature_data"><canvas class="signature-canvas"></canvas><button type="button" data-clear-signature class="text-xs text-red-600 mt-1">Hapus tanda tangan</button></div>
+                    {{ leadership_form.password(class='w-full px-3 py-2 border rounded-lg text-sm', placeholder='Konfirmasi password', autocomplete='current-password') }}
+                    <label class="flex gap-2 text-xs text-gray-700">{{ leadership_form.consent(class='mt-0.5') }}<span>Saya menyetujui formulir ini sebagai Pimpinan.</span></label>
+                    {{ leadership_form.submit(class='w-full px-3 py-2.5 bg-emerald-600 text-white rounded-lg font-semibold cursor-pointer') }}
+                </form>
+                {% else %}<p class="text-center text-sm text-gray-400 py-16">Menunggu tahap Pimpinan</p>{% endif %}
+            </article>
+        </div>
+    </section>
+
+    {% set operational_statuses = ['warehouse_fulfillment', 'service_intake_pending', 'service_in_progress', 'return_pending', 'replacement_pending', 'replacement_in_fulfillment'] %}
+    {% if current_user.is_warehouse_staff() and facility_request.status in operational_statuses %}
+    <section class="bg-white border border-blue-200 rounded-xl p-5 md:p-6">
+        <h2 class="font-bold text-lg text-gray-900 mb-2">Tindakan Operasional Administrasi</h2>
+        <p class="text-sm text-gray-600 mb-4">
+            {% if facility_request.status == 'warehouse_fulfillment' %}Konfirmasi fasilitas telah disiapkan dan diserahkan kepada Unit.
+            {% elif facility_request.status == 'service_intake_pending' %}Konfirmasi fasilitas eksisting telah diterima untuk proses servis.
+            {% elif facility_request.status == 'service_in_progress' %}Konfirmasi servis selesai dan fasilitas diserahkan kembali kepada Unit.
+            {% elif facility_request.status == 'return_pending' %}Konfirmasi fasilitas yang dikembalikan Unit telah diterima dan diperiksa Warehouse.
+            {% elif facility_request.status == 'replacement_in_fulfillment' %}Konfirmasi fasilitas lama telah diterima; barang pengganti tetap mengikuti Asset Request.
+            {% else %}Konfirmasi fasilitas lama diterima dan penggantian manual telah diserahkan kepada Unit.{% endif %}
+        </p>
+        <form method="POST" action="{{ url_for('facility_requests.operational_action', id=facility_request.id) }}" class="space-y-4">
+            {{ operational_form.hidden_tag() }}
+            {{ operational_form.notes(class='w-full px-3 py-2 border rounded-lg', rows='3', placeholder='Catatan kondisi, hasil servis, pengembalian, atau penyerahan') }}
+            {{ operational_form.password(class='w-full md:w-1/2 px-3 py-2 border rounded-lg', placeholder='Konfirmasi password', autocomplete='current-password') }}
+            <label class="flex gap-2 text-sm text-gray-700">{{ operational_form.confirmation(class='mt-1') }}<span>Saya mengonfirmasi tindakan ini menggunakan akun terautentikasi. Tidak ada tanda tangan tambahan.</span></label>
+            <button class="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold">Konfirmasi Tindakan Operasional</button>
+        </form>
+    </section>
+    {% endif %}
+
+    {% if current_user.is_unit_staff() and facility_request.request_type != 'return' and facility_request.status in ['in_fulfillment', 'receipt_pending', 'replacement_old_received'] %}
+    <section class="bg-white border border-gray-200 rounded-xl p-5 md:p-6">
+        <h2 class="font-bold text-lg text-gray-900 mb-2">Konfirmasi Penerimaan</h2>
+        {% if facility_request.linked_asset_request and facility_request.linked_asset_request.status != 'completed' %}
+        <p class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">Permohonan aset masih dalam proses. Selesaikan distribusi sebelum konfirmasi penerimaan.</p>
+        {% else %}
+        <form method="POST" action="{{ url_for('facility_requests.confirm_receipt', id=facility_request.id) }}" class="space-y-4">
+            {{ receipt_form.hidden_tag() }}
+            <div class="space-y-3">
+                {% for item in facility_request.items %}
+                <div class="border rounded-lg p-3">
+                    <p class="font-semibold text-sm mb-2">{{ item.facility_name }}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
+                        <input name="brand_type_{{ item.id }}" placeholder="Merek/Tipe" class="px-3 py-2 border rounded-lg text-sm">
+                        <input name="inventory_number_{{ item.id }}" placeholder="No. inventaris" class="px-3 py-2 border rounded-lg text-sm">
+                        <input name="serial_number_{{ item.id }}" placeholder="Serial number" class="px-3 py-2 border rounded-lg text-sm">
+                        <select name="condition_{{ item.id }}" required class="px-3 py-2 border rounded-lg text-sm"><option value="">Kondisi</option><option value="good">Baik</option><option value="damaged">Rusak</option></select>
+                        <input name="handover_notes_{{ item.id }}" placeholder="Keterangan" class="px-3 py-2 border rounded-lg text-sm">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {{ receipt_form.receipt_notes(class='w-full px-3 py-2 border rounded-lg', rows='3', placeholder='Catatan penerimaan') }}
+            <label class="flex gap-2 text-sm text-gray-700">{{ receipt_form.user_statement_accepted(class='mt-1') }}<span>Saya menyatakan fasilitas telah diterima, diperiksa, dan akan digunakan untuk kepentingan kedinasan.</span></label>
+            {{ receipt_form.password(class='w-full md:w-1/2 px-3 py-2 border rounded-lg', placeholder='Konfirmasi password', autocomplete='current-password') }}
+            {{ receipt_form.submit(class='px-4 py-2.5 bg-emerald-600 text-white rounded-lg font-semibold cursor-pointer') }}
+        </form>
+        {% endif %}
+    </section>
+    {% endif %}
+
+    {% if facility_request.warehouse_received_at or facility_request.released_at or facility_request.received_at %}
+    <section class="bg-white border border-gray-200 rounded-xl p-5 md:p-6">
+        <h2 class="font-bold text-lg text-gray-900 mb-4">Serah-Terima / Pengembalian</h2>
+        <dl class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div><dt class="text-gray-500">Diserahkan oleh</dt><dd class="font-semibold mt-1">{% if facility_request.request_type == 'return' %}{{ facility_request.submitter_name_snapshot }}{% else %}{{ facility_request.releaser.name if facility_request.releaser else '-' }}{% endif %}</dd></div>
+            <div><dt class="text-gray-500">Diterima oleh</dt><dd class="font-semibold mt-1">{% if facility_request.request_type == 'return' %}{{ facility_request.warehouse_receiver.name if facility_request.warehouse_receiver else '-' }}{% else %}{{ facility_request.receiver.name if facility_request.receiver else '-' }}{% endif %}</dd></div>
+            <div><dt class="text-gray-500">Tanggal</dt><dd class="font-semibold mt-1">{{ (facility_request.received_at or facility_request.warehouse_received_at or facility_request.released_at).strftime('%d/%m/%Y %H:%M') }}</dd></div>
+        </dl>
+        <p class="mt-3 text-xs text-gray-500">Konfirmasi menggunakan akun, password, waktu server, IP, dan audit event tanpa signature pad tambahan.</p>
+    </section>
+    {% endif %}
+
+    <section class="bg-white border border-gray-200 rounded-xl p-5 md:p-6">
+        <h2 class="font-bold text-lg text-gray-900 mb-4">Timeline Audit</h2>
+        <div class="space-y-4">
+            {% for event in facility_request.events|reverse %}
+            <div class="flex gap-3">
+                <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0"><i class="fas fa-check"></i></div>
+                <div><p class="font-semibold text-sm text-gray-900">{{ event.event_type.replace('_', ' ')|title }}</p><p class="text-xs text-gray-500">{{ event.actor_name_snapshot }} · {{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</p>{% if event.old_status or event.new_status %}<p class="text-xs text-gray-500 mt-1">{{ event.old_status or '-' }} → {{ event.new_status or '-' }}</p>{% endif %}</div>
+            </div>
+            {% else %}<p class="text-sm text-gray-500">Belum ada event.</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/signature-pad.js') }}"></script>
+{% endblock %}
